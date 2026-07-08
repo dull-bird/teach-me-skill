@@ -37,6 +37,9 @@ If Teach Me is not initialized, ask the user once before writing learning notes:
 - Confirm the default vault path: `~/.teach_me_skill/vault`
 - Confirm note language: `auto` means infer from the conversation language and
   keep technical terms in their common English form
+- Ask whether they want Git sync for cross-device learning state. Default is
+  off. If they already have a remote repository, ask for the URL and enable
+  auto-sync. If they do not have one or are busy, skip it and continue.
 
 After the user confirms, run:
 
@@ -45,6 +48,18 @@ python3 <teach-me-skill-dir>/scripts/teach_me.py configure --language auto
 ```
 
 Use `--vault <path>` if the user chooses a different vault path.
+
+Use Git sync options only when the user explicitly opts in:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py configure \
+  --language auto \
+  --git-remote git@github.com:user/teach-me-vault.git \
+  --auto-sync
+```
+
+If the user wants local-only versioning without a remote, use
+`--enable-git-sync` without `--git-remote`.
 
 ## When To Capture
 
@@ -125,6 +140,41 @@ The knowledge tree is allowed to grow even when no full concept note is worth
 writing. Use it to avoid repeating what the user already knows and to revisit
 weak prerequisites later.
 
+## Active Feedback Loop
+
+Do not wait only for the user to volunteer confusion. After a useful explanation
+or concept capture, ask one small, optional probe to update the knowledge tree.
+
+Default probe style:
+
+- Mostly multiple-choice or true/false checks.
+- Occasional short-answer questions when the concept is important or ambiguous.
+- Make the probe explicitly optional; the user may skip because they are busy.
+- If the user skips, continue normally and do not treat silence as evidence of
+  understanding.
+- If the user answers, update the knowledge tree with `assess`: promote mastery
+  only when the answer demonstrates it; otherwise record the gap or
+  misconception.
+
+Good probe examples:
+
+```text
+Quick optional check: in `mysub.yaml`, is a node closer to:
+A. one concrete server entry
+B. a routing policy group
+C. the whole mihomo process
+You can skip this.
+```
+
+```text
+True or false, optional: `fallback` chooses by priority order, while `url-test`
+chooses by measured latency.
+```
+
+```text
+Short answer, optional: why is hardcoding subscription node names brittle?
+```
+
 ## What To Capture
 
 Prefer concept-first notes. Capture these categories:
@@ -156,7 +206,8 @@ Default style:
 - Tie the idea to the current project.
 - Use a few code-level examples when useful.
 - Use analogies at a medium level, then adapt based on feedback.
-- Ask 1-2 gentle Socratic questions after important captures.
+- Ask 1-2 gentle, optional probes after important captures, mostly as
+  multiple-choice or true/false questions.
 
 Occasionally ask for style feedback after valuable notes, not every time:
 

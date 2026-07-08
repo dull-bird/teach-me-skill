@@ -3,6 +3,29 @@
 The runtime accepts JSON on stdin for `capture` and stores JSON state in the
 vault's `.teach-me/` directory.
 
+## Config
+
+`~/.teach_me_skill/config.json` may include optional Git sync settings:
+
+```json
+{
+  "version": 1,
+  "initialized": true,
+  "vault_path": "~/.teach_me_skill/vault",
+  "language": "auto",
+  "max_notes_per_phase": 3,
+  "git_sync": {
+    "enabled": true,
+    "remote": "git@github.com:user/teach-me-vault.git",
+    "branch": "main",
+    "auto_sync": true
+  }
+}
+```
+
+Git sync is opt-in. If `auto_sync` is true, the runtime attempts to commit,
+pull --rebase, and push after `assess`, `capture`, and `style`.
+
 ## Capture Payload
 
 ```json
@@ -162,6 +185,14 @@ generated `07_Learning_Profile/Knowledge_Tree.md`.
   "code_example_level": "high",
   "first_principles_level": "high",
   "verbosity": "compact",
+  "probe_format": "mostly_choice",
+  "probe_required": false,
   "last_feedback_at": null
 }
 ```
+
+Probe format values:
+
+- `mostly_choice`: prefer multiple-choice and true/false probes.
+- `mixed`: use choice, true/false, and short-answer probes evenly.
+- `mostly_short`: ask more short-answer probes for advanced users.

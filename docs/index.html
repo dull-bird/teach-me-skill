@@ -396,14 +396,14 @@ pre{
 <main id="main">
   <section class="hero">
     <div>
-      <p class="eyebrow">Agent Skill for development learning</p>
+      <p class="eyebrow">把开发过程变成学习资产</p>
       <h1>Teach Me</h1>
-      <p class="lede">把真实开发过程，沉淀成可复习的 Obsidian 知识笔记。它会维护一棵动态知识树，先扫基础概念和能力边界，再在有价值的阶段捕获概念、算法思路、架构图谱和复盘问题。</p>
+      <p class="lede">我不想让 agent 只是把活干完。我希望它顺手帮我留下真正学会的东西：哪些概念刚见过，哪些地方还没懂，下一次应该从哪里接着讲。</p>
       <div class="cta">
-        <a class="btn primary" href="#install">安装 Teach Me</a>
-        <a class="btn" href="#hooks">查看 hook 机制</a>
+        <a class="btn primary" href="#install">装到我的 agent</a>
+        <a class="btn" href="#why">看它解决什么</a>
       </div>
-      <p class="note">适配 Claude Code、Codex、OpenClaw、Kimi Code CLI。默认 vault 路径是 <code>~/.teach_me_skill/vault</code>。</p>
+      <p class="note">支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。默认写到 <code>~/.teach_me_skill/vault</code>，也可以用 Git 同步到别的设备。</p>
     </div>
     <div>
       <figure class="visual">
@@ -422,21 +422,21 @@ Teach Me learning context:
 
   <section id="why" class="band">
     <div class="wrap">
-      <p class="kicker">What it does</p>
-      <h2>不是把每个命令都讲一遍，而是留下以后真会用的知识。</h2>
-      <p class="section-sub">Teach Me 把 agent 的开发上下文和一个本地学习运行时连起来。它的目标不是制造更多解释，而是把值得复用的工程判断写成稳定笔记。</p>
+      <p class="kicker">Why</p>
+      <h2>我需要的不是更多解释，而是一个能记住我学到哪儿的老师。</h2>
+      <p class="section-sub">很多复盘的问题不是“有没有讲”，而是“从哪里开始讲”。Teach Me 会先判断基础概念有没有断层，再决定要不要写笔记、问小题、更新知识树。</p>
       <div class="grid">
         <article class="card">
-          <h3>先校准</h3>
-          <p>遇到新领域时先扫 prerequisite ladder，判断基础概念是 unknown、seen 还是 explained，再决定从哪里讲起。</p>
+          <h3>先找地基</h3>
+          <p>遇到新领域，不直接讲中层机制。先扫一遍基础词：是什么、和谁相关、你大概懂到哪一步。</p>
         </article>
         <article class="card">
-          <h3>抓高价值</h3>
-          <p>内置价值 rubric：新颖性、可迁移性、项目相关性、隐藏复杂度、未来 bug 风险、算法价值和用户信号。</p>
+          <h3>只记有用的</h3>
+          <p>不会把每个命令都写进笔记。只有能迁移到以后项目里的概念、设计取舍和易错点，才值得沉淀。</p>
         </article>
         <article class="card">
-          <h3>能复习</h3>
-          <p>输出到 Obsidian：概念、算法思路、项目地图、wikilinks、知识图谱、动态知识树、复习间隔和 Socratic questions。</p>
+          <h3>能带走</h3>
+          <p>笔记是普通 Markdown，放在 Obsidian vault 里。知识树、复习问题和掌握程度都能跟着 Git 跨设备同步。</p>
         </article>
       </div>
     </div>
@@ -444,14 +444,14 @@ Teach Me learning context:
 
   <section id="workflow">
     <div class="wrap">
-      <p class="kicker">Workflow</p>
-      <h2>Hook 负责轻量上下文，Skill 负责教学判断，Runtime 负责知识树和落盘。</h2>
-      <p class="section-sub">这种分层让行为更可控：hook 不替模型做学习决策，只告诉 agent 什么时候应该使用 Teach Me、本地 runtime 在哪里、哪些基础节点还弱。</p>
+      <p class="kicker">How</p>
+      <h2>它不抢工作流，只在合适的时候插一小步。</h2>
+      <p class="section-sub">hook 只给 agent 一点上下文：这个项目该用 Teach Me、vault 在哪里、哪些知识点还弱。真正的教学判断放在 skill 里，文件写入交给本地 runtime。</p>
       <div class="steps">
-        <div class="step"><strong>1. 识别</strong><span>开发类提示词或手动触发词进入 hook。</span></div>
-        <div class="step"><strong>2. 校准</strong><span>为新领域建立基础概念树并探测弱点。</span></div>
-        <div class="step"><strong>3. 判断</strong><span>阶段结束时按 rubric 选 1 到 3 个高价值知识点。</span></div>
-        <div class="step"><strong>4. 沉淀</strong><span>runtime 写入 Obsidian vault、学习状态和知识树。</span></div>
+        <div class="step"><strong>1. 识别</strong><span>只在开发、调试、复盘、讲原理这类场景进入。</span></div>
+        <div class="step"><strong>2. 校准</strong><span>先扫基础概念，别一上来就讲复杂机制。</span></div>
+        <div class="step"><strong>3. 反馈</strong><span>问一个可跳过的小题，多数是选择题或判断题。</span></div>
+        <div class="step"><strong>4. 沉淀</strong><span>写入 Obsidian；如果你愿意，也自动 Git sync。</span></div>
       </div>
     </div>
   </section>
@@ -459,8 +459,8 @@ Teach Me learning context:
   <section id="hooks" class="band">
     <div class="wrap">
       <p class="kicker">Hooks</p>
-      <h2>Hook 安装方式保持幂等，只注册 Teach Me 自己需要的入口。</h2>
-      <p class="section-sub">重点是只追加自己的 marker、不覆盖用户原配置。Codex 会修补已有 <code>[features]</code>，Kimi 会用括号匹配重写 <code>hooks = [...]</code> 数组，避免破坏原有 hook。</p>
+      <h2>安装要可撤、可重复，不碰别人的配置。</h2>
+      <p class="section-sub">安装脚本只追加 Teach Me 自己的 marker，不覆盖已有 hook。Codex 会补 <code>[features]</code>，Kimi 会只重写 <code>hooks = [...]</code> 这一段。</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -494,15 +494,15 @@ Teach Me learning context:
           </tbody>
         </table>
       </div>
-      <p class="note">当前仓库的 hook 更保守：它只注入学习上下文和记录工具事件，真正要不要写学习笔记仍由 agent 在阶段边界按 skill rubric 判断。</p>
+      <p class="note">hook 不负责“教”。它只提醒 agent 该看 Teach Me context，并记录少量工具事件。要不要写笔记，仍然在阶段边界判断。</p>
     </div>
   </section>
 
   <section id="install">
     <div class="wrap">
       <p class="kicker">Install</p>
-      <h2>安装技能，再按你使用的 agent 注册 hook。</h2>
-      <p class="section-sub">如果你让 agent 自动安装，直接复制第一段提示词。手动安装时，先运行根目录 <code>install.sh</code>，再按需要运行各平台的 <code>install-hook.sh</code>。</p>
+      <h2>先装 skill，再按你用的工具装 hook。</h2>
+      <p class="section-sub">想省事就把第一段复制给 agent。手动装也很直接：根目录 <code>install.sh</code> 负责复制 skill，各平台的 <code>install-hook.sh</code> 负责接入 hook。</p>
       <div class="ways">
         <div class="way">
           <h3>让 agent 自动安装 <span class="status">技能 + hook</span></h3>
@@ -541,7 +541,7 @@ cd teach-me-skill
 
         <div class="way">
           <h3>第一次配置 <span class="status">Obsidian vault</span></h3>
-          <p>默认 vault 是 <code>~/.teach_me_skill/vault</code>，语言用 <code>auto</code> 时会跟随对话语言，常见技术名词保留英文。</p>
+          <p>默认 vault 是 <code>~/.teach_me_skill/vault</code>。如果你想在多台机器上接着学，给它一个 Git remote，它会在写入后自动同步。</p>
           <div class="copybox">
             <button class="copybtn" type="button" data-copy="configure">复制</button>
 <pre><code id="configure">python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
@@ -549,7 +549,13 @@ cd teach-me-skill
 # Use a custom vault path
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
   --vault ~/Documents/Teach-Me-Vault \
-  --language auto</code></pre>
+  --language auto
+
+# Optional: sync the vault across devices
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
+  --language auto \
+  --git-remote git@github.com:user/teach-me-vault.git \
+  --auto-sync</code></pre>
           </div>
         </div>
       </div>
@@ -558,9 +564,9 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 
   <section class="band">
     <div class="wrap">
-      <p class="kicker">Vault shape</p>
-      <h2>写出来的是普通 Markdown，不被任何平台锁住。</h2>
-      <p class="section-sub">Teach Me 的 runtime 会维护一个 Obsidian 兼容目录：可读笔记放在可见文件夹，机器状态放在 <code>.teach-me/</code>。</p>
+      <p class="kicker">Vault</p>
+      <h2>数据在你本地，是普通 Markdown。</h2>
+      <p class="section-sub">可读笔记放在可见文件夹；机器状态放在 <code>.teach-me/</code>。默认不会同步到远端，除非你自己打开 Git sync。</p>
       <div class="copybox">
         <button class="copybtn" type="button" data-copy="vault-tree">复制</button>
 <pre><code id="vault-tree">vault/
@@ -584,8 +590,8 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 
 <footer class="footer">
   <div class="wrap">
-    <span>Teach Me · Agent Skill for development learning</span>
-    <span>Built for GitHub Pages · Inspired by dull-bird.github.io</span>
+    <span>Teach Me · 把开发过程变成学习资产</span>
+    <span>Markdown vault · Optional Git sync · Local first</span>
   </div>
 </footer>
 

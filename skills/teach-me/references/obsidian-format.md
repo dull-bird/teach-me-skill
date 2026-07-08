@@ -86,3 +86,23 @@ by the runtime.
 tracks prerequisite concepts, observed mastery, confidence, gaps,
 misconceptions, probe questions, and evidence. Use it to decide where to begin
 the next explanation.
+
+## Git Sync
+
+Git sync is optional and user-controlled. When enabled, the vault itself becomes
+a Git repository. The runtime can commit, pull with rebase/autostash, and push
+after `assess`, `capture`, and `style`.
+
+The generated vault `.gitignore` excludes volatile or more sensitive local
+state by default:
+
+```gitignore
+.obsidian/workspace*
+.obsidian/cache/
+.trash/
+.teach-me/sessions/
+.teach-me/events.jsonl
+```
+
+The durable learning state, notes, knowledge graph, style profile, and
+knowledge tree are intended to sync across machines.

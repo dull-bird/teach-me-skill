@@ -179,6 +179,7 @@ def build_additional_context(prompt: str, manual: bool) -> str:
         "- use this skill only for development learning or explicit teaching requests.",
         "- valuable captures include concepts, algorithmic ideas, architecture/data-flow models, and project maps; not just tool names.",
         "- when teaching a new domain, first map prerequisite concepts and probe the user's baseline before explaining mid-level mechanisms.",
+        "- after teaching, ask a small optional feedback probe; prefer multiple-choice or true/false, occasionally short-answer, and continue if the user skips.",
         "- update the knowledge tree with `teach_me.py assess` when you learn what the user does or does not understand.",
         "- final response should stay concise unless the user explicitly asked for teaching now.",
     ]

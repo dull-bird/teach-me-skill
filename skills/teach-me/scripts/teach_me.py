@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -83,6 +84,12 @@ def default_config() -> dict[str, Any]:
         "vault_path": str(DEFAULT_VAULT),
         "language": "auto",
         "max_notes_per_phase": 3,
+        "git_sync": {
+            "enabled": False,
+            "remote": "",
+            "branch": "main",
+            "auto_sync": False,
+        },
         "created_at": now_iso(),
         "updated_at": now_iso(),
     }
@@ -101,6 +108,11 @@ def load_config(create: bool = True) -> dict[str, Any]:
     config.setdefault("vault_path", str(DEFAULT_VAULT))
     config.setdefault("language", "auto")
     config.setdefault("max_notes_per_phase", 3)
+    git_sync = config.setdefault("git_sync", {})
+    git_sync.setdefault("enabled", False)
+    git_sync.setdefault("remote", "")
+    git_sync.setdefault("branch", "main")
+    git_sync.setdefault("auto_sync", False)
     return config
 
 
@@ -137,6 +149,8 @@ def default_style(language: str = "auto") -> dict[str, Any]:
         "code_example_level": "high",
         "first_principles_level": "high",
         "verbosity": "compact",
+        "probe_format": "mostly_choice",
+        "probe_required": False,
         "last_feedback_at": None,
     }
 
@@ -151,6 +165,147 @@ def style_path(config: dict[str, Any]) -> Path:
 
 def events_path(config: dict[str, Any]) -> Path:
     return meta_dir(config) / "events.jsonl"
+
+
+def git_sync_config(config: dict[str, Any]) -> dict[str, Any]:
+    sync = config.setdefault("git_sync", {})
+    sync.setdefault("enabled", False)
+    sync.setdefault("remote", "")
+    sync.setdefault("branch", "main")
+    sync.setdefault("auto_sync", False)
+    return sync
+
+
+def run_git(vault: Path, args: list[str], check: bool = True) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=str(vault),
+        text=True,
+        capture_output=True,
+    )
+    if check and result.returncode != 0:
+        command = "git " + " ".join(args)
+        message = (result.stderr or result.stdout or "").strip()
+        raise RuntimeError(f"{command} failed: {message}")
+    return result
+
+
+def git_has_head(vault: Path) -> bool:
+    return run_git(vault, ["rev-parse", "--verify", "HEAD"], check=False).returncode == 0
+
+
+def git_current_branch(vault: Path) -> str:
+    result = run_git(vault, ["branch", "--show-current"], check=False)
+    return result.stdout.strip()
+
+
+def ensure_git_remote(vault: Path, remote: str) -> None:
+    if not remote:
+        return
+    current = run_git(vault, ["remote", "get-url", "origin"], check=False)
+    if current.returncode == 0:
+        if current.stdout.strip() != remote:
+            run_git(vault, ["remote", "set-url", "origin", remote])
+    else:
+        run_git(vault, ["remote", "add", "origin", remote])
+
+
+def ensure_git_repo(config: dict[str, Any]) -> None:
+    vault = vault_path(config)
+    sync = git_sync_config(config)
+    branch = str(sync.get("branch") or "main")
+    if not (vault / ".git").exists():
+        run_git(vault, ["init"])
+        if run_git(vault, ["checkout", "-b", branch], check=False).returncode != 0:
+            run_git(vault, ["checkout", branch], check=False)
+    elif not git_current_branch(vault) and not git_has_head(vault):
+        run_git(vault, ["checkout", "-b", branch], check=False)
+    ensure_git_remote(vault, str(sync.get("remote") or ""))
+
+
+def remote_branch_exists(vault: Path, branch: str) -> bool:
+    if run_git(vault, ["remote", "get-url", "origin"], check=False).returncode != 0:
+        return False
+    result = run_git(vault, ["ls-remote", "--exit-code", "--heads", "origin", branch], check=False)
+    return result.returncode == 0
+
+
+def commit_vault_changes(config: dict[str, Any], reason: str) -> tuple[bool, str]:
+    vault = vault_path(config)
+    run_git(vault, ["add", "-A"])
+    if run_git(vault, ["diff", "--cached", "--quiet"], check=False).returncode == 0:
+        return False, "no changes"
+    stamp = local_now().strftime("%Y-%m-%d %H:%M")
+    message = f"teach-me: sync vault {stamp}"
+    if reason:
+        message = f"{message} - {reason[:48]}"
+    run_git(
+        vault,
+        [
+            "-c",
+            "user.name=Teach Me",
+            "-c",
+            "user.email=teach-me@local",
+            "commit",
+            "-m",
+            message,
+        ],
+    )
+    return True, message
+
+
+def sync_vault(config: dict[str, Any], reason: str = "manual") -> dict[str, Any]:
+    if not config.get("initialized"):
+        return {"enabled": False, "ok": False, "message": "Teach Me is not initialized"}
+    ensure_vault(config)
+    sync = git_sync_config(config)
+    if not sync.get("enabled"):
+        return {"enabled": False, "ok": True, "message": "git sync disabled"}
+
+    vault = vault_path(config)
+    branch = str(sync.get("branch") or "main")
+    remote = str(sync.get("remote") or "")
+    try:
+        ensure_git_repo(config)
+        current_branch = git_current_branch(vault)
+        if current_branch and current_branch != branch:
+            branch = current_branch
+        committed, commit_message = commit_vault_changes(config, reason)
+        pulled = False
+        pushed = False
+        if remote and remote_branch_exists(vault, branch):
+            run_git(vault, ["pull", "--rebase", "--autostash", "origin", branch])
+            pulled = True
+        if remote:
+            run_git(vault, ["push", "-u", "origin", branch])
+            pushed = True
+        return {
+            "enabled": True,
+            "ok": True,
+            "vault": str(vault),
+            "branch": branch,
+            "remote": remote,
+            "committed": committed,
+            "pulled": pulled,
+            "pushed": pushed,
+            "message": commit_message,
+        }
+    except Exception as exc:
+        return {
+            "enabled": True,
+            "ok": False,
+            "vault": str(vault),
+            "branch": branch,
+            "remote": remote,
+            "message": str(exc),
+        }
+
+
+def auto_sync_vault(config: dict[str, Any], reason: str) -> dict[str, Any] | None:
+    sync = git_sync_config(config)
+    if not sync.get("enabled") or not sync.get("auto_sync"):
+        return None
+    return sync_vault(config, reason)
 
 
 def slugify(title: str) -> str:
@@ -272,6 +427,23 @@ def ensure_vault(config: dict[str, Any]) -> None:
     if not tree.exists():
         tree.write_text(
             "# Knowledge Tree\n\nNo assessed concepts yet.\n",
+            encoding="utf-8",
+        )
+
+    gitignore = vault / ".gitignore"
+    if not gitignore.exists():
+        gitignore.write_text(
+            "\n".join(
+                [
+                    "# Teach Me vault sync defaults",
+                    ".obsidian/workspace*",
+                    ".obsidian/cache/",
+                    ".trash/",
+                    ".teach-me/sessions/",
+                    ".teach-me/events.jsonl",
+                    "",
+                ]
+            ),
             encoding="utf-8",
         )
 
@@ -703,16 +875,43 @@ def cmd_configure(args: argparse.Namespace) -> int:
         config["vault_path"] = str(Path(args.vault).expanduser())
     if args.language:
         config["language"] = args.language
+    sync = git_sync_config(config)
+    if args.git_remote:
+        sync["remote"] = args.git_remote
+        sync["enabled"] = True
+    if args.git_branch:
+        sync["branch"] = args.git_branch
+    if args.enable_git_sync:
+        sync["enabled"] = True
+    if args.disable_git_sync:
+        sync["enabled"] = False
+    if args.auto_sync:
+        sync["auto_sync"] = True
+        sync["enabled"] = True
+    if args.no_auto_sync:
+        sync["auto_sync"] = False
     config["initialized"] = True
     save_config(config)
     ensure_vault(config)
+    if sync.get("enabled"):
+        ensure_git_repo(config)
 
     style = read_style(config)
     style["language"] = config.get("language", "auto")
     write_json(style_path(config), style)
     rewrite_knowledge_tree(config, read_state(config))
+    sync_result = auto_sync_vault(config, "configure")
 
     print(f"Teach Me configured. Vault: {vault_path(config)}")
+    if sync.get("enabled"):
+        print(
+            "Git sync: enabled, "
+            f"remote={sync.get('remote') or '(local only)'}, "
+            f"branch={sync.get('branch')}, "
+            f"auto_sync={str(bool(sync.get('auto_sync'))).lower()}"
+        )
+    if sync_result is not None:
+        print("Initial sync: " + json.dumps(sync_result, ensure_ascii=False))
     return 0
 
 
@@ -726,11 +925,21 @@ def format_context(config: dict[str, Any]) -> str:
         f"- note language: {config.get('language', 'auto')}",
         f"- max notes per phase: {config.get('max_notes_per_phase', 3)}",
     ]
+    sync = git_sync_config(config)
+    lines.append(
+        "- git sync: enabled={enabled}, auto_sync={auto}, remote={remote}, branch={branch}".format(
+            enabled=str(bool(sync.get("enabled"))).lower(),
+            auto=str(bool(sync.get("auto_sync"))).lower(),
+            remote=sync.get("remote") or "(none)",
+            branch=sync.get("branch") or "main",
+        )
+    )
     if not initialized:
         lines.extend(
             [
-                "- first-use rule: before writing learning notes, ask the user to confirm the vault path and note language.",
-                "- default choices: vault ~/.teach_me_skill/vault, language auto based on conversation.",
+                "- first-use rule: before writing learning notes, ask the user to confirm the vault path, note language, and whether to enable Git sync.",
+                "- default choices: vault ~/.teach_me_skill/vault, language auto based on conversation, Git sync off unless the user provides a remote.",
+                "- Git sync question: ask whether the user has a remote repository for cross-device vault sync; if yes, run configure with --git-remote <url> --auto-sync.",
             ]
         )
         return "\n".join(lines)
@@ -766,12 +975,17 @@ def format_context(config: dict[str, Any]) -> str:
             "- teaching baseline: before teaching a new domain, sketch a prerequisite ladder, probe obvious basics, and start at the first weak node.",
             "- capture command: python3 <teach-me-skill-dir>/scripts/teach_me.py capture",
             "- assessment command: python3 <teach-me-skill-dir>/scripts/teach_me.py assess",
+            "- sync command: python3 <teach-me-skill-dir>/scripts/teach_me.py sync",
             "- style: analogy={analogy}, socratic={socratic}, code={code}, first_principles={fp}, verbosity={verbosity}".format(
                 analogy=style.get("analogy_level", "medium"),
                 socratic=style.get("socratic_level", "gentle"),
                 code=style.get("code_example_level", "high"),
                 fp=style.get("first_principles_level", "high"),
                 verbosity=style.get("verbosity", "compact"),
+            ),
+            "- feedback probes: format={fmt}, required={required}; ask mostly multiple-choice or true/false checks, occasional short-answer, and continue if the user skips.".format(
+                fmt=style.get("probe_format", "mostly_choice"),
+                required=str(bool(style.get("probe_required", False))).lower(),
             ),
         ]
     )
@@ -798,6 +1012,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         "initialized": bool(config.get("initialized")),
         "vault": str(vault_path(config)),
         "language": config.get("language", "auto"),
+        "git_sync": git_sync_config(config),
     }
     if config.get("initialized"):
         ensure_vault(config)
@@ -808,6 +1023,13 @@ def cmd_status(args: argparse.Namespace) -> int:
         data["assessment_count"] = len(state.get("assessments", []))
     print(json.dumps(data, ensure_ascii=False, indent=2))
     return 0
+
+
+def cmd_sync(args: argparse.Namespace) -> int:
+    config = load_config(create=True)
+    result = sync_vault(config, args.reason or "manual")
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result.get("ok") else 1
 
 
 def cmd_assess(args: argparse.Namespace) -> int:
@@ -868,12 +1090,15 @@ def cmd_assess(args: argparse.Namespace) -> int:
     rewrite_index(config, state)
     rewrite_graph(config, state)
     append_jsonl(events_path(config), {"type": "assessment", **assessment})
+    sync_result = auto_sync_vault(config, "assessment")
 
     output = {
         "assessed": updated,
         "vault": str(vault_path(config)),
         "knowledge_tree": str(vault_path(config) / PROFILE_FOLDER / "Knowledge_Tree.md"),
     }
+    if sync_result is not None:
+        output["sync"] = sync_result
     print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0
 
@@ -890,13 +1115,17 @@ def cmd_style(args: argparse.Namespace) -> int:
         "first_principles_level": args.first_principles,
         "verbosity": args.verbosity,
         "language": args.language,
+        "probe_format": args.probe_format,
     }
     for key, value in updates.items():
         if value:
             style[key] = value
     style["last_feedback_at"] = now_iso()
     write_json(style_path(config), style)
+    sync_result = auto_sync_vault(config, "style")
     print(f"Teach Me style updated: {style_path(config)}")
+    if sync_result is not None:
+        print("Sync: " + json.dumps(sync_result, ensure_ascii=False))
     return 0
 
 
@@ -1025,12 +1254,15 @@ def cmd_capture(args: argparse.Namespace) -> int:
     rewrite_graph(config, state)
     rewrite_knowledge_tree(config, state)
     append_jsonl(events_path(config), {"type": "capture", **capture})
+    sync_result = auto_sync_vault(config, "capture")
 
     output = {
         "captured": captured_titles,
         "vault": str(vault_path(config)),
         "index": str(vault_path(config) / "00_Index.md"),
     }
+    if sync_result is not None:
+        output["sync"] = sync_result
     print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0
 
@@ -1042,6 +1274,12 @@ def build_parser() -> argparse.ArgumentParser:
     configure = sub.add_parser("configure", help="Initialize or update Teach Me config")
     configure.add_argument("--vault", help="Obsidian vault path")
     configure.add_argument("--language", default="auto", help="auto, zh, en, etc.")
+    configure.add_argument("--git-remote", help="Remote repository URL for vault sync")
+    configure.add_argument("--git-branch", help="Git branch for vault sync")
+    configure.add_argument("--enable-git-sync", action="store_true", help="Initialize and enable local vault git sync")
+    configure.add_argument("--disable-git-sync", action="store_true", help="Disable vault git sync")
+    configure.add_argument("--auto-sync", action="store_true", help="Automatically sync after capture/assess")
+    configure.add_argument("--no-auto-sync", action="store_true", help="Disable automatic sync")
     configure.set_defaults(func=cmd_configure)
 
     context = sub.add_parser("context", help="Print compact context for an agent")
@@ -1049,6 +1287,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = sub.add_parser("status", help="Print runtime status JSON")
     status.set_defaults(func=cmd_status)
+
+    sync = sub.add_parser("sync", help="Commit, pull --rebase, and push the vault if Git sync is enabled")
+    sync.add_argument("--reason", default="manual", help="Short reason for the sync commit")
+    sync.set_defaults(func=cmd_sync)
 
     assess = sub.add_parser("assess", help="Update the user's knowledge tree from JSON stdin")
     assess.set_defaults(func=cmd_assess)
@@ -1059,6 +1301,7 @@ def build_parser() -> argparse.ArgumentParser:
     style.add_argument("--code", choices=["low", "medium", "high"])
     style.add_argument("--first-principles", choices=["low", "medium", "high"])
     style.add_argument("--verbosity", choices=["brief", "compact", "detailed"])
+    style.add_argument("--probe-format", choices=["mostly_choice", "mixed", "mostly_short"])
     style.add_argument("--language")
     style.set_defaults(func=cmd_style)
 

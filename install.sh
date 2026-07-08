@@ -48,4 +48,4 @@ if [ "$installed_any" = false ]; then
 fi
 
 echo
-echo "Teach Me skill installed. First capture will ask to confirm ~/.teach_me_skill/vault and note language."
+echo "Teach Me skill installed. First capture will ask to confirm ~/.teach_me_skill/vault, note language, and optional Git sync."
