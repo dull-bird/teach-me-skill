@@ -126,8 +126,9 @@ function bootstrapContext(state: SessionState): string {
     "- default vault: ~/.teach_me_skill/vault",
     "- first-use rule: before writing learning notes, ask the user to confirm the vault path and note language.",
     "- Do not interrupt implementation. At meaningful phase boundaries, capture 1-3 high-value concepts, algorithmic ideas, architecture/data-flow models, or project maps.",
+    "- Before teaching a new domain, sketch prerequisite concepts, probe obvious basics, and start from the first weak or unknown node.",
     "- Valuable captures are not limited to tool names; capture reusable reasoning and hidden mechanisms.",
-    "- Use: python3 ~/.openclaw/skills/teach-me/scripts/teach_me.py context|configure|capture|style",
+    "- Use: python3 ~/.openclaw/skills/teach-me/scripts/teach_me.py context|configure|assess|capture|style",
   ];
   if (state.manual) {
     lines.push("- Manual teaching trigger detected: teach now and include gentle Socratic questions.");

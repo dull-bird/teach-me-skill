@@ -12,6 +12,12 @@ Do not turn every action into a lesson. Work normally during implementation, the
 at a natural phase boundary decide whether the work produced knowledge worth
 capturing.
 
+Teach Me must behave like a tutor with a growing learner model, not only a
+recap writer. When a new domain appears, build a small prerequisite ladder,
+estimate the user's current level from the conversation, and start teaching at
+the first weak or unknown node. Do not jump into mid-level mechanisms if basic
+terms are probably unclear.
+
 Use the local runtime in `scripts/teach_me.py` for configuration, Obsidian note
 creation, mastery state updates, and event logging. Hooks may inject a compact
 Teach Me context. If hooks are not installed and the task is development-related,
@@ -67,6 +73,58 @@ clearly high-value and distinct.
 
 Read `references/value-rubric.md` when you need sharper judgment.
 
+## Learner Modeling
+
+Before teaching a domain that may be unfamiliar, do a quick baseline scan:
+
+1. Name the domain, for example `mihomo proxy routing`.
+2. Sketch 5-10 prerequisite concepts from basic to advanced, for example
+   `proxy`, `proxy node`, `subscription provider`, `config.yaml`,
+   `proxy group`, `selector`, `url-test`, `fallback`.
+3. Infer what the user likely knows from their wording, prior notes, and
+   questions. Mark uncertain basics as `unknown` or `seen`, not `explained`.
+4. Ask 1-3 short calibration questions only when useful, or inline a short
+   "foundation sweep" before the main explanation.
+5. Teach from the first weak prerequisite upward, then connect it to the
+   specific bug or implementation detail.
+
+Use the runtime to update the knowledge tree when you learn the user's level:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py assess <<'JSON'
+{
+  "project": {"name": "project-name", "path": "/absolute/project/path"},
+  "domain": "mihomo proxy routing",
+  "summary": "The user asked what mysub.yaml contains, so basic proxy configuration terms need a foundation sweep.",
+  "nodes": [
+    {
+      "title": "mihomo",
+      "mastery": "seen",
+      "confidence": 0.4,
+      "prerequisites": ["proxy"],
+      "gaps": ["May not yet have a crisp model of what a local proxy daemon does."],
+      "probes": ["What does mihomo do between your browser and the remote server?"],
+      "evidence": ["Asked for basic definitions after fallback explanation."]
+    },
+    {
+      "title": "proxy node",
+      "mastery": "unknown",
+      "confidence": 0.25,
+      "prerequisites": ["proxy server"],
+      "probes": ["What fields would you expect a node to need: name, server, port, password, protocol?"]
+    }
+  ],
+  "questions": [
+    "Can you explain the difference between a proxy node and a proxy group?"
+  ]
+}
+JSON
+```
+
+The knowledge tree is allowed to grow even when no full concept note is worth
+writing. Use it to avoid repeating what the user already knows and to revisit
+weak prerequisites later.
+
 ## What To Capture
 
 Prefer concept-first notes. Capture these categories:
@@ -78,6 +136,8 @@ Prefer concept-first notes. Capture these categories:
   diffing, debouncing, parsing, normalization, idempotency.
 - Project maps: how components, modules, services, routes, build tools, and data
   flows relate inside the current project.
+- Learner-model updates: prerequisite concepts, current mastery, gaps,
+  misconceptions, probes, and evidence about the user's understanding.
 
 Tool names are signals, not the target. Do not capture `npm install` merely
 because a command ran. Capture the underlying idea if it matters.
@@ -137,6 +197,8 @@ python3 <teach-me-skill-dir>/scripts/teach_me.py capture <<'JSON'
       "title": "dependency graph",
       "importance": 8,
       "mastery": "seen",
+      "confidence": 0.7,
+      "prerequisites": ["module", "import statement"],
       "why_it_matters": "It explains how build tools know what must be rebuilt.",
       "first_principles": [
         "A program is split across files.",
@@ -147,6 +209,12 @@ python3 <teach-me-skill-dir>/scripts/teach_me.py capture <<'JSON'
       "relationships": [
         {"target": "Vite", "relation": "uses"},
         {"target": "incremental rebuild", "relation": "enables"}
+      ],
+      "gaps": [
+        "The user may not yet connect imports to graph edges."
+      ],
+      "probes": [
+        "What changes if a file has no importers?"
       ],
       "socratic_questions": [
         "If one imported file changes, how could a build tool avoid rebuilding everything?"

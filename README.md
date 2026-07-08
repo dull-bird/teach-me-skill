@@ -8,6 +8,10 @@ It is intentionally conservative: hooks inject compact learning context and log
 lightweight tool events, while the agent decides at natural phase boundaries
 whether there is knowledge worth capturing.
 
+Teach Me also keeps a learner model. Before teaching a new domain, the agent
+should sketch the prerequisite concept tree, probe obvious basics, and start at
+the first weak or unknown node instead of jumping into mid-level details.
+
 ## Install
 
 ```bash
@@ -32,6 +36,20 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
 ```
 
 The default vault path is `~/.teach_me_skill/vault`.
+
+## Learner Model
+
+Use `assess` to update the knowledge tree without writing a full note:
+
+```bash
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py assess < assessment.json
+```
+
+The generated profile lives at:
+
+```text
+~/.teach_me_skill/vault/07_Learning_Profile/Knowledge_Tree.md
+```
 
 ## GitHub Pages
 

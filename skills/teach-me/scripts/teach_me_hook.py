@@ -178,10 +178,12 @@ def build_additional_context(prompt: str, manual: bool) -> str:
         f"- installed skill dir: {skill_dir}",
         "- use this skill only for development learning or explicit teaching requests.",
         "- valuable captures include concepts, algorithmic ideas, architecture/data-flow models, and project maps; not just tool names.",
+        "- when teaching a new domain, first map prerequisite concepts and probe the user's baseline before explaining mid-level mechanisms.",
+        "- update the knowledge tree with `teach_me.py assess` when you learn what the user does or does not understand.",
         "- final response should stay concise unless the user explicitly asked for teaching now.",
     ]
     if manual:
-        lines.append("- manual teaching trigger detected: teach now and include gentle Socratic questions.")
+        lines.append("- manual teaching trigger detected: teach now, start with a quick baseline scan, then include gentle Socratic questions.")
     return "\n".join(lines)
 
 

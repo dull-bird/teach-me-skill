@@ -38,6 +38,7 @@ ITEM_FOLDERS = {
     "algorithmic_idea": "03_Algorithmic_Ideas",
     "project_map": "04_Project_Maps",
 }
+PROFILE_FOLDER = "07_Learning_Profile"
 
 
 def local_now() -> datetime:
@@ -120,8 +121,10 @@ def default_state() -> dict[str, Any]:
     return {
         "version": 1,
         "concepts": {},
+        "knowledge_tree": {},
         "graph_edges": [],
         "captures": [],
+        "assessments": [],
     }
 
 
@@ -181,8 +184,10 @@ def read_state(config: dict[str, Any]) -> dict[str, Any]:
     state = read_json(state_path(config), default_state())
     state.setdefault("version", 1)
     state.setdefault("concepts", {})
+    state.setdefault("knowledge_tree", {})
     state.setdefault("graph_edges", [])
     state.setdefault("captures", [])
+    state.setdefault("assessments", [])
     return state
 
 
@@ -203,6 +208,7 @@ def ensure_vault(config: dict[str, Any]) -> None:
         vault / "04_Project_Maps",
         vault / "05_Socratic_Questions",
         vault / "06_Reviews",
+        vault / PROFILE_FOLDER,
     ]
     for directory in dirs:
         directory.mkdir(parents=True, exist_ok=True)
@@ -248,6 +254,7 @@ def ensure_vault(config: dict[str, Any]) -> None:
                     "- [[04_Project_Maps]]",
                     "- [[05_Socratic_Questions]]",
                     "- [[06_Reviews]]",
+                    f"- [[{PROFILE_FOLDER}/Knowledge_Tree]]",
                     "",
                 ]
             ),
@@ -258,6 +265,13 @@ def ensure_vault(config: dict[str, Any]) -> None:
     if not graph.exists():
         graph.write_text(
             "# Knowledge Graph\n\nNo captured relationships yet.\n",
+            encoding="utf-8",
+        )
+
+    tree = vault / PROFILE_FOLDER / "Knowledge_Tree.md"
+    if not tree.exists():
+        tree.write_text(
+            "# Knowledge Tree\n\nNo assessed concepts yet.\n",
             encoding="utf-8",
         )
 
@@ -306,6 +320,7 @@ def render_note(item: dict[str, Any], payload: dict[str, Any], existing: bool) -
     phase = str(payload.get("phase", "")).strip()
     one_line = str(item.get("one_line", "") or item.get("why_it_matters", "")).strip()
     first_principles = listify(item.get("first_principles"))
+    prerequisites = listify(item.get("prerequisites"))
     context = str(item.get("current_project_context", "")).strip()
     relationships = normalize_relationships(item.get("relationships"))
     questions = listify(item.get("socratic_questions"))
@@ -349,6 +364,10 @@ def render_note(item: dict[str, Any], payload: dict[str, Any], existing: bool) -
         lines.extend(["### First Principles", ""])
         lines.extend(f"- {entry}" for entry in first_principles)
         lines.append("")
+    if prerequisites:
+        lines.extend(["### Prerequisites", ""])
+        lines.extend(f"- {wikilink(entry)}" for entry in prerequisites)
+        lines.append("")
     if context:
         lines.extend(["### In This Project", "", context, ""])
     if relationships:
@@ -388,6 +407,215 @@ def add_graph_edges(state: dict[str, Any], source: str, relationships: list[dict
             existing.add(key)
 
 
+def add_graph_edge(state: dict[str, Any], source: str, relation: str, target: str) -> None:
+    source = source.strip()
+    target = target.strip()
+    relation = relation.strip() or "related"
+    if not source or not target:
+        return
+    add_graph_edges(state, source, [{"relation": relation, "target": target}])
+
+
+def clamp_float(value: Any, default: float = 0.5) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    return max(0.0, min(1.0, number))
+
+
+def normalize_evidence(raw: Any, fallback: dict[str, Any]) -> list[dict[str, Any]]:
+    evidence: list[dict[str, Any]] = []
+    if isinstance(raw, list):
+        for entry in raw:
+            if isinstance(entry, dict):
+                summary = str(entry.get("summary", "")).strip()
+                kind = str(entry.get("type", "observation")).strip() or "observation"
+                if summary:
+                    evidence.append(
+                        {
+                            "type": kind,
+                            "summary": summary,
+                            "timestamp": str(entry.get("timestamp") or now_iso()),
+                        }
+                    )
+            else:
+                text = str(entry).strip()
+                if text:
+                    evidence.append(
+                        {
+                            "type": "observation",
+                            "summary": text,
+                            "timestamp": now_iso(),
+                        }
+                    )
+    elif isinstance(raw, str) and raw.strip():
+        evidence.append(
+            {"type": "observation", "summary": raw.strip(), "timestamp": now_iso()}
+        )
+    if not evidence and fallback.get("summary"):
+        evidence.append(
+            {
+                "type": str(fallback.get("type", "observation")),
+                "summary": str(fallback["summary"]),
+                "timestamp": now_iso(),
+            }
+        )
+    return evidence
+
+
+def update_knowledge_tree_node(
+    state: dict[str, Any],
+    title: str,
+    data: dict[str, Any],
+    *,
+    project_name: str = "",
+    source: str = "capture",
+    note: str = "",
+) -> None:
+    title = title.strip()
+    if not title:
+        return
+    tree = state.setdefault("knowledge_tree", {})
+    current = tree.get(title, {})
+    mastery = str(data.get("mastery") or data.get("assessed_mastery") or "unknown")
+    if mastery not in MASTERY_ORDER:
+        mastery = "unknown"
+    merged_mastery = mastery_max(str(current.get("mastery", "unknown")), mastery)
+    prerequisites = sorted(
+        set(listify(current.get("prerequisites")) + listify(data.get("prerequisites")))
+    )
+    gaps = sorted(set(listify(current.get("gaps")) + listify(data.get("gaps"))))
+    probes = sorted(set(listify(current.get("probes")) + listify(data.get("probes"))))
+    misconceptions = sorted(
+        set(listify(current.get("misconceptions")) + listify(data.get("misconceptions")))
+    )
+    evidence = list(current.get("evidence", []))
+    evidence.extend(
+        normalize_evidence(
+            data.get("evidence"),
+            {
+                "type": source,
+                "summary": data.get("why_it_matters")
+                or data.get("one_line")
+                or data.get("summary")
+                or "",
+            },
+        )
+    )
+    node = {
+        **current,
+        "type": str(data.get("type") or current.get("type") or "concept"),
+        "mastery": merged_mastery,
+        "score": MASTERY_SCORE.get(merged_mastery, 0),
+        "confidence": clamp_float(data.get("confidence", current.get("confidence", 0.5))),
+        "prerequisites": prerequisites,
+        "children": sorted(set(listify(current.get("children")))),
+        "gaps": gaps,
+        "probes": probes,
+        "misconceptions": misconceptions,
+        "evidence": evidence[-10:],
+        "projects": merge_project(current.get("projects", []), project_name),
+        "last_assessed": now_iso(),
+        "needs_probe": bool(data.get("needs_probe", merged_mastery in {"unknown", "seen"})),
+    }
+    if note:
+        node["note"] = note
+    tree[title] = node
+
+    for prereq in prerequisites:
+        prereq_current = tree.get(prereq, {})
+        prereq_mastery = str(prereq_current.get("mastery", "unknown"))
+        if prereq_mastery not in MASTERY_ORDER:
+            prereq_mastery = "unknown"
+        tree[prereq] = {
+            **prereq_current,
+            "type": prereq_current.get("type", "concept"),
+            "mastery": prereq_mastery,
+            "score": MASTERY_SCORE.get(prereq_mastery, 0),
+            "confidence": clamp_float(prereq_current.get("confidence", 0.25)),
+            "prerequisites": listify(prereq_current.get("prerequisites")),
+            "children": sorted(set(listify(prereq_current.get("children")) + [title])),
+            "gaps": listify(prereq_current.get("gaps")),
+            "probes": listify(prereq_current.get("probes")),
+            "misconceptions": listify(prereq_current.get("misconceptions")),
+            "evidence": prereq_current.get("evidence", [])[-10:],
+            "projects": merge_project(prereq_current.get("projects", []), project_name),
+            "last_assessed": prereq_current.get("last_assessed", now_iso()),
+            "needs_probe": bool(prereq_current.get("needs_probe", True)),
+        }
+        add_graph_edge(state, prereq, "prerequisite_for", title)
+
+
+def rewrite_knowledge_tree(config: dict[str, Any], state: dict[str, Any]) -> None:
+    tree = state.get("knowledge_tree", {})
+    lines = ["# Knowledge Tree", ""]
+    if not tree:
+        lines.append("No assessed concepts yet.")
+    else:
+        lines.extend(
+            [
+                "This file is generated from Teach Me's learning state. It tracks observed mastery, prerequisite gaps, and probe questions.",
+                "",
+                "## Weak Or Unknown Nodes",
+                "",
+            ]
+        )
+        weak = sorted(
+            tree.items(),
+            key=lambda pair: (
+                MASTERY_SCORE.get(str(pair[1].get("mastery", "unknown")), 0),
+                -clamp_float(pair[1].get("confidence", 0.0), 0.0),
+                pair[0].lower(),
+            ),
+        )
+        for title, node in weak[:20]:
+            mastery = node.get("mastery", "unknown")
+            confidence = clamp_float(node.get("confidence", 0.0), 0.0)
+            needs_probe = "needs probe" if node.get("needs_probe") else "observed"
+            lines.append(
+                f"- {wikilink(title)} - {mastery}, confidence {confidence:.2f}, {needs_probe}"
+            )
+
+        lines.extend(["", "## Nodes", ""])
+        for title in sorted(tree):
+            node = tree[title]
+            lines.extend(
+                [
+                    f"### {title}",
+                    "",
+                    f"- Mastery: {node.get('mastery', 'unknown')}",
+                    f"- Confidence: {clamp_float(node.get('confidence', 0.0), 0.0):.2f}",
+                    f"- Needs probe: {str(bool(node.get('needs_probe'))).lower()}",
+                ]
+            )
+            prereqs = listify(node.get("prerequisites"))
+            children = listify(node.get("children"))
+            gaps = listify(node.get("gaps"))
+            probes = listify(node.get("probes"))
+            if prereqs:
+                lines.append("- Prerequisites: " + ", ".join(wikilink(item) for item in prereqs))
+            if children:
+                lines.append("- Children: " + ", ".join(wikilink(item) for item in children))
+            if gaps:
+                lines.append("- Gaps: " + "; ".join(gaps))
+            if probes:
+                lines.append("- Probe questions: " + "; ".join(probes))
+            evidence = node.get("evidence", [])[-3:]
+            if evidence:
+                lines.append("- Evidence:")
+                for entry in evidence:
+                    stamp = str(entry.get("timestamp", ""))[:10]
+                    summary = str(entry.get("summary", "")).strip()
+                    if summary:
+                        lines.append(f"  - {stamp}: {summary}")
+            lines.append("")
+    (vault_path(config) / PROFILE_FOLDER / "Knowledge_Tree.md").write_text(
+        "\n".join(lines).rstrip() + "\n",
+        encoding="utf-8",
+    )
+
+
 def rewrite_index(config: dict[str, Any], state: dict[str, Any]) -> None:
     vault = vault_path(config)
     concepts = state.get("concepts", {})
@@ -420,6 +648,7 @@ def rewrite_index(config: dict[str, Any], state: dict[str, Any]) -> None:
             lines.append(f"- {wikilink(title)} - {mastery}")
     else:
         lines.append("- No concepts yet.")
+    lines.extend(["", "## Learning Profile", "", f"- [[{PROFILE_FOLDER}/Knowledge_Tree]]"])
     lines.append("")
     (vault / "00_Index.md").write_text("\n".join(lines), encoding="utf-8")
 
@@ -481,6 +710,7 @@ def cmd_configure(args: argparse.Namespace) -> int:
     style = read_style(config)
     style["language"] = config.get("language", "auto")
     write_json(style_path(config), style)
+    rewrite_knowledge_tree(config, read_state(config))
 
     print(f"Teach Me configured. Vault: {vault_path(config)}")
     return 0
@@ -521,11 +751,21 @@ def format_context(config: dict[str, Any]) -> str:
         key=lambda pair: pair[1].get("last_seen", ""),
         reverse=True,
     )[:8]
+    tree = state.get("knowledge_tree", {})
+    weak_nodes = sorted(
+        tree.items(),
+        key=lambda pair: (
+            MASTERY_SCORE.get(str(pair[1].get("mastery", "unknown")), 0),
+            pair[1].get("last_assessed", ""),
+        ),
+    )[:8]
 
     lines.extend(
         [
             "- teaching cadence: do not interrupt implementation; capture 1-3 high-value concepts at phase boundaries.",
+            "- teaching baseline: before teaching a new domain, sketch a prerequisite ladder, probe obvious basics, and start at the first weak node.",
             "- capture command: python3 <teach-me-skill-dir>/scripts/teach_me.py capture",
+            "- assessment command: python3 <teach-me-skill-dir>/scripts/teach_me.py assess",
             "- style: analogy={analogy}, socratic={socratic}, code={code}, first_principles={fp}, verbosity={verbosity}".format(
                 analogy=style.get("analogy_level", "medium"),
                 socratic=style.get("socratic_level", "gentle"),
@@ -537,6 +777,8 @@ def format_context(config: dict[str, Any]) -> str:
     )
     if weak:
         lines.append("- weaker concepts: " + ", ".join(f"{name}({data.get('mastery', 'seen')})" for name, data in weak))
+    if weak_nodes:
+        lines.append("- knowledge-tree weak nodes: " + ", ".join(f"{name}({data.get('mastery', 'unknown')})" for name, data in weak_nodes))
     if recent:
         lines.append("- recent concepts: " + ", ".join(f"{name}({data.get('mastery', 'seen')})" for name, data in recent))
     return "\n".join(lines)
@@ -561,8 +803,78 @@ def cmd_status(args: argparse.Namespace) -> int:
         ensure_vault(config)
         state = read_state(config)
         data["concept_count"] = len(state.get("concepts", {}))
+        data["knowledge_tree_count"] = len(state.get("knowledge_tree", {}))
         data["capture_count"] = len(state.get("captures", []))
+        data["assessment_count"] = len(state.get("assessments", []))
     print(json.dumps(data, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_assess(args: argparse.Namespace) -> int:
+    config = load_config(create=True)
+    if not config.get("initialized"):
+        print(
+            "Teach Me is not initialized. Ask the user to confirm the vault path "
+            "and language, then run `teach_me.py configure`.",
+            file=sys.stderr,
+        )
+        return 2
+    ensure_vault(config)
+    try:
+        payload = json.load(sys.stdin)
+    except (json.JSONDecodeError, ValueError) as exc:
+        print(f"Invalid assessment JSON: {exc}", file=sys.stderr)
+        return 1
+
+    nodes = payload.get("nodes", [])
+    if not isinstance(nodes, list) or not nodes:
+        print("No assessment nodes provided.", file=sys.stderr)
+        return 1
+
+    state = read_state(config)
+    project = payload.get("project") or {}
+    project_name = str(project.get("name", "")).strip()
+    updated: list[str] = []
+    for raw_node in nodes:
+        if not isinstance(raw_node, dict):
+            continue
+        title = str(raw_node.get("title", "")).strip()
+        if not title:
+            continue
+        update_knowledge_tree_node(
+            state,
+            title,
+            raw_node,
+            project_name=project_name,
+            source="assessment",
+        )
+        updated.append(title)
+
+    if not updated:
+        print("No valid assessment nodes provided.", file=sys.stderr)
+        return 1
+
+    assessment = {
+        "timestamp": now_iso(),
+        "project": project,
+        "domain": payload.get("domain", ""),
+        "summary": payload.get("summary", ""),
+        "nodes": updated,
+        "questions": listify(payload.get("questions")),
+    }
+    state.setdefault("assessments", []).append(assessment)
+    write_json(state_path(config), state)
+    rewrite_knowledge_tree(config, state)
+    rewrite_index(config, state)
+    rewrite_graph(config, state)
+    append_jsonl(events_path(config), {"type": "assessment", **assessment})
+
+    output = {
+        "assessed": updated,
+        "vault": str(vault_path(config)),
+        "knowledge_tree": str(vault_path(config) / PROFILE_FOLDER / "Knowledge_Tree.md"),
+    }
+    print(json.dumps(output, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -685,6 +997,14 @@ def cmd_capture(args: argparse.Namespace) -> int:
         }
         relationships = normalize_relationships(raw_item.get("relationships"))
         add_graph_edges(state, title, relationships)
+        update_knowledge_tree_node(
+            state,
+            title,
+            raw_item,
+            project_name=project_name,
+            source="capture",
+            note=str(path.relative_to(vault_path(config))),
+        )
         captured_titles.append(title)
 
     if not captured_titles:
@@ -703,6 +1023,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
     write_json(state_path(config), state)
     rewrite_index(config, state)
     rewrite_graph(config, state)
+    rewrite_knowledge_tree(config, state)
     append_jsonl(events_path(config), {"type": "capture", **capture})
 
     output = {
@@ -728,6 +1049,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = sub.add_parser("status", help="Print runtime status JSON")
     status.set_defaults(func=cmd_status)
+
+    assess = sub.add_parser("assess", help="Update the user's knowledge tree from JSON stdin")
+    assess.set_defaults(func=cmd_assess)
 
     style = sub.add_parser("style", help="Update teaching style preferences")
     style.add_argument("--analogy", choices=["low", "medium", "high"])

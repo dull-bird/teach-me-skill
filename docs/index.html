@@ -398,7 +398,7 @@ pre{
     <div>
       <p class="eyebrow">Agent Skill for development learning</p>
       <h1>Teach Me</h1>
-      <p class="lede">把真实开发过程，沉淀成可复习的 Obsidian 知识笔记。它不打断实现，只在有价值的阶段边界捕获概念、算法思路、架构图谱和复盘问题。</p>
+      <p class="lede">把真实开发过程，沉淀成可复习的 Obsidian 知识笔记。它会维护一棵动态知识树，先扫基础概念和能力边界，再在有价值的阶段捕获概念、算法思路、架构图谱和复盘问题。</p>
       <div class="cta">
         <a class="btn primary" href="#install">安装 Teach Me</a>
         <a class="btn" href="#hooks">查看 hook 机制</a>
@@ -427,8 +427,8 @@ Teach Me learning context:
       <p class="section-sub">Teach Me 把 agent 的开发上下文和一个本地学习运行时连起来。它的目标不是制造更多解释，而是把值得复用的工程判断写成稳定笔记。</p>
       <div class="grid">
         <article class="card">
-          <h3>少打扰</h3>
-          <p>实现时正常推进。只有用户明确要求教学，或一个开发阶段自然结束时，才判断是否捕获学习笔记。</p>
+          <h3>先校准</h3>
+          <p>遇到新领域时先扫 prerequisite ladder，判断基础概念是 unknown、seen 还是 explained，再决定从哪里讲起。</p>
         </article>
         <article class="card">
           <h3>抓高价值</h3>
@@ -436,7 +436,7 @@ Teach Me learning context:
         </article>
         <article class="card">
           <h3>能复习</h3>
-          <p>输出到 Obsidian：概念、算法思路、项目地图、wikilinks、知识图谱、复习间隔和 Socratic questions。</p>
+          <p>输出到 Obsidian：概念、算法思路、项目地图、wikilinks、知识图谱、动态知识树、复习间隔和 Socratic questions。</p>
         </article>
       </div>
     </div>
@@ -445,13 +445,13 @@ Teach Me learning context:
   <section id="workflow">
     <div class="wrap">
       <p class="kicker">Workflow</p>
-      <h2>Hook 负责轻量上下文，Skill 负责教学判断，Runtime 负责落盘。</h2>
-      <p class="section-sub">这种分层让行为更可控：hook 不替模型做学习决策，只告诉 agent 什么时候应该使用 Teach Me，以及本地 runtime 在哪里。</p>
+      <h2>Hook 负责轻量上下文，Skill 负责教学判断，Runtime 负责知识树和落盘。</h2>
+      <p class="section-sub">这种分层让行为更可控：hook 不替模型做学习决策，只告诉 agent 什么时候应该使用 Teach Me、本地 runtime 在哪里、哪些基础节点还弱。</p>
       <div class="steps">
         <div class="step"><strong>1. 识别</strong><span>开发类提示词或手动触发词进入 hook。</span></div>
-        <div class="step"><strong>2. 注入</strong><span>向 agent 提供紧凑的 Teach Me context。</span></div>
+        <div class="step"><strong>2. 校准</strong><span>为新领域建立基础概念树并探测弱点。</span></div>
         <div class="step"><strong>3. 判断</strong><span>阶段结束时按 rubric 选 1 到 3 个高价值知识点。</span></div>
-        <div class="step"><strong>4. 沉淀</strong><span>runtime 写入 Obsidian vault 和学习状态。</span></div>
+        <div class="step"><strong>4. 沉淀</strong><span>runtime 写入 Obsidian vault、学习状态和知识树。</span></div>
       </div>
     </div>
   </section>
@@ -571,6 +571,8 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 ├── 04_Project_Maps/
 ├── 05_Socratic_Questions/
 ├── 06_Reviews/
+├── 07_Learning_Profile/
+│   └── Knowledge_Tree.md
 └── .teach-me/
     ├── learning-state.json
     ├── style-profile.json

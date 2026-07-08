@@ -22,6 +22,8 @@ vault's `.teach-me/` directory.
       "aliases": ["module graph"],
       "importance": 8,
       "mastery": "seen",
+      "confidence": 0.7,
+      "prerequisites": ["module", "import statement"],
       "why_it_matters": "It explains fast rebuilds in modern frontend tools.",
       "one_line": "A graph of which modules depend on which other modules.",
       "first_principles": [
@@ -33,6 +35,12 @@ vault's `.teach-me/` directory.
       "relationships": [
         {"target": "Vite", "relation": "uses"},
         {"target": "incremental rebuild", "relation": "enables"}
+      ],
+      "gaps": ["The user may not yet connect import statements to graph edges."],
+      "probes": ["What would happen if a changed file had no importers?"],
+      "misconceptions": ["A dependency graph is not limited to package dependencies."],
+      "evidence": [
+        {"type": "observation", "summary": "The user asked why only one changed file can trigger a rebuild."}
       ],
       "socratic_questions": [
         "What would be slower if the tool did not remember import relationships?"
@@ -53,6 +61,48 @@ vault's `.teach-me/` directory.
 
 Unknown types are treated as `concept`.
 
+## Assessment Payload
+
+Use `assess` when you learned something about the user's level but do not need
+to write a full note yet. It updates `.teach-me/learning-state.json` and the
+generated `07_Learning_Profile/Knowledge_Tree.md`.
+
+```json
+{
+  "project": {
+    "name": "teach-me-skill",
+    "path": "/absolute/path/to/project"
+  },
+  "domain": "mihomo proxy routing",
+  "summary": "The user asked basic questions after a fallback explanation, so the proxy stack needs a foundation sweep.",
+  "nodes": [
+    {
+      "title": "mihomo",
+      "type": "concept",
+      "mastery": "seen",
+      "confidence": 0.4,
+      "prerequisites": ["proxy"],
+      "gaps": ["May not have a crisp model of a local proxy daemon."],
+      "probes": ["What does mihomo do between your browser and the remote server?"],
+      "evidence": [
+        {"type": "question", "summary": "Asked what mysub.yaml contains."}
+      ],
+      "needs_probe": true
+    },
+    {
+      "title": "proxy node",
+      "mastery": "unknown",
+      "confidence": 0.25,
+      "prerequisites": ["proxy server"],
+      "probes": ["Which fields does a node need to connect to a server?"]
+    }
+  ],
+  "questions": [
+    "Can the user distinguish a proxy node from a proxy group?"
+  ]
+}
+```
+
 ## Learning State
 
 ```json
@@ -71,9 +121,33 @@ Unknown types are treated as `concept`.
       "note": "02_Concepts/dependency-graph.md"
     }
   },
+  "knowledge_tree": {
+    "proxy node": {
+      "type": "concept",
+      "mastery": "unknown",
+      "score": 0,
+      "confidence": 0.25,
+      "prerequisites": ["proxy server"],
+      "children": ["proxy group"],
+      "gaps": ["The user has not yet defined what a node is."],
+      "probes": ["Which fields does a node need to connect to a server?"],
+      "misconceptions": [],
+      "evidence": [
+        {
+          "type": "question",
+          "summary": "Asked what mysub.yaml contains.",
+          "timestamp": "2026-07-08T20:10:00+08:00"
+        }
+      ],
+      "projects": ["mihomo"],
+      "last_assessed": "2026-07-08T20:10:00+08:00",
+      "needs_probe": true
+    }
+  },
   "graph_edges": [
     {"source": "dependency graph", "relation": "enables", "target": "incremental rebuild"}
-  ]
+  ],
+  "assessments": []
 }
 ```
 
