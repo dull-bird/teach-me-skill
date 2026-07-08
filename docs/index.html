@@ -6,6 +6,7 @@
 <title>Teach Me - Development Learning Companion</title>
 <meta name="description" content="Teach Me 是给 Claude Code、Codex、OpenClaw、Kimi Code CLI 使用的 Agent Skill，把真实开发过程沉淀成 Obsidian 学习笔记和知识图谱。">
 <meta name="theme-color" content="#fbfaf7">
+<link rel="icon" type="image/webp" href="assets/seedling_1f331.webp">
 <style>
 @property --accent-h{syntax:"<number>";inherits:true;initial-value:154}
 :root{
@@ -94,17 +95,18 @@ code{font-family:var(--mono);font-size:.92em}
   letter-spacing:0;
 }
 .mark{
-  width:31px;
-  height:31px;
-  border:1px solid var(--line-strong);
-  border-radius:8px;
-  background:var(--card);
-  color:var(--accent-ink);
-  display:grid;
-  place-items:center;
-  font-family:var(--serif);
-  font-size:20px;
-  line-height:1;
+width:31px;
+height:31px;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+flex:0 0 auto;
+}
+.mark img{
+width:31px;
+height:31px;
+display:block;
+object-fit:contain;
 }
 .nav-links{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .nav-links a{
@@ -382,7 +384,7 @@ pre{
 <a class="skip" href="#main">跳到正文</a>
 <header class="site-header">
   <nav class="nav" aria-label="主导航">
-    <a class="brand" href="#"><span class="mark">T</span><span>Teach Me</span></a>
+    <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="assets/seedling_1f331.webp" alt=""></span><span>Teach Me</span></a>
     <div class="nav-links">
       <a href="#why">为什么</a>
       <a href="#workflow">工作流</a>

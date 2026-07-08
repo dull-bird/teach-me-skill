@@ -486,7 +486,7 @@ def build_stop_reason(config: dict[str, Any], assessment: dict[str, Any]) -> str
     skill_dir = Path(__file__).resolve().parent.parent
     evidence = evidence_summary(assessment)
     if not config.get("initialized"):
-        return f"""🌱 Teach Me: detected a learning-worthy phase at turn end.
+        return f"""🌱 detected a learning-worthy phase at turn end.
 
 Before writing any learning notes, ask the user to confirm:
 - vault path, default `~/.teach_me_skill/vault`
@@ -494,13 +494,13 @@ Before writing any learning notes, ask the user to confirm:
 - whether to enable Git sync; default off unless the user provides a remote
 
 Do not write notes yet. Keep the confirmation concise. Prefix the user-visible
-message with `🌱 Teach Me:`. Detection evidence:
+message with `🌱`. Detection evidence:
 {evidence}
 
 Teach Me skill dir: {skill_dir}
 """
 
-    return f"""🌱 Teach Me: detected a learning-worthy phase at turn end.
+    return f"""🌱 detected a learning-worthy phase at turn end.
 
 Continue with a short Teach Me review before the final response:
 1. Decide whether this phase deserves 1-3 durable learning notes.
@@ -508,7 +508,7 @@ Continue with a short Teach Me review before the final response:
 3. If useful, run `python3 {skill_dir}/scripts/teach_me.py capture` or `assess` with focused JSON.
 4. If no note is actually worth writing after inspection, say that briefly and finish normally.
 5. Ask at most one optional quick probe only when it would improve the learner model.
-6. Prefix any user-visible Teach Me review, note-capture summary, or setup confirmation with `🌱 Teach Me:`.
+6. Prefix any user-visible Teach Me review, note-capture summary, or setup confirmation with `🌱`.
 
 Detection evidence:
 {evidence}
@@ -545,7 +545,7 @@ def handle_stop(payload: dict[str, Any]) -> int:
     output = {
         "decision": "block",
         "reason": reason,
-        "systemMessage": "🌱 Teach Me phase review",
+        "systemMessage": "🌱",
     }
     print(json.dumps(output, ensure_ascii=False))
     return 0
