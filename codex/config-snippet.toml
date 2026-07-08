@@ -1,4 +1,4 @@
-# Append to ~/.codex/config.toml and merge with existing content.
+# Append to ~/.codex/config.toml and merge existing content.
 
 [features]
 hooks = true
@@ -9,7 +9,19 @@ type = "command"
 command = "python3 ~/.codex/skills/teach-me/scripts/teach_me_hook.py"
 
 [[hooks.PreToolUse]]
-matcher = "Bash"
+matcher = "*"
 [[hooks.PreToolUse.hooks]]
+type = "command"
+command = "python3 ~/.codex/skills/teach-me/scripts/teach_me_hook.py"
+
+[[hooks.PostToolUse]]
+matcher = "*"
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = "python3 ~/.codex/skills/teach-me/scripts/teach_me_hook.py"
+
+[[hooks.Stop]]
+matcher = "*"
+[[hooks.Stop.hooks]]
 type = "command"
 command = "python3 ~/.codex/skills/teach-me/scripts/teach_me_hook.py"

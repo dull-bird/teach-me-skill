@@ -15,6 +15,7 @@ HOOK_COMMAND = "python3 " + os.path.expanduser(
     "~/.codex/skills/teach-me/scripts/teach_me_hook.py"
 )
 MARKER = "teach-me/scripts/teach_me_hook.py"
+
 HOOK_BLOCK = f"""
 [[hooks.UserPromptSubmit]]
 [[hooks.UserPromptSubmit.hooks]]
@@ -22,8 +23,20 @@ type = "command"
 command = "{HOOK_COMMAND}"
 
 [[hooks.PreToolUse]]
-matcher = "Bash"
+matcher = "*"
 [[hooks.PreToolUse.hooks]]
+type = "command"
+command = "{HOOK_COMMAND}"
+
+[[hooks.PostToolUse]]
+matcher = "*"
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = "{HOOK_COMMAND}"
+
+[[hooks.Stop]]
+matcher = "*"
+[[hooks.Stop.hooks]]
 type = "command"
 command = "{HOOK_COMMAND}"
 """
@@ -33,7 +46,7 @@ def feature_section_span(text: str) -> tuple[int, int] | None:
     match = re.search(r"^\[features\]\s*$", text, re.MULTILINE)
     if not match:
         return None
-    next_section = re.search(r"^\[[^\]]+\]\s*$", text[match.end():], re.MULTILINE)
+    next_section = re.search(r"^\[[^\]]+\]\s*$", text[match.end() :], re.MULTILINE)
     end = match.end() + next_section.start() if next_section else len(text)
     return match.start(), end
 
@@ -53,21 +66,48 @@ def ensure_hooks_feature(text: str) -> str:
     return text[:start] + section + text[end:]
 
 
+def is_main_hook_table(line: str) -> bool:
+    return bool(re.match(r"^\s*\[\[hooks\.[^.]+]]\s*$", line))
+
+
+def is_top_table(line: str) -> bool:
+    return bool(re.match(r"^\s*\[[^\[].*]\s*$", line))
+
+
+def remove_existing_teach_me_hooks(text: str) -> str:
+    lines = text.splitlines()
+    output: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if is_main_hook_table(line):
+            end = index + 1
+            while end < len(lines):
+                if is_main_hook_table(lines[end]) or is_top_table(lines[end]):
+                    break
+                end += 1
+            block = lines[index:end]
+            if any(MARKER in item for item in block):
+                index = end
+                continue
+            output.extend(block)
+            index = end
+            continue
+        output.append(line)
+        index += 1
+    result = "\n".join(output)
+    return result + ("\n" if text.endswith("\n") and result else "")
+
+
 def install(text: str) -> str:
-    text = ensure_hooks_feature(text)
-    if MARKER in text:
-        return text
+    text = ensure_hooks_feature(remove_existing_teach_me_hooks(text))
     if not text.endswith("\n"):
         text += "\n"
-    return text + HOOK_BLOCK
+    return text.rstrip() + "\n" + HOOK_BLOCK
 
 
 def uninstall(text: str) -> str:
-    if MARKER not in text:
-        return text
-    # Remove only exact blocks produced by this installer.
-    pattern = re.escape(HOOK_BLOCK.strip()).replace(re.escape(HOOK_COMMAND), r".*teach-me/scripts/teach_me_hook\.py")
-    return re.sub(r"\n*" + pattern + r"\n*", "\n", text, flags=re.DOTALL)
+    return remove_existing_teach_me_hooks(text)
 
 
 def main() -> int:
@@ -83,7 +123,7 @@ def main() -> int:
     action = "Removed" if args.uninstall else "Installed"
     print(f"{action} Teach Me hooks in {CONFIG_PATH}")
     if not args.uninstall:
-        print(f"  UserPromptSubmit + PreToolUse(Bash) -> {HOOK_COMMAND}")
+        print(f"  UserPromptSubmit + PreToolUse(*) + PostToolUse(*) + Stop(*) -> {HOOK_COMMAND}")
         print("  Codex may ask for hook trust approval on first use.")
     return 0
 

@@ -20,8 +20,9 @@ terms are probably unclear.
 
 Use the local runtime in `scripts/teach_me.py` for configuration, Obsidian note
 creation, mastery state updates, and event logging. Hooks may inject a compact
-Teach Me context. If hooks are not installed and the task is development-related,
-run:
+Teach Me context and may request one short Stop-hook review pass after
+learning-worthy tool work. If hooks are not installed and the task is
+development-related, run:
 
 ```bash
 python3 skills/teach-me/scripts/teach_me.py context
@@ -63,7 +64,10 @@ If the user wants local-only versioning without a remote, use
 
 ## When To Capture
 
-At the end of a meaningful phase, score the work with this rubric:
+At the end of a meaningful phase, score the work with this rubric. Hook-triggered
+reviews may happen even when the user's prompt did not include coding or teaching
+keywords, because the agent's actual tool activity can reveal useful learning
+material.
 
 - Novelty: the user is unlikely to already understand it.
 - Transferability: it helps with future projects, not only this file.
