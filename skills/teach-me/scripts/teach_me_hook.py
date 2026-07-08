@@ -515,8 +515,8 @@ Detection evidence:
 """
 
 
-def build_stop_reason() -> str:
-    return "🌱"
+def build_stop_reason(config: dict[str, Any], assessment: dict[str, Any]) -> str:
+    return "🌱 " + build_stop_review_prompt(config, assessment)
 
 
 def handle_stop(payload: dict[str, Any]) -> int:
@@ -548,7 +548,7 @@ def handle_stop(payload: dict[str, Any]) -> int:
     if not assessment["should_block"]:
         return 0
 
-    reason = build_stop_reason()
+    reason = build_stop_reason(config, assessment)
     output = {
         "decision": "block",
         "reason": reason,
