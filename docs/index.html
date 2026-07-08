@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Teach Me - Development Learning Companion</title>
+<meta name="description" content="Teach Me 是给 Claude Code、Codex、OpenClaw、Kimi Code CLI 使用的 Agent Skill，把真实开发过程沉淀成 Obsidian 学习笔记和知识图谱。">
+<meta name="theme-color" content="#fbfaf7">
+<style>
+@property --accent-h{syntax:"<number>";inherits:true;initial-value:154}
+:root{
+  --paper:#fbfaf7;
+  --paper-2:#f2f0ea;
+  --card:#fff;
+  --ink:#1b1a18;
+  --body:#4a4742;
+  --muted:#756f66;
+  --faint:#b7b1a5;
+  --line:#e2ddd2;
+  --line-strong:#d2cabd;
+  --accent-h:154;
+  --accent:oklch(55% .105 var(--accent-h));
+  --accent-ink:oklch(42% .105 var(--accent-h));
+  --accent-soft:oklch(94% .028 var(--accent-h));
+  --coral:#b46b43;
+  --blue:#476f9e;
+  --green:#4d8b78;
+  --max:1120px;
+  --measure:42rem;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --serif:Georgia,"Songti SC","Noto Serif CJK SC","Source Han Serif SC",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --paper:#16150f;
+    --paper-2:#201e18;
+    --card:#211f19;
+    --ink:#f3f0e7;
+    --body:#c9c1b4;
+    --muted:#9c9487;
+    --faint:#676157;
+    --line:#302d25;
+    --line-strong:#443f34;
+    --accent:oklch(72% .11 var(--accent-h));
+    --accent-ink:oklch(78% .1 var(--accent-h));
+    --accent-soft:oklch(27% .052 var(--accent-h));
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  min-height:100dvh;
+  background:var(--paper);
+  color:var(--body);
+  font:16px/1.75 var(--sans);
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+body[data-accent="coral"]{--accent-h:28}
+body[data-accent="green"]{--accent-h:154}
+body[data-accent="blue"]{--accent-h:246}
+a{color:var(--accent-ink);text-underline-offset:.16em}
+a:hover{color:var(--accent)}
+code{font-family:var(--mono);font-size:.92em}
+.skip{position:absolute;left:-999px;top:12px;background:var(--ink);color:var(--paper);padding:8px 12px;border-radius:8px;z-index:20}
+.skip:focus{left:12px}
+.site-header{
+  position:sticky;
+  top:0;
+  z-index:10;
+  border-bottom:1px solid color-mix(in srgb,var(--line) 76%,transparent);
+  background:color-mix(in srgb,var(--paper) 86%,transparent);
+  backdrop-filter:blur(16px);
+}
+.nav{
+  max-width:var(--max);
+  margin:0 auto;
+  padding:14px 22px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  min-width:0;
+}
+.brand{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  color:var(--ink);
+  text-decoration:none;
+  font-weight:720;
+  letter-spacing:0;
+}
+.mark{
+  width:31px;
+  height:31px;
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  background:var(--card);
+  color:var(--accent-ink);
+  display:grid;
+  place-items:center;
+  font-family:var(--serif);
+  font-size:20px;
+  line-height:1;
+}
+.nav-links{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.nav-links a{
+  color:var(--muted);
+  text-decoration:none;
+  font-size:14px;
+}
+.nav-links a:hover{color:var(--accent-ink)}
+.hero{
+  max-width:var(--max);
+  margin:0 auto;
+  padding:76px 22px 58px;
+  display:grid;
+  grid-template-columns:minmax(0,1.02fr) minmax(320px,.98fr);
+  gap:46px;
+  align-items:center;
+}
+.hero>*{min-width:0}
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 18px;
+  color:var(--accent-ink);
+  font:650 12px/1.2 var(--mono);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.eyebrow:before{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--accent);
+}
+h1,h2,h3,p{margin-top:0}
+h1{
+  margin-bottom:22px;
+  color:var(--ink);
+  font:400 clamp(46px,7vw,82px)/1.02 var(--serif);
+  letter-spacing:0;
+}
+.lede{
+  max-width:38rem;
+  color:var(--body);
+  font-size:clamp(18px,2.2vw,22px);
+  line-height:1.72;
+  margin-bottom:28px;
+}
+.cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:44px;
+  padding:10px 18px;
+  border:1px solid var(--line-strong);
+  border-radius:999px;
+  color:var(--ink);
+  background:var(--card);
+  text-decoration:none;
+  font-weight:650;
+  transition:transform .2s cubic-bezier(.22,1,.36,1),border-color .2s,background .2s,color .2s;
+}
+.btn:hover{transform:translateY(-1px);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--paper)}
+.btn.primary:hover{color:var(--paper)}
+.note{
+  margin:18px 0 0;
+  color:var(--muted);
+  font-size:14px;
+  overflow-wrap:anywhere;
+}
+.visual{
+  margin:0;
+  border:1px solid var(--line);
+  border-radius:8px;
+  overflow:hidden;
+  background:var(--card);
+  max-width:100%;
+}
+.visual img{display:block;width:100%;height:auto}
+.terminal{
+  margin-top:14px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--card);
+  overflow:hidden;
+  max-width:100%;
+  min-width:0;
+}
+.terminal-head{
+  display:flex;
+  gap:7px;
+  padding:11px 14px;
+  border-bottom:1px solid var(--line);
+  background:var(--paper-2);
+}
+.terminal-head span{width:10px;height:10px;border-radius:50%;background:var(--faint)}
+.terminal-head span:nth-child(1){background:var(--coral)}
+.terminal-head span:nth-child(2){background:#c8a24a}
+.terminal-head span:nth-child(3){background:var(--green)}
+.terminal pre{margin:0;padding:18px;overflow:auto;font:14px/1.75 var(--mono);color:var(--body);white-space:pre-wrap;overflow-wrap:anywhere}
+.band{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
+section{padding:70px 22px}
+.wrap{max-width:var(--max);margin:0 auto;min-width:0}
+.narrow{max-width:var(--measure)}
+h2{
+  color:var(--ink);
+  font:400 clamp(30px,4.2vw,48px)/1.15 var(--serif);
+  letter-spacing:0;
+  margin-bottom:12px;
+}
+.section-sub{
+  color:var(--muted);
+  max-width:44rem;
+  font-size:17px;
+  margin-bottom:28px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+}
+.card{
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--card);
+  padding:22px;
+  min-width:0;
+}
+.card h3{
+  color:var(--ink);
+  font-size:18px;
+  line-height:1.35;
+  margin-bottom:9px;
+}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.kicker{
+  display:inline-flex;
+  margin-bottom:14px;
+  border:1px solid color-mix(in srgb,var(--accent) 38%,var(--line));
+  border-radius:999px;
+  background:var(--accent-soft);
+  color:var(--accent-ink);
+  padding:4px 10px;
+  font:650 12px/1.2 var(--mono);
+}
+.steps{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-top:26px;
+}
+.step{
+  border-top:2px solid var(--accent);
+  padding:18px 0 0;
+}
+.step strong{display:block;color:var(--ink);margin-bottom:7px}
+.step span{display:block;color:var(--muted);font-size:14px}
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--card);
+}
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  min-width:760px;
+  font-size:14px;
+}
+th,td{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  text-align:left;
+  vertical-align:top;
+}
+tr:last-child td{border-bottom:0}
+th{
+  color:var(--ink);
+  background:var(--paper-2);
+  font-size:12px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+td:first-child{color:var(--ink);font-weight:700}
+.copybox{
+  position:relative;
+  margin:14px 0 0;
+  min-width:0;
+}
+pre{
+  margin:0;
+  padding:18px;
+  overflow:auto;
+  max-width:100%;
+  min-width:0;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--card);
+  color:var(--body);
+  font:13px/1.7 var(--mono);
+}
+.copybox pre{padding-right:82px}
+.copybtn{
+  position:absolute;
+  top:10px;
+  right:10px;
+  min-width:58px;
+  height:32px;
+  border:1px solid var(--line-strong);
+  border-radius:8px;
+  background:var(--paper);
+  color:var(--ink);
+  font:650 13px/1 var(--sans);
+  cursor:pointer;
+}
+.copybtn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.copybtn.done{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+.ways{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:18px;
+  max-width:900px;
+}
+.way{
+  padding:24px 0;
+  border-top:1px solid var(--line);
+}
+.way:first-child{border-top:0;padding-top:0}
+.way h3{color:var(--ink);font-size:18px;margin-bottom:8px}
+.way p{margin:0;color:var(--muted)}
+.status{
+  display:inline-flex;
+  border-radius:999px;
+  border:1px solid var(--line);
+  padding:2px 8px;
+  color:var(--accent-ink);
+  background:var(--accent-soft);
+  font:650 12px/1.5 var(--mono);
+}
+.footer{
+  padding:34px 22px 52px;
+  color:var(--muted);
+  border-top:1px solid var(--line);
+}
+.footer .wrap{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  flex-wrap:wrap;
+  font-size:14px;
+}
+@media(max-width:860px){
+  .hero{grid-template-columns:1fr;padding-top:52px}
+  .grid{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .nav{align-items:flex-start;flex-direction:column}
+  .nav-links{gap:12px}
+  section{padding:52px 18px}
+  .hero{padding-left:18px;padding-right:18px}
+  .steps{grid-template-columns:1fr}
+  .copybox pre{padding-right:18px;padding-top:54px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}
+}
+</style>
+</head>
+<body data-accent="green">
+<a class="skip" href="#main">跳到正文</a>
+<header class="site-header">
+  <nav class="nav" aria-label="主导航">
+    <a class="brand" href="#"><span class="mark">T</span><span>Teach Me</span></a>
+    <div class="nav-links">
+      <a href="#why">为什么</a>
+      <a href="#workflow">工作流</a>
+      <a href="#hooks">Hooks</a>
+      <a href="#install">安装</a>
+      <a href="https://github.com/dull-bird/teach-me-skill">GitHub</a>
+    </div>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Agent Skill for development learning</p>
+      <h1>Teach Me</h1>
+      <p class="lede">把真实开发过程，沉淀成可复习的 Obsidian 知识笔记。它不打断实现，只在有价值的阶段边界捕获概念、算法思路、架构图谱和复盘问题。</p>
+      <div class="cta">
+        <a class="btn primary" href="#install">安装 Teach Me</a>
+        <a class="btn" href="#hooks">查看 hook 机制</a>
+      </div>
+      <p class="note">适配 Claude Code、Codex、OpenClaw、Kimi Code CLI。默认 vault 路径是 <code>~/.teach_me_skill/vault</code>。</p>
+    </div>
+    <div>
+      <figure class="visual">
+        <img src="assets/teach-me-flow.svg" alt="Teach Me 从提示词经过 hook 到 agent，再写入 Obsidian vault 的工作流图">
+      </figure>
+      <div class="terminal" aria-label="Teach Me terminal example">
+        <div class="terminal-head"><span></span><span></span><span></span></div>
+<pre><code>$ python3 skills/teach-me/scripts/teach_me.py context
+Teach Me learning context:
+- vault: ~/.teach_me_skill/vault
+- capture only high-value development knowledge
+- keep implementation flow uninterrupted</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="why" class="band">
+    <div class="wrap">
+      <p class="kicker">What it does</p>
+      <h2>不是把每个命令都讲一遍，而是留下以后真会用的知识。</h2>
+      <p class="section-sub">Teach Me 把 agent 的开发上下文和一个本地学习运行时连起来。它的目标不是制造更多解释，而是把值得复用的工程判断写成稳定笔记。</p>
+      <div class="grid">
+        <article class="card">
+          <h3>少打扰</h3>
+          <p>实现时正常推进。只有用户明确要求教学，或一个开发阶段自然结束时，才判断是否捕获学习笔记。</p>
+        </article>
+        <article class="card">
+          <h3>抓高价值</h3>
+          <p>内置价值 rubric：新颖性、可迁移性、项目相关性、隐藏复杂度、未来 bug 风险、算法价值和用户信号。</p>
+        </article>
+        <article class="card">
+          <h3>能复习</h3>
+          <p>输出到 Obsidian：概念、算法思路、项目地图、wikilinks、知识图谱、复习间隔和 Socratic questions。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow">
+    <div class="wrap">
+      <p class="kicker">Workflow</p>
+      <h2>Hook 负责轻量上下文，Skill 负责教学判断，Runtime 负责落盘。</h2>
+      <p class="section-sub">这种分层让行为更可控：hook 不替模型做学习决策，只告诉 agent 什么时候应该使用 Teach Me，以及本地 runtime 在哪里。</p>
+      <div class="steps">
+        <div class="step"><strong>1. 识别</strong><span>开发类提示词或手动触发词进入 hook。</span></div>
+        <div class="step"><strong>2. 注入</strong><span>向 agent 提供紧凑的 Teach Me context。</span></div>
+        <div class="step"><strong>3. 判断</strong><span>阶段结束时按 rubric 选 1 到 3 个高价值知识点。</span></div>
+        <div class="step"><strong>4. 沉淀</strong><span>runtime 写入 Obsidian vault 和学习状态。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="hooks" class="band">
+    <div class="wrap">
+      <p class="kicker">Hooks</p>
+      <h2>Hook 安装方式参考了 changde-dialect-skill 里已经测试过的模式。</h2>
+      <p class="section-sub">重点是幂等、只追加自己的 marker、不覆盖用户原配置。Codex 和 Kimi 的 TOML 处理沿用经过验证的思路：Codex 修补已有 <code>[features]</code>，Kimi 用括号匹配重写 <code>hooks = [...]</code> 数组。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>平台</th><th>注册位置</th><th>事件</th><th>Teach Me 行为</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Claude Code</td>
+              <td><code>~/.claude/settings.json</code></td>
+              <td><code>UserPromptSubmit</code>、<code>PreToolUse</code> with Bash matcher</td>
+              <td>开发类提示词注入上下文；Bash 开发命令写入轻量事件日志。</td>
+            </tr>
+            <tr>
+              <td>Codex</td>
+              <td><code>~/.codex/config.toml</code></td>
+              <td><code>[[hooks.UserPromptSubmit]]</code>、<code>[[hooks.PreToolUse]]</code></td>
+              <td>自动打开 <code>[features] hooks = true</code>，然后追加 Teach Me hook block。</td>
+            </tr>
+            <tr>
+              <td>Kimi Code CLI</td>
+              <td><code>~/.kimi/config.toml</code></td>
+              <td><code>hooks = [{ event = "UserPromptSubmit", ... }]</code></td>
+              <td>复用共享 <code>~/.agents/skills/teach-me</code> 路径，插入单条 UserPromptSubmit hook。</td>
+            </tr>
+            <tr>
+              <td>OpenClaw</td>
+              <td><code>~/.openclaw/hooks/teach-me-learning</code></td>
+              <td><code>message:received</code>、<code>agent:bootstrap</code></td>
+              <td>先记录 session 是否是开发学习场景，再在 bootstrap 文件里追加 Teach Me context。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">当前仓库的 hook 更保守：它只注入学习上下文和记录工具事件，真正要不要写学习笔记仍由 agent 在阶段边界按 skill rubric 判断。</p>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <p class="kicker">Install</p>
+      <h2>安装技能，再按你使用的 agent 注册 hook。</h2>
+      <p class="section-sub">如果你让 agent 自动安装，直接复制第一段提示词。手动安装时，先运行根目录 <code>install.sh</code>，再按需要运行各平台的 <code>install-hook.sh</code>。</p>
+      <div class="ways">
+        <div class="way">
+          <h3>让 agent 自动安装 <span class="status">技能 + hook</span></h3>
+          <p>把这段发给 Claude Code、Codex、OpenClaw 或 Kimi Code CLI。</p>
+          <div class="copybox">
+            <button class="copybtn" type="button" data-copy="agent-install">复制</button>
+<pre><code id="agent-install">请帮我安装 Teach Me 这个 Agent Skill：
+1. 克隆 https://github.com/dull-bird/teach-me-skill.git
+2. 进入 teach-me-skill，运行 ./install.sh
+3. 如果我使用 Claude Code，运行 ./claude-code/install-hook.sh
+4. 如果我使用 Codex，运行 ./codex/install-hook.sh
+5. 如果我使用 OpenClaw，运行 ./openclaw/install-hook.sh
+6. 如果我使用 Kimi Code CLI，运行 ./kimi/install-hook.sh
+7. 安装后运行：
+   python3 ~/.codex/skills/teach-me/scripts/teach_me.py context
+   或对应 agent skills 目录下的 scripts/teach_me.py context
+8. 第一次写学习笔记前，先让我确认 vault 路径和笔记语言</code></pre>
+          </div>
+        </div>
+
+        <div class="way">
+          <h3>手动安装 <span class="status">本地 clone</span></h3>
+          <div class="copybox">
+            <button class="copybtn" type="button" data-copy="manual-install">复制</button>
+<pre><code id="manual-install">git clone https://github.com/dull-bird/teach-me-skill.git
+cd teach-me-skill
+./install.sh
+
+# Optional hooks
+./claude-code/install-hook.sh
+./codex/install-hook.sh
+./openclaw/install-hook.sh
+./kimi/install-hook.sh</code></pre>
+          </div>
+        </div>
+
+        <div class="way">
+          <h3>第一次配置 <span class="status">Obsidian vault</span></h3>
+          <p>默认 vault 是 <code>~/.teach_me_skill/vault</code>，语言用 <code>auto</code> 时会跟随对话语言，常见技术名词保留英文。</p>
+          <div class="copybox">
+            <button class="copybtn" type="button" data-copy="configure">复制</button>
+<pre><code id="configure">python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
+
+# Use a custom vault path
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
+  --vault ~/Documents/Teach-Me-Vault \
+  --language auto</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap">
+      <p class="kicker">Vault shape</p>
+      <h2>写出来的是普通 Markdown，不被任何平台锁住。</h2>
+      <p class="section-sub">Teach Me 的 runtime 会维护一个 Obsidian 兼容目录：可读笔记放在可见文件夹，机器状态放在 <code>.teach-me/</code>。</p>
+      <div class="copybox">
+        <button class="copybtn" type="button" data-copy="vault-tree">复制</button>
+<pre><code id="vault-tree">vault/
+├── 00_Index.md
+├── 01_Knowledge_Graph.md
+├── 02_Concepts/
+├── 03_Algorithmic_Ideas/
+├── 04_Project_Maps/
+├── 05_Socratic_Questions/
+├── 06_Reviews/
+└── .teach-me/
+    ├── learning-state.json
+    ├── style-profile.json
+    └── events.jsonl</code></pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <span>Teach Me · Agent Skill for development learning</span>
+    <span>Built for GitHub Pages · Inspired by dull-bird.github.io</span>
+  </div>
+</footer>
+
+<script>
+const accents=["green","coral","blue"];
+let accentIndex=0;
+document.addEventListener("pointerdown",()=>{
+  accentIndex=(accentIndex+1)%accents.length;
+  document.body.dataset.accent=accents[accentIndex];
+});
+
+document.querySelectorAll("[data-copy]").forEach((button)=>{
+  button.addEventListener("click",async(event)=>{
+    event.stopPropagation();
+    const target=document.getElementById(button.dataset.copy);
+    if(!target)return;
+    const text=target.textContent;
+    const original=button.textContent;
+    try{
+      if(navigator.clipboard&&window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+      }else{
+        const area=document.createElement("textarea");
+        area.value=text;
+        area.setAttribute("readonly","");
+        area.style.position="fixed";
+        area.style.left="-9999px";
+        document.body.appendChild(area);
+        area.select();
+        document.execCommand("copy");
+        area.remove();
+      }
+      button.textContent="已复制";
+      button.classList.add("done");
+      setTimeout(()=>{button.textContent=original;button.classList.remove("done")},1400);
+    }catch(_error){
+      button.textContent="失败";
+      setTimeout(()=>{button.textContent=original},1400);
+    }
+  });
+});
+</script>
+</body>
+</html>

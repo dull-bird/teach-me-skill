@@ -1,0 +1,15 @@
+# Append to ~/.codex/config.toml and merge with existing content.
+
+[features]
+hooks = true
+
+[[hooks.UserPromptSubmit]]
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = "python3 ~/.codex/skills/teach-me/scripts/teach_me_hook.py"
+
+[[hooks.PreToolUse]]
+matcher = "Bash"
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "python3 ~/.codex/skills/teach-me/scripts/teach_me_hook.py"
