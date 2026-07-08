@@ -459,8 +459,8 @@ Teach Me learning context:
   <section id="hooks" class="band">
     <div class="wrap">
       <p class="kicker">Hooks</p>
-      <h2>Hook 安装方式参考了 changde-dialect-skill 里已经测试过的模式。</h2>
-      <p class="section-sub">重点是幂等、只追加自己的 marker、不覆盖用户原配置。Codex 和 Kimi 的 TOML 处理沿用经过验证的思路：Codex 修补已有 <code>[features]</code>，Kimi 用括号匹配重写 <code>hooks = [...]</code> 数组。</p>
+      <h2>Hook 安装方式保持幂等，只注册 Teach Me 自己需要的入口。</h2>
+      <p class="section-sub">重点是只追加自己的 marker、不覆盖用户原配置。Codex 会修补已有 <code>[features]</code>，Kimi 会用括号匹配重写 <code>hooks = [...]</code> 数组，避免破坏原有 hook。</p>
       <div class="table-wrap">
         <table>
           <thead>
