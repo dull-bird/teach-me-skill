@@ -41,6 +41,11 @@ Codex, Claude Code, and Kimi Code CLI hooks install:
 - `PostToolUse`: observe successful tool results.
 - `Stop`: at turn end, score the observed work and request one Teach Me review pass only when it looks useful.
 
+The Codex installer also adds `~/.teach_me_skill` to
+`[sandbox_workspace_write].writable_roots` once, so later learner-model and vault
+updates do not repeatedly ask for workspace-outside write approval. Codex may
+still ask for hook trust once after the hook command changes.
+
 OpenClaw's bundled `HOOK.md` integration covers `message:received` and
 `agent:bootstrap`. OpenClaw's internal `command:stop` is user cancellation, not
 natural agent finalization; a true "before final answer" review requires an

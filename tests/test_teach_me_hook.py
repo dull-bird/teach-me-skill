@@ -177,14 +177,20 @@ class TeachMeHookTests(unittest.TestCase):
                 home,
             )
 
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = parse_stdout(result)
-        self.assertEqual(data["decision"], "block")
-        self.assertEqual(data["systemMessage"], "🌱")
-        self.assertIn("🌱", data["reason"])
-        self.assertNotIn("🌱 Teach Me:", data["reason"])
-        self.assertIn("confirm", data["reason"].lower())
-        self.assertIn("vault", data["reason"].lower())
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = parse_stdout(result)
+            self.assertEqual(data["decision"], "block")
+            self.assertEqual(data["systemMessage"], "🌱")
+            self.assertEqual(data["reason"], "🌱")
+            self.assertNotIn("🌱 Teach Me:", data["reason"])
+            self.assertNotIn("Detection evidence", data["reason"])
+            events = read_events(home)
+            stop_decision = events[-1]
+            self.assertEqual(stop_decision["type"], "stop_decision")
+            self.assertEqual(stop_decision["decision"], "block")
+            self.assertIn("review_prompt", stop_decision)
+            self.assertIn("confirm", stop_decision["review_prompt"].lower())
+            self.assertIn("vault", stop_decision["review_prompt"].lower())
 
     def test_initialized_stop_blocks_with_capture_instruction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -214,14 +220,19 @@ class TeachMeHookTests(unittest.TestCase):
                 home,
             )
 
-        self.assertEqual(result.returncode, 0, result.stderr)
-        data = parse_stdout(result)
-        self.assertEqual(data["decision"], "block")
-        self.assertEqual(data["systemMessage"], "🌱")
-        self.assertIn("🌱", data["reason"])
-        self.assertNotIn("🌱 Teach Me:", data["reason"])
-        self.assertIn("capture", data["reason"].lower())
-        self.assertIn("1-3", data["reason"])
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = parse_stdout(result)
+            self.assertEqual(data["decision"], "block")
+            self.assertEqual(data["systemMessage"], "🌱")
+            self.assertEqual(data["reason"], "🌱")
+            self.assertNotIn("🌱 Teach Me:", data["reason"])
+            self.assertNotIn("Detection evidence", data["reason"])
+            events = read_events(home)
+            stop_decision = events[-1]
+            self.assertEqual(stop_decision["type"], "stop_decision")
+            self.assertEqual(stop_decision["decision"], "block")
+            self.assertIn("capture", stop_decision["review_prompt"].lower())
+            self.assertIn("1-3", stop_decision["review_prompt"])
 
     def test_stop_stays_silent_without_meaningful_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -431,6 +442,23 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("[[hooks.PostToolUse]]", text)
         self.assertIn('matcher = "*"', text)
         self.assertIn("teach_me_hook.py", text)
+        self.assertIn("[sandbox_workspace_write]", text)
+        self.assertIn(f'"{module.TEACH_ME_HOME}"', text)
+
+    def test_codex_installer_merges_writable_root_once(self) -> None:
+        module = load_module(ROOT / "codex" / "install_hook.py")
+        existing = (
+            "[sandbox_workspace_write]\n"
+            'writable_roots = ["/tmp/project"]\n'
+            "\n"
+            "[projects.\"/tmp/project\"]\n"
+            'trust_level = "trusted"\n'
+        )
+        text = module.install(existing)
+        second = module.install(text)
+        self.assertIn('"/tmp/project"', second)
+        self.assertIn(f'"{module.TEACH_ME_HOME}"', second)
+        self.assertEqual(second.count(f'"{module.TEACH_ME_HOME}"'), 1)
 
     def test_claude_installer_registers_stop_and_post_tool_use(self) -> None:
         module = load_module(ROOT / "claude-code" / "install_hook.py")

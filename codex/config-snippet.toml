@@ -3,6 +3,10 @@
 [features]
 hooks = true
 
+[sandbox_workspace_write]
+# install-hook.py writes your absolute home path automatically.
+writable_roots = ["/Users/YOUR_USER/.teach_me_skill"]
+
 [[hooks.UserPromptSubmit]]
 [[hooks.UserPromptSubmit.hooks]]
 type = "command"

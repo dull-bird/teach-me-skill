@@ -482,11 +482,11 @@ def evidence_summary(assessment: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def build_stop_reason(config: dict[str, Any], assessment: dict[str, Any]) -> str:
+def build_stop_review_prompt(config: dict[str, Any], assessment: dict[str, Any]) -> str:
     skill_dir = Path(__file__).resolve().parent.parent
     evidence = evidence_summary(assessment)
     if not config.get("initialized"):
-        return f"""🌱 detected a learning-worthy phase at turn end.
+        return f"""Teach Me detected a learning-worthy phase at turn end.
 
 Before writing any learning notes, ask the user to confirm:
 - vault path, default `~/.teach_me_skill/vault`
@@ -500,7 +500,7 @@ message with `🌱`. Detection evidence:
 Teach Me skill dir: {skill_dir}
 """
 
-    return f"""🌱 detected a learning-worthy phase at turn end.
+    return f"""Teach Me detected a learning-worthy phase at turn end.
 
 Continue with a short Teach Me review before the final response:
 1. Decide whether this phase deserves 1-3 durable learning notes.
@@ -515,6 +515,10 @@ Detection evidence:
 """
 
 
+def build_stop_reason() -> str:
+    return "🌱"
+
+
 def handle_stop(payload: dict[str, Any]) -> int:
     if boolish(payload.get("stop_hook_active") or payload.get("stopHookActive")):
         return 0
@@ -526,6 +530,7 @@ def handle_stop(payload: dict[str, Any]) -> int:
 
     assessment = score_stop(payload, events)
     decision = "block" if assessment["should_block"] else "allow"
+    review_prompt = build_stop_review_prompt(config, assessment) if assessment["should_block"] else ""
     append_event(
         config,
         {
@@ -535,13 +540,15 @@ def handle_stop(payload: dict[str, Any]) -> int:
             "score": assessment["score"],
             "threshold": assessment["threshold"],
             "signal_tags": assessment["tags"],
+            "review_prompt": review_prompt,
+            "reasons": assessment.get("reasons", []),
         },
     )
 
     if not assessment["should_block"]:
         return 0
 
-    reason = build_stop_reason(config, assessment)
+    reason = build_stop_reason()
     output = {
         "decision": "block",
         "reason": reason,
