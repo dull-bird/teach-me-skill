@@ -876,15 +876,13 @@ cd teach-me-skill
       <p class="section-sub">书、PDF、网页、Word、EPUB，或者一整个 Obsidian vault，都可以喂给 Teach Me。它会先读一遍，问你熟不熟，再决定是简要归档还是直接考你。导入是一次性的知识注入——原文件和你的 Teach Me vault 之后互不影响。</p>
       <div class="copybox">
         <button class="copybtn" type="button" data-copy="import-cmd">复制</button>
-<pre><code id="import-cmd"># 导入一本书 / PDF / 网页 / EPUB / Word
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py import \
-  --source pdf --path /path/to/file.pdf --project "书名"
+<pre><code id="import-cmd">导入我的 Obsidian vault：/path/to/obsidian/vault
 
-# 导入整个 Obsidian vault（自动跳过 .teach-me / .obsidian / 系统生成笔记）
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py import \
-  --source obsidian --path /path/to/obsidian/vault --project "My Obsidian"</code></pre>
+帮我导入这本书：/path/to/file.pdf
+
+把这个网页导入我的知识库：https://example.com/article</code></pre>
       </div>
-      <p class="note">更自然的方式：直接对 agent 说"导入我的 Obsidian vault：<code>/path/to/vault</code>"，或者把一本 PDF 拖给它，说"帮我导入这本书"。</p>
+      <p class="note">直接对 agent 说这句话就行，不用记命令、不用写脚本参数。</p>
     </div>
   </section>
 

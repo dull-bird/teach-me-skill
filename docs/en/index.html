@@ -878,15 +878,13 @@ Enable Git sync with remote git@github.com:user/teach-me-vault.git and auto-sync
       <p class="section-sub">A book, a PDF, a web page, a Word doc, an EPUB, or an entire Obsidian vault — Teach Me can absorb any of them. It reads through the material first, asks how familiar you already are, then decides whether to file it away briefly or quiz you on it right away. Import is a one-time knowledge injection — the source file and your Teach Me vault stay independent afterward.</p>
       <div class="copybox">
         <button class="copybtn" type="button" data-copy="import-cmd">Copy</button>
-<pre><code id="import-cmd"># Import a book / PDF / web page / EPUB / Word doc
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py import \
-  --source pdf --path /path/to/file.pdf --project "Book Name"
+<pre><code id="import-cmd">Import my Obsidian vault: /path/to/obsidian/vault
 
-# Import an entire Obsidian vault (skips .teach-me / .obsidian / system-generated notes)
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py import \
-  --source obsidian --path /path/to/obsidian/vault --project "My Obsidian"</code></pre>
+Import this book for me: /path/to/file.pdf
+
+Add this page to my knowledge base: https://example.com/article</code></pre>
       </div>
-      <p class="note">More naturally: just tell your agent "Import my Obsidian vault: <code>/path/to/vault</code>", or hand it a PDF and say "import this book for me."</p>
+      <p class="note">Just say it to your agent — no commands or script flags to remember.</p>
     </div>
   </section>
 
