@@ -2,8 +2,8 @@
 
 ## Public Page Voice
 
-When editing `docs/index.html`, write as the project author introducing my own
-tool. Do not write in an AI assistant voice.
+When editing `docs/index.html` or `docs/en/index.html`, write as the project
+author introducing my own tool. Do not write in an AI assistant voice.
 
 Use this tone:
 
@@ -13,6 +13,9 @@ Use this tone:
   command.
 - Sell the practical points: local-first Markdown vault, prerequisite scanning,
   dynamic knowledge tree, optional feedback probes, optional Git sync.
+- Keep the public site bilingual: `docs/index.html` is Chinese,
+  `docs/en/index.html` is English. Each page should use the flow diagram in its
+  own language.
 
 Avoid:
 
@@ -30,3 +33,6 @@ Avoid:
 - Feedback probes should be optional. Prefer multiple-choice and true/false;
   use short-answer occasionally.
 - Git sync is opt-in. Never imply a vault is pushed remotely by default.
+- Public copy must match the current implementation: Prompt hooks inject
+  context, tool hooks collect evidence, Stop hooks score the phase boundary, and
+  the runtime writes the vault.

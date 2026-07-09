@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teach Me - 把开发过程变成学习资产</title>
-<meta name="description" content="Teach Me 是给 Claude Code、Codex、OpenClaw、Kimi Code CLI 使用的 Agent Skill，用 prompt、tool、stop hooks 把有价值的开发过程沉淀成 Obsidian 学习笔记、知识树和复习问题。">
+<title>Teach Me - Turn Development Work Into Learning Assets</title>
+<meta name="description" content="Teach Me is an Agent Skill for Claude Code, Codex, OpenClaw, and Kimi Code CLI. Prompt, tool, and stop hooks turn meaningful development work into Obsidian notes, a knowledge tree, and review prompts.">
 <meta name="theme-color" content="#fbfaf7">
-<link rel="icon" type="image/webp" href="assets/seedling_1f331_once.webp">
-<link rel="alternate" hreflang="zh-CN" href="./">
-<link rel="alternate" hreflang="en" href="en/">
+<link rel="icon" type="image/webp" href="../assets/seedling_1f331_once.webp">
+<link rel="alternate" hreflang="zh-CN" href="../">
+<link rel="alternate" hreflang="en" href="./">
 <style>
 @property --accent-h{syntax:"<number>";inherits:true;initial-value:154}
 :root{
@@ -383,16 +383,16 @@ pre{
 </style>
 </head>
 <body data-accent="green">
-<a class="skip" href="#main">跳到正文</a>
+<a class="skip" href="#main">Skip to content</a>
 <header class="site-header">
-  <nav class="nav" aria-label="主导航">
-    <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="assets/seedling_1f331_once.webp" alt=""></span><span>Teach Me</span></a>
+  <nav class="nav" aria-label="Main navigation">
+    <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="../assets/seedling_1f331_once.webp" alt=""></span><span>Teach Me</span></a>
     <div class="nav-links">
-      <a href="#why">为什么</a>
-      <a href="#workflow">工作流</a>
+      <a href="#why">Why</a>
+      <a href="#workflow">Workflow</a>
       <a href="#hooks">Hooks</a>
-      <a href="#install">安装</a>
-      <a href="en/" hreflang="en">English</a>
+      <a href="#install">Install</a>
+      <a href="../" hreflang="zh-CN">中文</a>
       <a href="https://github.com/dull-bird/teach-me-skill">GitHub</a>
     </div>
   </nav>
@@ -401,18 +401,18 @@ pre{
 <main id="main">
   <section class="hero">
     <div>
-      <p class="eyebrow">把开发过程变成学习资产</p>
+      <p class="eyebrow">Turn development work into learning assets</p>
       <h1>Teach Me</h1>
-      <p class="lede">我不想让 agent 每次都讲课，也不想它只把活干完。Teach Me 会看这一轮真正发生了什么：有没有改代码、跑测试、踩坑、验证；值得复盘时，才插入一次短的学习整理。</p>
+      <p class="lede">I do not want an agent to lecture on every step, and I do not want it to only finish the task. Teach Me looks at what actually happened in the turn: edits, tests, errors, verification. When the work is worth learning from, it asks for one short review pass.</p>
       <div class="cta">
-        <a class="btn primary" href="#install">装到我的 agent</a>
-        <a class="btn" href="#why">看它解决什么</a>
+        <a class="btn primary" href="#install">Install it for my agent</a>
+        <a class="btn" href="#why">See what it solves</a>
       </div>
-      <p class="note">支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。默认写到 <code>~/.teach_me_skill/vault</code>，Git 同步是可选项，不会默认推到远端。</p>
+      <p class="note">Works with Claude Code, Codex, OpenClaw, and Kimi Code CLI. It writes to <code>~/.teach_me_skill/vault</code> by default. Git sync is optional and never enabled by default.</p>
     </div>
     <div>
       <figure class="visual">
-        <img src="assets/teach-me-flow.zh.svg" alt="Teach Me 从 prompt 和工具证据，到 Stop 评分、短复盘、本地 Obsidian vault 的工作流图">
+        <img src="../assets/teach-me-flow.svg" alt="Teach Me hook loop from prompt and tool evidence to stop scoring, review, and a local Obsidian vault">
       </figure>
       <div class="terminal" aria-label="Teach Me terminal example">
         <div class="terminal-head"><span></span><span></span><span></span></div>
@@ -428,20 +428,20 @@ Teach Me learning context:
   <section id="why" class="band">
     <div class="wrap">
       <p class="kicker">Why</p>
-      <h2>我需要的不是更多解释，而是一个知道什么时候该停下来复盘的老师。</h2>
-      <p class="section-sub">现在的 Teach Me 不是看到关键词就写笔记。它先收集一轮开发里的证据，再在 Stop 阶段评分：证据弱就安静，证据强才请求一次短复盘。</p>
+      <h2>I do not need more explanations. I need a tutor that knows when to pause.</h2>
+      <p class="section-sub">Teach Me is not a keyword-triggered recap bot. It collects evidence from the turn, scores it at the Stop hook, stays quiet when the signal is weak, and asks for a short review only when the work is worth keeping.</p>
       <div class="grid">
         <article class="card">
-          <h3>看证据，不看热闹</h3>
-          <p>编辑、测试、构建、报错、验证都会变成轻量事件。真正有学习价值的阶段，才会进入复盘。</p>
+          <h3>Evidence over noise</h3>
+          <p>Edits, tests, builds, errors, and verification become lightweight events. Only learning-worthy phases move into review.</p>
         </article>
         <article class="card">
-          <h3>先找地基</h3>
-          <p>遇到新领域，先扫 prerequisite ladder，确认基础词有没有断层，再从第一个弱点讲起。</p>
+          <h3>Find the foundation first</h3>
+          <p>For a new domain, the agent sketches a prerequisite ladder and starts from the first weak or unknown concept.</p>
         </article>
         <article class="card">
-          <h3>能带走</h3>
-          <p>笔记是普通 Markdown。知识树、掌握程度、复习问题和可选 Git sync 都围绕本地 Obsidian vault 工作。</p>
+          <h3>Keep what transfers</h3>
+          <p>The output is ordinary Markdown. Notes, mastery, review prompts, and optional Git sync all revolve around a local Obsidian vault.</p>
         </article>
       </div>
     </div>
@@ -450,13 +450,13 @@ Teach Me learning context:
   <section id="workflow">
     <div class="wrap">
       <p class="kicker">How</p>
-      <h2>它不抢工作流，只在阶段边界插一小步。</h2>
-      <p class="section-sub">Prompt hook 负责提醒 agent 可以使用 Teach Me；Tool hooks 记录实际发生的开发证据；Stop hook 只在证据足够时请求一次短复盘。真正写文件的事交给本地 runtime。</p>
+      <h2>It does not take over the workflow. It adds one step at the boundary.</h2>
+      <p class="section-sub">The prompt hook tells the agent Teach Me is available. Tool hooks record what actually happened. The Stop hook asks for one short review only when the evidence is strong enough. The local runtime owns file writes.</p>
       <div class="steps">
-        <div class="step"><strong>1. 注入上下文</strong><span>显式教学或开发提示词触发紧凑 Teach Me context。</span></div>
-        <div class="step"><strong>2. 收集证据</strong><span>Pre / Post / Failure tool hooks 记录编辑、测试、构建和错误。</span></div>
-        <div class="step"><strong>3. Stop 评分</strong><span>阶段结束时按证据决定是否需要一次学习复盘。</span></div>
-        <div class="step"><strong>4. 沉淀或校准</strong><span>写 1-3 条笔记，或只更新知识树和掌握度。</span></div>
+        <div class="step"><strong>1. Inject context</strong><span>Explicit teaching or development prompts receive compact Teach Me context.</span></div>
+        <div class="step"><strong>2. Collect evidence</strong><span>Pre / Post / Failure tool hooks log edits, tests, builds, and errors.</span></div>
+        <div class="step"><strong>3. Score at Stop</strong><span>At the turn boundary, evidence decides whether a review is useful.</span></div>
+        <div class="step"><strong>4. Capture or assess</strong><span>Write 1-3 notes, or only update the knowledge tree and mastery.</span></div>
       </div>
     </div>
   </section>
@@ -464,74 +464,74 @@ Teach Me learning context:
   <section id="hooks" class="band">
     <div class="wrap">
       <p class="kicker">Hooks</p>
-      <h2>安装要可撤、可重复，不碰别人的配置。</h2>
-      <p class="section-sub">安装脚本只追加 Teach Me 自己的 marker，不覆盖已有 hook。Codex 会补 <code>[features]</code> 和 writable root；Kimi 会只重写 <code>hooks = [...]</code> 这一段。</p>
+      <h2>Installation should be reversible, repeatable, and respectful of existing config.</h2>
+      <p class="section-sub">Installers append Teach Me's own marker instead of replacing user config. Codex also enables <code>[features]</code> and adds the writable root once. Kimi rewrites only the <code>hooks = [...]</code> block.</p>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>平台</th><th>注册位置</th><th>事件</th><th>Teach Me 行为</th></tr>
+            <tr><th>Platform</th><th>Registration</th><th>Events</th><th>Teach Me behavior</th></tr>
           </thead>
           <tbody>
             <tr>
               <td>Claude Code</td>
               <td><code>~/.claude/settings.json</code></td>
-              <td><code>UserPromptSubmit</code>、<code>PreToolUse</code>、<code>PostToolUse</code>、<code>Stop</code></td>
-              <td>显式学习/开发提示词注入上下文；工具事件计分；Stop 阶段可能请求一次短复盘。</td>
+              <td><code>UserPromptSubmit</code>, <code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code></td>
+              <td>Injects context for explicit learning or development prompts, scores tool evidence, and may request one short review at Stop.</td>
             </tr>
             <tr>
               <td>Codex</td>
               <td><code>~/.codex/config.toml</code></td>
-              <td><code>UserPromptSubmit</code>、<code>PreToolUse</code>、<code>PostToolUse</code>、<code>Stop</code></td>
-            <td>自动打开 <code>[features] hooks = true</code>，追加 Teach Me hook block，并把 <code>~/.teach_me_skill</code> 加入 writable root。</td>
+              <td><code>UserPromptSubmit</code>, <code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code></td>
+            <td>Enables <code>[features] hooks = true</code>, appends Teach Me hook blocks, and adds <code>~/.teach_me_skill</code> as a writable root.</td>
             </tr>
             <tr>
               <td>Kimi Code CLI</td>
               <td><code>~/.kimi/config.toml</code></td>
-              <td><code>UserPromptSubmit</code>、工具事件、<code>Stop</code></td>
-              <td>复用共享 <code>~/.agents/skills/teach-me</code> 路径，按支持的 hook 事件记录证据和触发复盘。</td>
+              <td><code>UserPromptSubmit</code>, tool events, <code>Stop</code></td>
+              <td>Reuses the shared <code>~/.agents/skills/teach-me</code> path, records evidence, and triggers reviews through supported hook events.</td>
             </tr>
             <tr>
               <td>OpenClaw</td>
               <td><code>~/.openclaw/hooks/teach-me-learning</code></td>
-              <td><code>message:received</code>、<code>agent:bootstrap</code></td>
-              <td>先记录 session 是否是开发学习场景，再在 bootstrap 文件里追加 Teach Me context。OpenClaw 的真正 final-review 需要插件层支持。</td>
+              <td><code>message:received</code>, <code>agent:bootstrap</code></td>
+              <td>Records whether the session is development-learning work, then appends Teach Me context to bootstrap files. True final-review behavior needs plugin support.</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p class="note">hook 不直接“教”。它负责提供上下文和证据；要不要写笔记、写哪几个点，仍由 agent 在阶段边界按 skill rubric 判断。</p>
+      <p class="note">Hooks do not teach directly. They provide context and evidence. The agent still decides at the phase boundary whether anything deserves a durable note.</p>
     </div>
   </section>
 
   <section id="install">
     <div class="wrap">
       <p class="kicker">Install</p>
-      <h2>先装 skill，再按你用的工具装 hook。</h2>
-      <p class="section-sub">想省事就把第一段复制给 agent。手动装也很直接：根目录 <code>install.sh</code> 负责复制 skill，各平台的 <code>install-hook.sh</code> 负责接入 hook。</p>
+      <h2>Install the skill, then register hooks for the agent you use.</h2>
+      <p class="section-sub">For the easiest path, paste the first prompt into your agent. Manual install is just as direct: <code>install.sh</code> copies the skill, and each platform's <code>install-hook.sh</code> connects hooks.</p>
       <div class="ways">
         <div class="way">
-          <h3>让 agent 自动安装 <span class="status">技能 + hook</span></h3>
-          <p>把这段发给 Claude Code、Codex、OpenClaw 或 Kimi Code CLI。</p>
+          <h3>Ask an agent to install it <span class="status">skill + hooks</span></h3>
+          <p>Send this to Claude Code, Codex, OpenClaw, or Kimi Code CLI.</p>
           <div class="copybox">
-            <button class="copybtn" type="button" data-copy="agent-install">复制</button>
-<pre><code id="agent-install">请帮我安装 Teach Me 这个 Agent Skill：
-1. 克隆 https://github.com/dull-bird/teach-me-skill.git
-2. 进入 teach-me-skill，运行 ./install.sh
-3. 如果我使用 Claude Code，运行 ./claude-code/install-hook.sh
-4. 如果我使用 Codex，运行 ./codex/install-hook.sh
-5. 如果我使用 OpenClaw，运行 ./openclaw/install-hook.sh
-6. 如果我使用 Kimi Code CLI，运行 ./kimi/install-hook.sh
-7. 安装后运行：
+            <button class="copybtn" type="button" data-copy="agent-install">Copy</button>
+<pre><code id="agent-install">Please install the Teach Me Agent Skill:
+1. Clone https://github.com/dull-bird/teach-me-skill.git
+2. Enter teach-me-skill and run ./install.sh
+3. If I use Claude Code, run ./claude-code/install-hook.sh
+4. If I use Codex, run ./codex/install-hook.sh
+5. If I use OpenClaw, run ./openclaw/install-hook.sh
+6. If I use Kimi Code CLI, run ./kimi/install-hook.sh
+7. After installation, run:
    python3 ~/.codex/skills/teach-me/scripts/teach_me.py context
-   或对应 agent skills 目录下的 scripts/teach_me.py context
-8. 第一次写学习笔记前，先让我确认 vault 路径、笔记语言，以及是否启用 Git sync</code></pre>
+   or the scripts/teach_me.py context command under the matching agent skills directory
+8. Before writing the first learning note, ask me to confirm the vault path, note language, and whether to enable Git sync</code></pre>
           </div>
         </div>
 
         <div class="way">
-          <h3>手动安装 <span class="status">本地 clone</span></h3>
+          <h3>Manual install <span class="status">local clone</span></h3>
           <div class="copybox">
-            <button class="copybtn" type="button" data-copy="manual-install">复制</button>
+            <button class="copybtn" type="button" data-copy="manual-install">Copy</button>
 <pre><code id="manual-install">git clone https://github.com/dull-bird/teach-me-skill.git
 cd teach-me-skill
 ./install.sh
@@ -545,10 +545,10 @@ cd teach-me-skill
         </div>
 
         <div class="way">
-          <h3>第一次配置 <span class="status">Obsidian vault</span></h3>
-          <p>默认 vault 是 <code>~/.teach_me_skill/vault</code>。如果你想在多台机器上接着学，给它一个 Git remote，它会在写入后自动同步。</p>
+          <h3>First configuration <span class="status">Obsidian vault</span></h3>
+          <p>The default vault is <code>~/.teach_me_skill/vault</code>. If you want to continue across machines, provide a Git remote and Teach Me can sync after writes.</p>
           <div class="copybox">
-            <button class="copybtn" type="button" data-copy="configure">复制</button>
+            <button class="copybtn" type="button" data-copy="configure">Copy</button>
 <pre><code id="configure">python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
 
 # Use a custom vault path
@@ -570,10 +570,10 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
   <section class="band">
     <div class="wrap">
       <p class="kicker">Vault</p>
-      <h2>数据在你本地，是普通 Markdown。</h2>
-      <p class="section-sub">可读笔记放在可见文件夹；机器状态放在 <code>.teach-me/</code>。默认不会同步到远端，除非你自己打开 Git sync。</p>
+      <h2>Your data stays local, in ordinary Markdown.</h2>
+      <p class="section-sub">Readable notes live in visible folders. Machine state lives in <code>.teach-me/</code>. Nothing syncs to a remote unless you explicitly enable Git sync.</p>
       <div class="copybox">
-        <button class="copybtn" type="button" data-copy="vault-tree">复制</button>
+        <button class="copybtn" type="button" data-copy="vault-tree">Copy</button>
 <pre><code id="vault-tree">vault/
 ├── 00_Index.md
 ├── 01_Knowledge_Graph.md
@@ -595,7 +595,7 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 
 <footer class="footer">
   <div class="wrap">
-    <span>Teach Me · 把开发过程变成学习资产</span>
+    <span>Teach Me · Turn development work into learning assets</span>
     <span>Markdown vault · Optional Git sync · Local first</span>
   </div>
 </footer>
@@ -629,11 +629,11 @@ document.querySelectorAll("[data-copy]").forEach((button)=>{
         document.execCommand("copy");
         area.remove();
       }
-      button.textContent="已复制";
+      button.textContent="Copied";
       button.classList.add("done");
       setTimeout(()=>{button.textContent=original;button.classList.remove("done")},1400);
     }catch(_error){
-      button.textContent="失败";
+      button.textContent="Failed";
       setTimeout(()=>{button.textContent=original},1400);
     }
   });
