@@ -1034,7 +1034,7 @@ def cmd_configure(args: argparse.Namespace) -> int:
     return 0
 
 
-def format_context(config: dict[str, Any]) -> str:
+def format_context(config: dict[str, Any], brief: bool = True) -> str:
     initialized = bool(config.get("initialized"))
     lines = [
         "Teach Me learning context:",
@@ -1068,26 +1068,14 @@ def format_context(config: dict[str, Any]) -> str:
     state = read_state(config)
     style = read_style(config)
     concepts = state.get("concepts", {})
-    weak = sorted(
-        concepts.items(),
-        key=lambda pair: (
-            MASTERY_SCORE.get(pair[1].get("mastery", "seen"), 1),
-            pair[1].get("last_seen", ""),
-        ),
-    )[:8]
-    recent = sorted(
-        concepts.items(),
-        key=lambda pair: pair[1].get("last_seen", ""),
-        reverse=True,
-    )[:8]
     tree = state.get("knowledge_tree", {})
-    weak_nodes = sorted(
-        tree.items(),
-        key=lambda pair: (
-            MASTERY_SCORE.get(str(pair[1].get("mastery", "unknown")), 0),
-            pair[1].get("last_assessed", ""),
-        ),
-    )[:8]
+    total = len(concepts)
+    weak_count = sum(1 for data in concepts.values() if data.get("mastery", "seen") in ("unknown", "seen"))
+    due_today = sum(
+        1
+        for data in concepts.values()
+        if data.get("next_review") and str(data.get("next_review")) <= today()
+    )
 
     lines.extend(
         [
@@ -1109,8 +1097,34 @@ def format_context(config: dict[str, Any]) -> str:
                 fmt=style.get("probe_format", "mostly_choice"),
                 required=str(bool(style.get("probe_required", False))).lower(),
             ),
+            f"- portrait summary: {total} concepts, {weak_count} weak, {due_today} due today, {len(tree)} knowledge-tree nodes",
         ]
     )
+
+    if brief:
+        lines.append("- run `python3 <teach-me-skill-dir>/scripts/teach_me.py context --full` to see weak concepts, knowledge-tree nodes, and recent captures.")
+        return "\n".join(lines)
+
+    weak = sorted(
+        concepts.items(),
+        key=lambda pair: (
+            MASTERY_SCORE.get(pair[1].get("mastery", "seen"), 1),
+            pair[1].get("last_seen", ""),
+        ),
+    )[:8]
+    recent = sorted(
+        concepts.items(),
+        key=lambda pair: pair[1].get("last_seen", ""),
+        reverse=True,
+    )[:8]
+    weak_nodes = sorted(
+        tree.items(),
+        key=lambda pair: (
+            MASTERY_SCORE.get(str(pair[1].get("mastery", "unknown")), 0),
+            pair[1].get("last_assessed", ""),
+        ),
+    )[:8]
+
     if weak:
         lines.append("- weaker concepts: " + ", ".join(f"{name}({data.get('mastery', 'seen')})" for name, data in weak))
     if weak_nodes:
@@ -1123,7 +1137,7 @@ def format_context(config: dict[str, Any]) -> str:
 def cmd_context(args: argparse.Namespace) -> int:
     top_config = load_config(create=True)
     user_cfg = resolve_user_config(top_config, args.user)
-    print(format_context(user_cfg))
+    print(format_context(user_cfg, brief=not args.full))
     return 0
 
 
@@ -1424,6 +1438,8 @@ def build_parser() -> argparse.ArgumentParser:
     switch_user.set_defaults(func=cmd_switch_user)
 
     context = sub.add_parser("context", help="Print compact context for an agent")
+    context.add_argument("--full", action="store_true", help="Include weak concepts, knowledge-tree nodes, and recent captures")
+    context.add_argument("--brief", action="store_true", help="Print only summary (default)")
     context.set_defaults(func=cmd_context)
 
     status = sub.add_parser("status", help="Print runtime status JSON")

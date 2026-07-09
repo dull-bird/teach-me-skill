@@ -558,7 +558,7 @@ def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[st
 
 
 def build_additional_context(prompt: str, manual: bool, user_cfg: dict[str, Any]) -> str:
-    context = format_context(user_cfg)
+    context = format_context(user_cfg, brief=True)
     skill_dir = Path(__file__).resolve().parent.parent
     lines = [
         context,
@@ -566,13 +566,14 @@ def build_additional_context(prompt: str, manual: bool, user_cfg: dict[str, Any]
         "- use skill for any tool-based work: coding, writing, design, data analysis, configuration, research, etc.",
         "- valuable captures include concepts, algorithmic ideas, workflows, hidden mechanisms, project maps; not just tool names.",
         "- when teaching a new domain, first map prerequisite concepts and probe the user's baseline before explaining mid-level mechanisms.",
+        f"- run `python3 {skill_dir}/scripts/teach_me.py context --full` when you need the detailed learner portrait (weak concepts, knowledge-tree nodes, recent captures).",
         "- after teaching, ask one small optional feedback probe; prefer multiple-choice or true/false, and continue if user skips.",
         "- update knowledge tree with `teach_me.py assess --user <id>` when you learn what the user does or does not understand.",
         "- final response should teach something: explain the idea, ask a follow-up, then mention captured notes.",
     ]
     if manual:
         lines.append(
-            "- manual teaching trigger detected: teach now, start with a quick baseline scan, include gentle Socratic questions."
+            "- manual teaching trigger detected: teach now, start with a quick baseline scan; run context --full to see weak prerequisites before teaching."
         )
     return "\n".join(lines)
 
@@ -618,7 +619,7 @@ Teach Me skill dir: {skill_dir}
     return f"""Teach Me detected a learning-worthy phase at turn end.
 
 Before finishing, do a short Teach Me review that actually teaches the user something:
-1. First, run `python3 {skill_dir}/scripts/teach_me.py context{user_flag}` to load the user's learning portrait: weak concepts, knowledge-tree weak nodes, style preferences, and recent captures. Use this to avoid repeating what they already know and to start from their first weak prerequisite.
+1. First, run `python3 {skill_dir}/scripts/teach_me.py context --full{user_flag}` to load the user's learning portrait: weak concepts, knowledge-tree weak nodes, style preferences, and recent captures. Use this to avoid repeating what they already know and to start from their first weak prerequisite.
 2. Then, look at the actual content the user produced or discussed in this phase (the note, code, design, analysis, writing, etc.). Read any modified files or the transcript if needed.
 3. Identify 1-3 valuable ideas, concepts, or insights from that substance, calibrated to what the user still needs to learn.
 4. Only if the phase had no substantive content, reflect on a brief process or tool lesson. If the tool lesson is trivial (e.g. "a CLI was not installed"), skip it entirely.
@@ -708,7 +709,7 @@ def handle_prompt(payload: dict[str, Any]) -> int:
 {context}
 
 Do a short Teach Me session right now:
-1. First, run `python3 {skill_dir}/scripts/teach_me.py context{user_flag}` to load the user's learning portrait: weak concepts, knowledge-tree weak nodes, style preferences, and recent captures.
+1. First, run `python3 {skill_dir}/scripts/teach_me.py context --full{user_flag}` to load the user's learning portrait: weak concepts, knowledge-tree weak nodes, style preferences, and recent captures.
 2. Use that portrait to decide what to teach: avoid repeating mastered concepts, start from weak prerequisites, and match the user's speaking style.
 3. Briefly explain the core idea in plain language.
 4. Ask one short follow-up question (Socratic, true/false, or "要不要我展开讲讲？").

@@ -358,7 +358,7 @@ JSON
 6. In the final response, do not just announce that you captured notes. Briefly
    teach the user the most valuable point **from the substance of what they did or
    produced**, not from the tool mechanics:
-   - First, run `python3 <teach-me-skill-dir>/scripts/teach_me.py context` to load
+   - First, run `python3 <teach-me-skill-dir>/scripts/teach_me.py context --full` to load
      the user's learning portrait: weak concepts, knowledge-tree weak nodes,
      style preferences, and recent captures.
    - Use the portrait to choose what to teach: avoid repeating mastered concepts
