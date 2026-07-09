@@ -402,13 +402,13 @@ pre{
   <section class="hero">
     <div>
       <p class="eyebrow">Turn development work into learning assets</p>
-      <h1>Teach Me</h1>
-      <p class="lede">I do not want an agent to lecture on every step, and I do not want it to only finish the task. Teach Me looks at what actually happened in the turn: edits, tests, errors, verification. When the work is worth learning from, it asks for one short review pass.</p>
+      <h1>After AI writes the code, what do you actually keep?</h1>
+      <p class="lede">Teach Me does not do your project for you, and it does not lecture after every step. It watches what actually happened in the turn—edits, tests, errors, verification—and when the work is worth learning from, it turns concepts, tradeoffs, pitfalls, and bug risks into your own local knowledge base. Every project you build becomes a stack of portable learning notes.</p>
       <div class="cta">
         <a class="btn primary" href="#install">Install it for my agent</a>
         <a class="btn" href="#why">See what it solves</a>
       </div>
-      <p class="note">Works with Claude Code, Codex, OpenClaw, and Kimi Code CLI. It writes to <code>~/.teach_me_skill/vault</code> by default. Git sync is optional and never enabled by default.</p>
+      <p class="note">Works with Claude Code, Codex, OpenClaw, and Kimi Code CLI. Your data lives locally in <code>~/.teach_me_skill/vault</code>. Git sync is optional and never enabled by default.</p>
     </div>
     <div>
       <figure class="visual">
@@ -428,20 +428,32 @@ Teach Me learning context:
   <section id="why" class="band">
     <div class="wrap">
       <p class="kicker">Why</p>
-      <h2>I do not need more explanations. I need a tutor that knows when to pause.</h2>
-      <p class="section-sub">Teach Me is not a keyword-triggered recap bot. It collects evidence from the turn, scores it at the Stop hook, stays quiet when the signal is weak, and asks for a short review only when the work is worth keeping.</p>
+      <h2>Vibe coding is fast, but three days later you may not be able to change that code.</h2>
+      <p class="section-sub">Teach Me is not about making AI faster. It is about making <strong>you actually learn</strong>. It automatically captures what is worth keeping from development: concepts you understood, pitfalls you hit, tradeoffs you made, and bug risks you introduced.</p>
       <div class="grid">
         <article class="card">
-          <h3>Evidence over noise</h3>
-          <p>Edits, tests, builds, errors, and verification become lightweight events. Only learning-worthy phases move into review.</p>
+          <h3>Learn from real projects</h3>
+          <p>No extra tutorials needed. The project you are building right now is the curriculum. Every turn can become a concept note or knowledge-tree node.</p>
         </article>
         <article class="card">
-          <h3>Find the foundation first</h3>
-          <p>For a new domain, the agent sketches a prerequisite ladder and starts from the first weak or unknown concept.</p>
+          <h3>Hook-aware, not keyword-driven</h3>
+          <p>Prompt, tool, and stop hooks observe actual behavior: edits, tests, builds, errors, verification. Notes are not triggered only when you say “teach me.”</p>
         </article>
         <article class="card">
-          <h3>Keep what transfers</h3>
-          <p>The output is ordinary Markdown. Notes, mastery, review prompts, and optional Git sync all revolve around a local Obsidian vault.</p>
+          <h3>Only the high-value points</h3>
+          <p>By default it keeps just 1-3 transferable items: hidden mechanisms, design tradeoffs, algorithmic ideas, bug risks. No note flooding.</p>
+        </article>
+        <article class="card">
+          <h3>Structured knowledge base</h3>
+          <p>Automatically organizes into Concepts, Algorithmic Ideas, Project Maps, Socratic Questions, and Reviews, plus a knowledge tree and mastery tracking.</p>
+        </article>
+        <article class="card">
+          <h3>Remember what you learn</h3>
+          <p>Teach Me Recap uses spaced repetition and active recall to turn “I read it once” into “I can use it.”</p>
+        </article>
+        <article class="card">
+          <h3>Local-first and fully controllable</h3>
+          <p>All readable notes are plain Markdown stored locally. Git sync is optional and disabled by default.</p>
         </article>
       </div>
     </div>
@@ -450,18 +462,40 @@ Teach Me learning context:
   <section id="workflow">
     <div class="wrap">
       <p class="kicker">How</p>
-      <h2>It does not take over the workflow. It adds one step at the boundary.</h2>
-      <p class="section-sub">The prompt hook tells the agent Teach Me is available. Tool hooks record what actually happened. The Stop hook asks for one short review only when the evidence is strong enough. The local runtime owns file writes.</p>
+      <h2>Four steps to turn a development phase into knowledge.</h2>
+      <p class="section-sub">Teach Me does not replace your agent. It acts like a tutor who knows when to pause: it looks at the evidence first, then decides whether to summarize.</p>
       <div class="steps">
-        <div class="step"><strong>1. Inject context</strong><span>Explicit teaching or development prompts receive compact Teach Me context.</span></div>
-        <div class="step"><strong>2. Collect evidence</strong><span>Pre / Post / Failure tool hooks log edits, tests, builds, and errors.</span></div>
-        <div class="step"><strong>3. Score at Stop</strong><span>At the turn boundary, evidence decides whether a review is useful.</span></div>
-        <div class="step"><strong>4. Capture or assess</strong><span>Write 1-3 notes, or only update the knowledge tree and mastery.</span></div>
+        <div class="step"><strong>1. Sense the scene</strong><span>Development, debugging, refactoring, testing, or prompts like “teach me” / “why” inject Teach Me context.</span></div>
+        <div class="step"><strong>2. Collect evidence</strong><span>Pre / Post / Failure tool hooks log real edits, tests, builds, errors, and verification.</span></div>
+        <div class="step"><strong>3. Score at Stop</strong><span>At the phase boundary, evidence is scored: weak signal is skipped, strong signal triggers one short review.</span></div>
+        <div class="step"><strong>4. Capture assets</strong><span>Write only 1-3 high-value items: concepts, algorithmic ideas, project maps, bug risks. Update the knowledge tree and review schedule.</span></div>
       </div>
     </div>
   </section>
 
-  <section id="hooks" class="band">
+  <section id="skills" class="band">
+    <div class="wrap">
+      <p class="kicker">Skills</p>
+      <h2>Three skills for the full loop: capture, check, review.</h2>
+      <p class="section-sub">Not one bloated tool, but three small skills that work together.</p>
+      <div class="grid">
+        <article class="card">
+          <h3>🌱 Teach Me</h3>
+          <p>Core skill. Collects evidence while you develop, triggers reviews at phase boundaries, and writes high-value knowledge to the local vault.</p>
+        </article>
+        <article class="card">
+          <h3>🔍 Teach Me Check</h3>
+          <p>Diagnostic skill. Checks installation status, vault location, and recent activity, then suggests next steps in natural language.</p>
+        </article>
+        <article class="card">
+          <h3>🔄 Teach Me Recap</h3>
+          <p>Review skill. Uses spaced repetition and active recall to help you review captured concepts so you do not forget them.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="hooks">
     <div class="wrap">
       <p class="kicker">Hooks</p>
       <h2>Installation should be reversible, repeatable, and respectful of existing config.</h2>
@@ -503,7 +537,7 @@ Teach Me learning context:
     </div>
   </section>
 
-  <section id="install">
+  <section id="install" class="band">
     <div class="wrap">
       <p class="kicker">Install</p>
       <h2>Install the skill, then register hooks for the agent you use.</h2>
@@ -514,9 +548,9 @@ Teach Me learning context:
           <p>Send this to Claude Code, Codex, OpenClaw, or Kimi Code CLI.</p>
           <div class="copybox">
             <button class="copybtn" type="button" data-copy="agent-install">Copy</button>
-<pre><code id="agent-install">Please install the Teach Me Agent Skill:
+<pre><code id="agent-install">Please install the Teach Me Agent Skill (this installs Teach Me, Teach Me Check, and Teach Me Recap):
 1. Clone https://github.com/dull-bird/teach-me-skill.git
-2. Enter teach-me-skill and run ./install.sh
+2. Enter teach-me-skill and run ./install.sh (only copy skill files; do not install extra dependencies or test tools)
 3. If I use Claude Code, run ./claude-code/install-hook.sh
 4. If I use Codex, run ./codex/install-hook.sh
 5. If I use OpenClaw, run ./openclaw/install-hook.sh
@@ -524,7 +558,11 @@ Teach Me learning context:
 7. After installation, run:
    python3 ~/.codex/skills/teach-me/scripts/teach_me.py context
    or the scripts/teach_me.py context command under the matching agent skills directory
-8. Before writing the first learning note, ask me to confirm the vault path, note language, and whether to enable Git sync</code></pre>
+8. Later, check status any time with:
+   python3 ~/.codex/skills/check/scripts/check_me.py report
+9. To review captured knowledge, say "Help me review" and the agent will run:
+   python3 ~/.codex/skills/recap/scripts/recap.py next
+10. Before writing the first learning note, ask me to confirm the vault path, note language, and whether to enable Git sync</code></pre>
           </div>
         </div>
 
@@ -567,7 +605,7 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
     </div>
   </section>
 
-  <section class="band">
+  <section>
     <div class="wrap">
       <p class="kicker">Vault</p>
       <h2>Your data stays local, in ordinary Markdown.</h2>

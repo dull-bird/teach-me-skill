@@ -23,72 +23,105 @@
 
 ## 中文
 
-Teach Me 是一个面向开发学习的 Agent Skill。它支持 Claude Code、Codex、OpenClaw、Kimi Code CLI，把有价值的开发过程沉淀成本地 Obsidian 笔记、知识树、掌握度记录和复习问题。
+Teach Me 是一套 Agent Skill，支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。
 
-它不是“每执行一个命令就讲课”的工具。Teach Me 的目标是让 agent 正常把事做完，同时在合适的阶段边界留下一点真正能迁移的知识：概念、算法思路、架构关系、数据流、易错点和未来可能造成 bug 的理解缺口。
+**它的核心功能只有一句：把开发过程变成学习资产。**
 
-### 它现在怎么工作
+AI 能帮你写代码，但写完之后你会不会改、懂不懂为什么，是另一回事。Teach Me 不会替代你的 agent，也不会每个命令都给你上课。它会在你真正完成了一段有学习价值的开发工作之后，轻轻插入一次复盘，把你刚才理解的关键概念、踩过的坑、做过的设计取舍和可能埋下的 bug 风险，沉淀成你自己的本地知识库。
 
-1. **Prompt hook 注入上下文**
+这样，你做的每个项目都会留下一叠能带走的学习笔记，而不是一坨改不动的 AI 代码。
 
-   当用户明确说“教我”“复盘”“讲原理”，或提示词明显是开发、调试、重构、测试、构建等场景时，hook 会注入一段紧凑的 Teach Me context。它告诉 agent：可以使用 Teach Me，但不要打断正常实现。
+### 这不是 vibe coding
 
-2. **Tool hooks 收集证据**
+vibe coding 的问题不是慢，而是**学完还是不会**。你看着 AI 生成代码、跑通测试，但三天后：
 
-   `PreToolUse`、`PostToolUse`、`PostToolUseFailure` 会记录这一轮真正发生了什么：文件编辑、测试、构建、类型检查、报错、验证结果等。它们不会直接写学习笔记，只是形成轻量 evidence。
+- 为什么这里要这样设计？忘了。
+- 这个 bug 为什么出现？忘了。
+- 这段代码能搬到下一个项目吗？不敢动。
 
-3. **Stop hook 做阶段边界判断**
+Teach Me 的设定是：**AI 可以替你写，但理解必须你自己有**。它在阶段边界喊停，只把真正值得留下的东西写成笔记，让你能复习、能迁移、能独立改代码。
 
-   在一轮回复结束前，Stop hook 会给这些 evidence 打分。信号弱时保持安静；信号足够强时，只请求一次短 Teach Me review。这样即使用户一开始没有说“教我”，只要 agent 实际完成了一段有学习价值的开发工作，也能触发复盘。
+### 具体怎么做
 
-4. **Skill rubric 决定写不写**
+Teach Me 通过 hooks 观察你这一轮到底做了什么，而不是只看你说的话：
 
-   真正要不要写笔记，由 skill 在阶段边界判断。默认只捕获 1-3 个高价值点，优先选择能迁移到以后项目里的概念、隐藏机制、设计取舍、算法思路、项目地图和 bug 风险。
+1. **Prompt hook** 识别开发/调试/重构/测试场景，或“教我”“复盘”“为什么”这类显式学习意图。
+2. **Tool hooks** 记录实际发生的证据：文件编辑、测试运行、构建、类型检查、报错、验证结果。
+3. **Stop hook** 在阶段结束时给证据打分。信号弱就安静，信号强才请求一次短复盘。
+4. **Skill rubric** 决定写什么：默认只抓 1-3 个高价值点——能迁移的概念、隐藏机制、设计取舍、算法思路、项目地图、未来 bug 风险。
+5. **本地 runtime** 把内容写入 Obsidian vault，同时更新知识树、掌握度和复习计划。
 
-5. **Runtime 负责落盘**
+### 你会得到什么
 
-   `scripts/teach_me.py` 负责配置、写入 Obsidian vault、更新知识树、记录掌握度、生成复习字段、可选 Git sync。hook 不直接改笔记内容。
-
-### Learner model
-
-Teach Me 会维护一个逐步生长的用户知识模型。遇到新领域时，agent 应该先画一条 prerequisite ladder，例如：
-
-```text
-proxy -> proxy node -> subscription provider -> config.yaml -> proxy group -> selector -> url-test -> fallback
-```
-
-然后根据对话判断哪些概念是 `unknown`、`seen`、`explained`、`practiced`、`transferable` 或 `confident`。如果只是学到了用户哪里不懂，可以用 `assess` 更新知识树，不一定写完整笔记。
-
-Teach Me 也会主动收集轻量反馈。默认是可跳过的选择题或判断题，偶尔用简答题。用户不回答时，不会被当作“已经理解”。
-
-### Vault 输出
-
-默认 vault 路径：
-
-```text
-~/.teach_me_skill/vault
-```
-
-目录结构：
+一个本地 vault，默认在 `~/.teach_me_skill/vault`：
 
 ```text
 vault/
-├── 00_Index.md
-├── 01_Knowledge_Graph.md
-├── 02_Concepts/
-├── 03_Algorithmic_Ideas/
-├── 04_Project_Maps/
-├── 05_Socratic_Questions/
-├── 06_Reviews/
+├── 00_Index.md                 # 总索引
+├── 01_Knowledge_Graph.md       # 知识图谱
+├── 02_Concepts/                # 概念笔记
+├── 03_Algorithmic_Ideas/       # 算法思想
+├── 04_Project_Maps/            # 项目地图
+├── 05_Socratic_Questions/      # 苏格拉底问题
+├── 06_Reviews/                 # 复盘记录
 ├── 07_Learning_Profile/
-│   └── Knowledge_Tree.md
+│   └── Knowledge_Tree.md       # 知识树
 └── .teach-me/
-    ├── learning-state.json
-    ├── style-profile.json
-    └── events.jsonl
+    ├── learning-state.json     # 掌握度、复习计划
+    ├── style-profile.json      # 学习风格偏好
+    └── events.jsonl            # 事件日志
 ```
 
-可读笔记是普通 Markdown。机器状态放在 `.teach-me/`。默认不会同步到远端。
+所有可读笔记都是普通 Markdown。机器状态放在 `.teach-me/`。默认本地保存，不会推送到远端。
+
+### 三个技能
+
+| 技能 | 作用 | 典型说法 |
+| --- | --- | --- |
+| **Teach Me** | 开发时收集证据，阶段边界触发复盘，写笔记 | “复盘一下刚才的调试” |
+| **Teach Me Check** | 检查安装状态、vault 内容、最近记录 | “帮我检查 Teach Me 状态” |
+| **Teach Me Recap** | 用间隔重复 + 主动回忆复习已记录知识 | “帮我复习一下” |
+
+### 适合谁
+
+- **刚入门的人**：跟着真实项目学，每一步都留下理解痕迹。
+- **不想被 AI 绑架的人**：把 AI 的输出变成自己的知识。
+- **长期维护项目的人**：把架构决策、易错点、隐式依赖记下来，避免重复踩坑。
+- **想建立个人知识体系的人**：每个项目都是课程，vault 是你的教材。
+
+### 快速开始
+
+```bash
+# 1. 安装
+git clone https://github.com/dull-bird/teach-me-skill.git
+cd teach-me-skill
+./install.sh
+
+# 2. 按你的 agent 装 hook
+./codex/install-hook.sh      # 或 claude-code, kimi, openclaw
+
+# 3. 配置
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
+
+# 4. 正常写代码； Teach Me 会在合适时机请求复盘
+```
+
+之后：
+
+```bash
+# 检查状态
+python3 ~/.codex/skills/check/scripts/check_me.py report
+
+# 复习
+python3 ~/.codex/skills/recap/scripts/recap.py next
+```
+
+更自然的方式是直接说：
+
+- “帮我检查 Teach Me 状态”
+- “复盘一下刚才的调试”
+- “帮我复习一下”
+- “把 vault 改到 ~/Documents/Teach-Me”
 
 ### 安装
 
@@ -113,7 +146,7 @@ cd teach-me-skill
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
 ```
 
-第一次写学习笔记前，Teach Me 应该先让用户确认：
+第一次写笔记前， Teach Me 会让你确认：
 
 - vault 路径
 - 笔记语言
@@ -121,7 +154,7 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
 
 ### 可选 Git sync
 
-Git sync 是可选项。提供远端仓库后，Teach Me 可以在 `assess`、`capture`、`style` 之后自动 commit、pull --rebase、push。
+Git sync 是可选项。提供远端仓库后， Teach Me 可以在 `assess`、`capture`、`style` 之后自动 commit、pull --rebase、push。
 
 ```bash
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
@@ -153,45 +186,6 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 | Kimi Code CLI | prompt/tool/stop hooks | 复用 `~/.agents/skills/teach-me`，按支持事件记录证据 |
 | OpenClaw | `message:received`, `agent:bootstrap` | 注入 bootstrap context；真正的 final-review 需要插件层支持 |
 
-### Teach Me Check
-
-随时查看安装状态、vault 位置和最近记录：
-
-```bash
-python3 ~/.codex/skills/check/scripts/check_me.py report
-```
-
-也可以让 agent 直接说“帮我检查 Teach Me 状态”。检查完成后，你可以用自然语言继续要求修改路径、开启 Git sync、查看学习记录等。
-
-完整操作手册：
-
-```bash
-python3 ~/.codex/skills/check/scripts/check_me.py manual
-```
-
-### Teach Me Recap
-
-用间隔重复 + 主动回忆来复习已记录的知识：
-
-```bash
-python3 ~/.codex/skills/recap/scripts/recap.py next   # 出一道复习题
-python3 ~/.codex/skills/recap/scripts/recap.py rate "概念名" good  # 记录结果
-python3 ~/.codex/skills/recap/scripts/recap.py due    # 今天到期项
-python3 ~/.codex/skills/recap/scripts/recap.py stats  # 统计
-```
-
-自然语言示例：
-
-- “帮我复习一下”
-- “考考我”
-- “把 `PDF4QT page tree mutation` 标为 easy”
-
-完整操作手册：
-
-```bash
-python3 ~/.codex/skills/recap/scripts/recap.py manual
-```
-
 ### 开发测试（普通用户可跳过）
 
 ```bash
@@ -202,53 +196,37 @@ python3 -m unittest -v tests.test_teach_me_hook
 
 ## English
 
-Teach Me is an Agent Skill for development learning. It works with Claude Code, Codex, OpenClaw, and Kimi Code CLI, turning meaningful development work into local Obsidian notes, a knowledge tree, mastery records, and review prompts.
+Teach Me is a set of Agent Skills for Claude Code, Codex, OpenClaw, and Kimi Code CLI.
 
-It is not a tool that explains every command. The point is to let the agent work normally, then preserve the few things that are worth learning from: concepts, algorithmic ideas, architecture relationships, data flow, hidden mechanisms, bug risks, and project maps.
+**Its core promise is simple: turn development work into learning assets.**
 
-### How it works now
+AI can write code for you, but whether you can later modify it and understand why it works is a different question. Teach Me does not replace your agent, and it does not lecture you after every command. When you actually finish a meaningful piece of development, it gently asks for a short review, turning the key concepts, pitfalls, design tradeoffs, and bug risks you just encountered into your own local knowledge base.
 
-1. **Prompt hook injects context**
+This way, every project you build leaves behind a stack of portable learning notes instead of a pile of unmaintainable AI-generated code.
 
-   When the user explicitly asks for teaching, review, or first-principles explanation, or when the prompt is clearly about coding, debugging, refactoring, testing, or building, the hook injects compact Teach Me context. It tells the agent Teach Me is available without interrupting implementation.
+### This is not vibe coding
 
-2. **Tool hooks collect evidence**
+The problem with vibe coding is not speed—it is that **you still do not learn**. You watch AI generate code and pass tests, but three days later:
 
-   `PreToolUse`, `PostToolUse`, and `PostToolUseFailure` record what actually happened in the turn: file edits, tests, builds, type checks, errors, and verification results. These events do not write learning notes directly. They only become lightweight evidence.
+- Why was it designed this way? Forgotten.
+- Why did that bug appear? Forgotten.
+- Can I reuse this code in the next project? Afraid to touch it.
 
-3. **Stop hook scores the boundary**
+Teach Me is built on one rule: **AI may write for you, but understanding must stay with you**. It pauses at phase boundaries and writes down only what is worth keeping, so you can review it, transfer it, and independently change the code later.
 
-   Before the final answer, the Stop hook scores the collected evidence. If the signal is weak, it stays silent. If the signal is strong enough, it requests exactly one short Teach Me review pass. This means useful learning can be captured even when the original prompt did not say “teach me.”
+### How it works
 
-4. **The skill rubric decides what to keep**
+Teach Me uses hooks to observe what you actually did this turn, not just what you typed:
 
-   The skill decides whether the phase deserves durable notes. By default it captures only 1-3 high-value items: transferable concepts, hidden complexity, design tradeoffs, algorithmic ideas, project maps, and future bug risks.
+1. **Prompt hook** detects dev/debug/refactor/test scenarios, or explicit learning intent like “teach me”, “review”, or “why”.
+2. **Tool hooks** record evidence: file edits, test runs, builds, type checks, errors, verification results.
+3. **Stop hook** scores the evidence at the end of a phase. If the signal is weak, it stays quiet; if strong, it asks for one short review.
+4. **Skill rubric** decides what to keep: by default only 1-3 high-value items—transferable concepts, hidden mechanisms, design tradeoffs, algorithmic ideas, project maps, and future bug risks.
+5. **Local runtime** writes everything into an Obsidian vault and updates the knowledge tree, mastery, and review schedule.
 
-5. **The runtime writes state**
+### What you get
 
-   `scripts/teach_me.py` owns configuration, Obsidian vault writes, knowledge-tree updates, mastery state, review fields, event logs, and optional Git sync. Hooks provide context and evidence; the runtime performs deterministic file operations.
-
-### Learner model
-
-Teach Me keeps a growing learner model. When a new domain appears, the agent should sketch a prerequisite ladder, for example:
-
-```text
-proxy -> proxy node -> subscription provider -> config.yaml -> proxy group -> selector -> url-test -> fallback
-```
-
-Then it estimates whether each concept is `unknown`, `seen`, `explained`, `practiced`, `transferable`, or `confident`. If the useful discovery is only about the user's current understanding, the agent can run `assess` to update the knowledge tree without writing a full note.
-
-Teach Me also asks small optional feedback probes. Most are multiple-choice or true/false checks; short-answer questions are occasional. If the user skips the probe, Teach Me keeps moving and does not treat silence as mastery.
-
-### Vault output
-
-Default vault path:
-
-```text
-~/.teach_me_skill/vault
-```
-
-Directory shape:
+A local vault, default at `~/.teach_me_skill/vault`:
 
 ```text
 vault/
@@ -267,7 +245,56 @@ vault/
     └── events.jsonl
 ```
 
-Readable notes are ordinary Markdown. Machine state lives under `.teach-me/`. Nothing is pushed remotely by default.
+Readable notes are plain Markdown. Machine state lives under `.teach-me/`. Local by default; nothing is pushed remotely unless you enable Git sync.
+
+### The three skills
+
+| Skill | Purpose | Typical prompt |
+| --- | --- | --- |
+| **Teach Me** | Collects evidence while you develop, triggers reviews at phase boundaries, writes notes | “Review the debugging we just did” |
+| **Teach Me Check** | Checks installation status, vault contents, recent activity | “Check my Teach Me status” |
+| **Teach Me Recap** | Reviews captured knowledge with spaced repetition and active recall | “Help me review” |
+
+### Who it is for
+
+- **Beginners**: Learn by working on real projects; every step leaves a trace of understanding.
+- **People who want AI acceleration without dependency**: Turn AI output into your own knowledge.
+- **Long-term maintainers**: Record architectural decisions, pitfalls, and implicit dependencies so you do not step on the same rake twice.
+- **People building a personal knowledge system**: Every project becomes a course; the vault is your textbook.
+
+### Quick start
+
+```bash
+# 1. Install
+git clone https://github.com/dull-bird/teach-me-skill.git
+cd teach-me-skill
+./install.sh
+
+# 2. Register hooks for your agent
+./codex/install-hook.sh      # or claude-code, kimi, openclaw
+
+# 3. Configure
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
+
+# 4. Code as usual; Teach Me asks for a review when it matters
+```
+
+After that:
+
+```bash
+# Check status
+python3 ~/.codex/skills/check/scripts/check_me.py report
+
+# Review
+python3 ~/.codex/skills/recap/scripts/recap.py next
+```
+
+Or just speak naturally:
+
+- “Check my Teach Me status”
+- “Review the debugging we just did”
+- “Help me review”
+- “Move my vault to ~/Documents/Teach-Me”
 
 ### Install
 
@@ -292,7 +319,7 @@ Install hooks for the agent you use:
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
 ```
 
-Before writing the first learning note, Teach Me should ask the user to confirm:
+Before writing the first note, Teach Me asks you to confirm:
 
 - vault path
 - note language
@@ -331,45 +358,6 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 | Codex | `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Stop` | Same, plus adds `~/.teach_me_skill` as a writable root |
 | Kimi Code CLI | prompt/tool/stop hooks | Reuses `~/.agents/skills/teach-me` and records evidence through supported events |
 | OpenClaw | `message:received`, `agent:bootstrap` | Injects bootstrap context; true final-review behavior needs plugin support |
-
-### Teach Me Check
-
-Check installation status, vault location, and recent activity at any time:
-
-```bash
-python3 ~/.codex/skills/check/scripts/check_me.py report
-```
-
-You can also ask your agent: “Check my Teach Me status.” After the report, use natural language to change the vault path, enable Git sync, view learning records, etc.
-
-Full operation manual:
-
-```bash
-python3 ~/.codex/skills/check/scripts/check_me.py manual
-```
-
-### Teach Me Recap
-
-Review captured knowledge with spaced repetition and active recall:
-
-```bash
-python3 ~/.codex/skills/recap/scripts/recap.py next              # next review prompt
-python3 ~/.codex/skills/recap/scripts/recap.py rate "Concept" good  # record result
-python3 ~/.codex/skills/recap/scripts/recap.py due               # due today
-python3 ~/.codex/skills/recap/scripts/recap.py stats             # statistics
-```
-
-Natural-language examples:
-
-- “Help me review”
-- “Quiz me”
-- “Mark `PDF4QT page tree mutation` as easy”
-
-Full operation manual:
-
-```bash
-python3 ~/.codex/skills/recap/scripts/recap.py manual
-```
 
 ### Developer tests (users can skip)
 
