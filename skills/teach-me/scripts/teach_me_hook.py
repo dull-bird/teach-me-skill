@@ -551,13 +551,19 @@ def handle_stop(payload: dict[str, Any]) -> int:
         return 0
 
     reason = build_stop_reason(config, assessment)
-    # Kimi Code CLI hook runner：exit 0 + hookSpecificOutput.permissionDecision=deny 表示 block
-    output = {
-        "hookSpecificOutput": {
-            "permissionDecision": "deny",
-            "permissionDecisionReason": reason,
+    # Codex 在 Stop payload 里会带 transcript_path，Kimi 没有；据此选择输出格式
+    is_codex = bool(payload.get("transcript_path") is not None or "codex" in cwd(payload).lower())
+    if is_codex:
+        # Codex Stop 识别 decision=block + reason
+        output = {"decision": "block", "reason": reason, "systemMessage": "🌱"}
+    else:
+        # Kimi Code CLI 识别 hookSpecificOutput.permissionDecision=deny
+        output = {
+            "hookSpecificOutput": {
+                "permissionDecision": "deny",
+                "permissionDecisionReason": reason,
+            }
         }
-    }
     print(json.dumps(output, ensure_ascii=False))
     return 0
 

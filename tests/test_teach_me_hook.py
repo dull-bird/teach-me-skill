@@ -240,6 +240,42 @@ class TeachMeHookTests(unittest.TestCase):
             self.assertIn("capture", stop_decision["review_prompt"].lower())
             self.assertIn("1-3", stop_decision["review_prompt"])
 
+    def test_codex_stop_uses_decision_block_format(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "pytest"},
+                    "tool_response": {"stdout": "1 passed", "stderr": ""},
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "transcript_path": "/tmp/codex-transcript.jsonl",
+                },
+                home,
+            )
+            result = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "测试通过。",
+                    "transcript_path": "/tmp/codex-transcript.jsonl",
+                },
+                home,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = parse_stdout(result)
+        self.assertEqual(data["decision"], "block")
+        self.assertIn("🌱", data["reason"])
+        self.assertIn("Teach Me detected", data["reason"])
+        self.assertNotIn("hookSpecificOutput", data)
+
     def test_stop_stays_silent_without_meaningful_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -446,7 +482,7 @@ class InstallerTests(unittest.TestCase):
         self.assertIn("[[hooks.Stop]]", text)
         self.assertIn("[[hooks.PreToolUse]]", text)
         self.assertIn("[[hooks.PostToolUse]]", text)
-        self.assertIn('matcher = "*"', text)
+        self.assertNotIn('matcher = "*"', text)
         self.assertIn("teach_me_hook.py", text)
         self.assertIn("[sandbox_workspace_write]", text)
         self.assertIn(f'"{module.TEACH_ME_HOME}"', text)

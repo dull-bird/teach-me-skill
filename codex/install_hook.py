@@ -25,19 +25,16 @@ type = "command"
 command = "{HOOK_COMMAND}"
 
 [[hooks.PreToolUse]]
-matcher = "*"
 [[hooks.PreToolUse.hooks]]
 type = "command"
 command = "{HOOK_COMMAND}"
 
 [[hooks.PostToolUse]]
-matcher = "*"
 [[hooks.PostToolUse.hooks]]
 type = "command"
 command = "{HOOK_COMMAND}"
 
 [[hooks.Stop]]
-matcher = "*"
 [[hooks.Stop.hooks]]
 type = "command"
 command = "{HOOK_COMMAND}"
