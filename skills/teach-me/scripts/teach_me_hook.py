@@ -299,6 +299,54 @@ def extract_file_path(value: Any) -> str:
     return ""
 
 
+def is_file_writer(tool: str) -> bool:
+    lowered = tool.lower()
+    return any(k in lowered for k in ("write", "edit", "replace", "patch", "save", "create"))
+
+
+def extract_content_excerpt(input_value: Any, tool: str, limit: int = 1500) -> str:
+    """Extract a meaningful excerpt of new content from write/edit tools."""
+    if not isinstance(input_value, dict):
+        return ""
+    lowered = tool.lower()
+
+    # Edit/Replace tools: show the replacement, which is the actual change
+    for key in ("new_string", "newString", "new", "replacement", "content"):
+        value = input_value.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()[:limit]
+
+    # Write/Create tools: show beginning of the written content
+    for key in ("content", "text", "data"):
+        value = input_value.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()[:limit]
+
+    return ""
+
+
+def extract_content_diff(input_value: Any, tool: str, limit: int = 1200) -> str:
+    """For edit tools, return a mini diff of old -> new."""
+    if not isinstance(input_value, dict):
+        return ""
+    old = ""
+    new = ""
+    for key in ("old_string", "oldString", "old"):
+        value = input_value.get(key)
+        if isinstance(value, str):
+            old = value.strip()
+            break
+    for key in ("new_string", "newString", "new", "replacement", "content"):
+        value = input_value.get(key)
+        if isinstance(value, str):
+            new = value.strip()
+            break
+    if old or new:
+        text = f"--- old\n{old[:limit]}\n+++ new\n{new[:limit]}"
+        return text[: limit * 2 + 30]
+    return ""
+
+
 def classify_tool(tool: str, command: str, file_path: str, output: str) -> tuple[int, list[str]]:
     tags: set[str] = set()
     score = 0
@@ -389,22 +437,23 @@ def maybe_log_tool_event(payload: dict[str, Any]) -> None:
         "PostToolUse": "post",
         "PostToolUseFailure": "failure",
     }.get(event, "tool")
-    append_event(
-        user_cfg,
-        {
-            "type": "tool",
-            "phase": phase,
-            **event_context(payload),
-            "tool_name": tool,
-            "command": command[:500],
-            "file_path": file_path[:500],
-            "input_excerpt": compact_json(input_value),
-            "output_excerpt": response_text,
-            "score": score,
-            "signal_tags": tags,
-            "user_id": user_cfg.get("_user_id", "default"),
-        },
-    )
+    data: dict[str, Any] = {
+        "type": "tool",
+        "phase": phase,
+        **event_context(payload),
+        "tool_name": tool,
+        "command": command[:500],
+        "file_path": file_path[:500],
+        "input_excerpt": compact_json(input_value),
+        "output_excerpt": response_text,
+        "score": score,
+        "signal_tags": tags,
+        "user_id": user_cfg.get("_user_id", "default"),
+    }
+    if is_file_writer(tool):
+        data["content_excerpt"] = extract_content_excerpt(input_value, tool)[:1500]
+        data["content_diff"] = extract_content_diff(input_value, tool)[:1200]
+    append_event(user_cfg, data)
 
 
 def load_events(config: dict[str, Any], limit: int = 500) -> list[dict[str, Any]]:
@@ -446,6 +495,24 @@ def already_blocked(events: list[dict[str, Any]], payload: dict[str, Any]) -> bo
     )
 
 
+def modified_files(events: list[dict[str, Any]], payload: dict[str, Any]) -> list[str]:
+    """Collect file paths that were written or edited in the current scope."""
+    scoped = [event for event in events if same_scope(event, payload)]
+    files: list[str] = []
+    seen: set[str] = set()
+    for event in scoped:
+        if event.get("type") != "tool":
+            continue
+        tags = event.get("signal_tags", []) or []
+        if "modification" not in tags:
+            continue
+        path = str(event.get("file_path") or "").strip()
+        if path and path not in seen:
+            seen.add(path)
+            files.append(path)
+    return files[-8:]
+
+
 def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
     scoped = [event for event in events if same_scope(event, payload)]
     tags: set[str] = set()
@@ -485,6 +552,7 @@ def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[st
         "threshold": threshold,
         "tags": sorted(tags),
         "reasons": reasons[-6:],
+        "modified_files": modified_files(events, payload),
         "should_block": score >= threshold and bool(tags),
     }
 
@@ -541,19 +609,27 @@ message with `🌱`. Detection evidence:
 Teach Me skill dir: {skill_dir}
 """
 
+    modified = assessment.get("modified_files", [])
+    modified_hint = ""
+    if modified:
+        modified_hint = "\nFiles created or edited in this phase:\n" + "\n".join(f"- {p}" for p in modified)
+        modified_hint += "\nRead these files (or the conversation transcript) to understand the substance before teaching."
+
     return f"""Teach Me detected a learning-worthy phase at turn end.
 
 Before finishing, do a short Teach Me review that actually teaches the user something:
-1. Identify the 1-3 most valuable concepts, algorithmic ideas, hidden mechanisms, or bug-risk lessons from this phase.
-2. In 1-2 plain sentences, explain the core idea to the user as if teaching a beginner. Connect it to something they already know if possible.
-3. Ask one short, concrete follow-up: a Socratic question, a true/false check, or "要不要我展开讲讲？". Do not just announce that you wrote a note.
-4. If the user wants to go deeper, explain missing prerequisites first (e.g. "什么是 Canvas", "什么是状态驱动动画"). Never make the user dig through the vault to learn.
-5. Only after teaching, if a durable note is warranted, run `python3 {skill_dir}/scripts/teach_me.py capture{user_flag}` or `assess{user_flag}`.
-6. If nothing is worth capturing after reflection, say so briefly and finish normally.
-7. Prefix the user-visible teaching message with `🌱`.
+1. First, look at the actual content the user produced or discussed in this phase (the note, code, design, analysis, writing, etc.). Read any modified files or the transcript if needed.
+2. Identify 1-3 valuable ideas, concepts, or insights from that substance.
+3. Only if the phase had no substantive content, reflect on a brief process or tool lesson. If the tool lesson is trivial (e.g. "a CLI was not installed"), skip it entirely.
+4. In 1-2 plain sentences, explain the core idea to the user as if teaching a beginner. Connect it to something they already know if possible.
+5. Ask one short, concrete follow-up: a Socratic question, a true/false check, or "要不要我展开讲讲？". Do not just announce that you wrote a note.
+6. If the user wants to go deeper, explain missing prerequisites first (e.g. "什么是 Canvas", "什么是状态驱动动画"). Never make the user dig through the vault to learn.
+7. Only after teaching, if a durable note is warranted, run `python3 {skill_dir}/scripts/teach_me.py capture{user_flag}` or `assess{user_flag}`.
+8. If nothing is worth capturing after reflection, say so briefly and finish normally.
+9. Prefix the user-visible teaching message with `🌱`.
 
 Detection evidence:
-{evidence}
+{evidence}{modified_hint}
 """
 
 

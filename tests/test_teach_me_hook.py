@@ -537,6 +537,70 @@ class InstallerTests(unittest.TestCase):
         self.assertIn('event = "Stop"', text)
         self.assertNotIn('matcher = "*"', text)
 
+    def test_write_file_event_captures_content_excerpt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            result = run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "WriteFile",
+                    "tool_input": {
+                        "file_path": "/repo/essay.md",
+                        "content": "AI needs its own time to grow.\nIt is still borrowing human tools.",
+                    },
+                    "tool_response": {"ok": True},
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            events = read_events(home)
+            tool_events = [e for e in events if e.get("type") == "tool"]
+            self.assertEqual(len(tool_events), 1)
+            event = tool_events[0]
+            self.assertIn("modification", event.get("signal_tags", []))
+            self.assertIn("AI needs its own time", event.get("content_excerpt", ""))
+            self.assertEqual(event.get("file_path"), "/repo/essay.md")
+
+    def test_stop_prompt_lists_modified_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            write_initialized_config(home)
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "WriteFile",
+                    "tool_input": {
+                        "file_path": "/repo/essay.md",
+                        "content": "AI needs its own time.",
+                    },
+                    "tool_response": {"ok": True},
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            result = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "Done.",
+                },
+                home,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = parse_stdout(result)
+            reason = data["hookSpecificOutput"]["permissionDecisionReason"]
+            self.assertIn("Files created or edited", reason)
+            self.assertIn("/repo/essay.md", reason)
+            self.assertIn("Read these files", reason)
+
 
 if __name__ == "__main__":
     unittest.main()
