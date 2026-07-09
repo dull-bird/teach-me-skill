@@ -56,7 +56,11 @@ After the user confirms, run:
 python3 <teach-me-skill-dir>/scripts/teach_me.py configure --language auto
 ```
 
-Use `--vault <path>` if the user chooses a different vault path.
+Use `--vault <path>` if the user chooses a different vault path. Users can also say these naturally:
+
+- “Initialize Teach Me for me, language auto.”
+- “Put my Teach Me vault in ~/Documents/Teach-Me-Vault.”
+- “Enable Git sync with my remote git@github.com:user/teach-me-vault.git and auto-sync.”
 
 ### Multiple users
 
@@ -89,6 +93,11 @@ python3 <teach-me-skill-dir>/scripts/teach_me.py configure \
 
 If the user wants local-only versioning without a remote, use
 `--enable-git-sync` without `--git-remote`.
+
+Natural-language equivalents:
+
+- “Enable Git sync with remote git@github.com:user/teach-me-vault.git and auto-sync after writes.”
+- “Enable local git versioning for my vault without a remote.”
 
 ## When To Capture
 

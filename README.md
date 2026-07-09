@@ -206,19 +206,33 @@ cd teach-me-skill
 
 ### 首次配置
 
+不用记命令，直接对你的 agent 说：
+
+> “帮我初始化 Teach Me，语言用自动。”
+
+agent 会运行：
+
 ```bash
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
 ```
 
-第一次写笔记前， Teach Me 会让你确认：
+第一次写笔记前，Teach Me 会让你确认：
 
-- vault 路径
+- vault 路径（默认 `~/.teach_me_skill/vault`）
 - 笔记语言
 - 是否启用 Git sync
 
+想换 vault 位置：
+
+> “把 Teach Me vault 放到 ~/Documents/Teach-Me-Vault。”
+
 ### 可选 Git sync
 
-Git sync 是可选项。提供远端仓库后， Teach Me 可以在 `assess`、`capture`、`style` 之后自动 commit、pull --rebase、push。
+想跨设备接着学，给 vault 配一个 Git remote：
+
+> “开启 Git sync，远程仓库用 git@github.com:user/teach-me-vault.git，写入后自动同步。”
+
+agent 会运行：
 
 ```bash
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
@@ -443,19 +457,33 @@ Install hooks for the agent you use:
 
 ### First configuration
 
+No need to memorize commands. Just tell your agent:
+
+> “Initialize Teach Me for me, language auto.”
+
+The agent will run:
+
 ```bash
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
 ```
 
 Before writing the first note, Teach Me asks you to confirm:
 
-- vault path
+- vault path (default `~/.teach_me_skill/vault`)
 - note language
 - whether to enable Git sync
 
+To use a custom vault path:
+
+> “Put my Teach Me vault in ~/Documents/Teach-Me-Vault.”
+
 ### Optional Git sync
 
-Git sync is opt-in. With a remote repository, Teach Me can automatically commit, pull --rebase, and push after `assess`, `capture`, and `style`.
+To keep learning across devices, give the vault a Git remote:
+
+> “Enable Git sync with remote git@github.com:user/teach-me-vault.git and auto-sync after writes.”
+
+The agent will run:
 
 ```bash
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \

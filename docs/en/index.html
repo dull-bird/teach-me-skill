@@ -624,21 +624,16 @@ cd teach-me-skill
 
         <div class="way">
           <h3>First configuration <span class="status">Obsidian vault</span></h3>
-          <p>The default vault is <code>~/.teach_me_skill/vault</code>. If you want to continue across machines, provide a Git remote and Teach Me can sync after writes.</p>
+          <p>The default vault is <code>~/.teach_me_skill/vault</code>. No need to memorize commands — just copy one of these prompts and send it to your agent.</p>
           <div class="copybox">
             <button class="copybtn" type="button" data-copy="configure">Copy</button>
-<pre><code id="configure">python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
+<pre><code id="configure">Initialize Teach Me for me, language auto.
 
-# Use a custom vault path
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
-  --vault ~/Documents/Teach-Me-Vault \
-  --language auto
+Use a custom vault path:
+Put my Teach Me vault in ~/Documents/Teach-Me-Vault.
 
-# Optional: sync the vault across devices
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
-  --language auto \
-  --git-remote git@github.com:user/teach-me-vault.git \
-  --auto-sync</code></pre>
+Sync across devices:
+Enable Git sync with remote git@github.com:user/teach-me-vault.git and auto-sync after writes.</code></pre>
           </div>
         </div>
       </div>

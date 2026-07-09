@@ -622,21 +622,16 @@ cd teach-me-skill
 
         <div class="way">
           <h3>第一次配置 <span class="status">Obsidian vault</span></h3>
-          <p>默认 vault 是 <code>~/.teach_me_skill/vault</code>。如果你想在多台机器上接着学，给它一个 Git remote，它会在写入后自动同步。</p>
+          <p>默认 vault 是 <code>~/.teach_me_skill/vault</code>。不用记命令，直接复制下面的话发给你的 agent。</p>
           <div class="copybox">
             <button class="copybtn" type="button" data-copy="configure">复制</button>
-<pre><code id="configure">python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
+<pre><code id="configure">帮我初始化 Teach Me，语言用自动。
 
-# Use a custom vault path
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
-  --vault ~/Documents/Teach-Me-Vault \
-  --language auto
+换 vault 位置：
+把 Teach Me vault 放到 ~/Documents/Teach-Me-Vault。
 
-# Optional: sync the vault across devices
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
-  --language auto \
-  --git-remote git@github.com:user/teach-me-vault.git \
-  --auto-sync</code></pre>
+多设备同步：
+开启 Git sync，远程仓库用 git@github.com:user/teach-me-vault.git，写入后自动同步。</code></pre>
           </div>
         </div>
       </div>
