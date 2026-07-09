@@ -20,9 +20,11 @@ terms are probably unclear.
 
 Use the local runtime in `scripts/teach_me.py` for configuration, Obsidian note
 creation, mastery state updates, and event logging. Hooks may inject a compact
-Teach Me context and may request one short Stop-hook review pass after
-learning-worthy tool work. If hooks are not installed and the task is
-development-related, run:
+Teach Me context and may request one short Stop-hook review after
+learning-worthy tool work. The Stop-hook review must teach the user something:
+explain the core idea in 1-2 sentences, ask a short follow-up, and only then
+capture notes. If hooks are not installed and the task is development-related,
+run:
 
 ```bash
 python3 skills/teach-me/scripts/teach_me.py context
@@ -280,14 +282,25 @@ python3 <teach-me-skill-dir>/scripts/teach_me.py capture <<'JSON'
 JSON
 ```
 
-6. In the final response, keep the teaching report short:
+6. In the final response, do not just announce that you captured notes. Briefly
+   teach the user the most valuable point:
+   - Explain the core idea in 1-2 plain sentences.
+   - Ask one short follow-up: a Socratic question, a true/false check, or an
+     invitation to go deeper (e.g. "要不要我展开讲讲？").
+   - If the user accepts, explain missing prerequisites first (e.g. "什么是
+     Canvas", "什么是状态驱动动画").
+   - Only after the micro-lesson, mention which notes were captured.
+
+Example:
 
 ```text
-Teach Me captured 2 notes: [[dependency graph]], [[state lifting]].
-```
+🌱 刚才你做了一个“集中状态驱动动画”的改动。核心思路是：把所有动画状态
+放在一个地方管理，UI 只负责根据状态重绘，这样交互和动画逻辑不会散在
+各处。一个小问题：如果状态更新和重绘频率不一致，你觉得应该先改状态再
+重绘，还是直接操作 DOM/Canvas？
 
-Include the actual explanation in the user-facing answer only when the user
-manually asked to be taught now.
+我顺手把这条记进了 vault：[[单文件 WebUI 的集中状态驱动动画]]。
+```
 
 ## Mastery Updates
 

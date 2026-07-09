@@ -504,13 +504,14 @@ Teach Me skill dir: {skill_dir}
 
     return f"""Teach Me detected a learning-worthy phase at turn end.
 
-Continue with a short Teach Me review before the final response:
-1. Decide whether this phase deserves 1-3 durable learning notes.
-2. Prefer concepts, algorithmic ideas, project maps, hidden complexity, or future bug-risk lessons over tool-name summaries.
-3. If useful, run `python3 {skill_dir}/scripts/teach_me.py capture` or `assess` with focused JSON.
-4. If no note is actually worth writing after inspection, say that briefly and finish normally.
-5. Ask at most one optional quick probe only when it would improve the learner model.
-6. Prefix any user-visible Teach Me review, note-capture summary, or setup confirmation with `🌱`.
+Before finishing, do a short Teach Me review that actually teaches the user something:
+1. Identify the 1-3 most valuable concepts, algorithmic ideas, hidden mechanisms, or bug-risk lessons from this phase.
+2. In 1-2 plain sentences, explain the core idea to the user as if teaching a beginner. Connect it to something they already know if possible.
+3. Ask one short, concrete follow-up: a Socratic question, a true/false check, or "要不要我展开讲讲？". Do not just announce that you wrote a note.
+4. If the user wants to go deeper, explain missing prerequisites first (e.g. "什么是 Canvas", "什么是状态驱动动画"). Never make the user dig through the vault to learn.
+5. Only after teaching, if a durable note is warranted, run `python3 {skill_dir}/scripts/teach_me.py capture` or `assess`.
+6. If nothing is worth capturing after reflection, say so briefly and finish normally.
+7. Prefix the user-visible teaching message with `🌱`.
 
 Detection evidence:
 {evidence}

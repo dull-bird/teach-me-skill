@@ -239,6 +239,9 @@ class TeachMeHookTests(unittest.TestCase):
             self.assertEqual(stop_decision["decision"], "block")
             self.assertIn("capture", stop_decision["review_prompt"].lower())
             self.assertIn("1-3", stop_decision["review_prompt"])
+            self.assertIn("explain", stop_decision["review_prompt"].lower())
+            self.assertIn("follow-up", stop_decision["review_prompt"].lower())
+            self.assertIn("prerequisites", stop_decision["review_prompt"].lower())
 
     def test_codex_stop_uses_decision_block_format(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
