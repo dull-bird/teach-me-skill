@@ -304,6 +304,28 @@ h1{
 .terminal-head span:nth-child(3){background:var(--green)}
 .terminal pre{margin:0;padding:18px;overflow:auto;font:14px/1.75 var(--mono);color:var(--body);white-space:pre-wrap;overflow-wrap:anywhere}
 .band{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
+.quote-section{padding:64px 22px}
+.quote-block{max-width:46rem;margin:0 auto;text-align:center}
+.quote-mark{
+  display:block;
+  margin:0 0 6px;
+  color:var(--accent);
+  font:400 54px/1 var(--serif);
+  opacity:.55;
+}
+.quote-block blockquote{
+  margin:0 0 18px;
+  color:var(--ink);
+  font:400 clamp(23px,3.2vw,32px)/1.55 var(--serif);
+  font-style:italic;
+}
+.quote-block cite{
+  display:block;
+  color:var(--muted);
+  font:650 13px/1.6 var(--mono);
+  font-style:normal;
+  letter-spacing:.04em;
+}
 .try-grid{
   display:grid;
   grid-template-columns:minmax(0,1fr) minmax(0,1fr);
@@ -575,6 +597,7 @@ pre{
       <a href="#workflow">工作流</a>
       <a href="#hooks">Hooks</a>
       <a href="#install">安装</a>
+      <a href="#import">导入</a>
       <a href="en/" hreflang="en">English</a>
       <a href="https://github.com/dull-bird/teach-me-skill">GitHub</a>
     </div>
@@ -599,11 +622,6 @@ pre{
         <div class="stat"><strong>1–3</strong><span>条高价值笔记，而不是流水账</span></div>
       </div>
     </div>
-    <div class="hero-diagram">
-      <figure class="visual" aria-label="Teach Me 四个技能串成的学习闭环">
-        <img src="assets/teach-me-workflow.png" alt="Teach Me 工作流程：你在写代码、调配置、查资料时，Teach Me 判断这段工作是否值得学，值得就捕获并提炼关键点，写入本地 Vault，更新学习画像，再由 Teach Me Recap 和 Exam 安排复习与测试，形成学习闭环" loading="lazy" width="1494" height="1053">
-      </figure>
-    </div>
   </section>
 
   <section>
@@ -611,6 +629,14 @@ pre{
       <figure class="visual" aria-label="做事、沉淀、复习三个阶段">
         <img src="assets/teach-me-story.jpg" alt="三格插画：做事阶段专注解决问题、写代码；沉淀阶段把问题记录、解决方案、关键要点和代码片段整理成一棵知识树；复习阶段用复习清单定期回顾，加深记忆" loading="lazy" width="1672" height="941">
       </figure>
+    </div>
+  </section>
+
+  <section class="quote-section">
+    <div class="wrap quote-block">
+      <span class="quote-mark" aria-hidden="true">"</span>
+      <blockquote>把持续建设自己的大脑，当作此生唯一重要的任务。</blockquote>
+      <cite>—— 李笑来，《专注的真相》</cite>
     </div>
   </section>
 
@@ -712,6 +738,9 @@ intent 则可先原位预览，再由用户 Apply 保存。
       <p class="kicker">Skills</p>
       <h2>四个技能，串成学习闭环。</h2>
       <p class="section-sub">不是一个大而全的工具，而是四个只做一件事、但能配合起来的小技能。</p>
+      <figure class="visual" aria-label="Teach Me 四个技能串成的学习闭环" style="margin-bottom:22px">
+        <img src="assets/teach-me-workflow.png" alt="Teach Me 工作流程：你在写代码、调配置、查资料时，Teach Me 判断这段工作是否值得学，值得就捕获并提炼关键点，写入本地 Vault，更新学习画像，再由 Teach Me Recap 和 Exam 安排复习与测试，形成学习闭环" loading="lazy" width="1494" height="1053">
+      </figure>
       <div class="grid-2">
         <article class="card">
           <h3>🌱 Teach Me</h3>
@@ -837,6 +866,25 @@ cd teach-me-skill
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="import">
+    <div class="wrap">
+      <p class="kicker">Import</p>
+      <h2>已经有笔记？直接导入进来。</h2>
+      <p class="section-sub">书、PDF、网页、Word、EPUB，或者一整个 Obsidian vault，都可以喂给 Teach Me。它会先读一遍，问你熟不熟，再决定是简要归档还是直接考你。导入是一次性的知识注入——原文件和你的 Teach Me vault 之后互不影响。</p>
+      <div class="copybox">
+        <button class="copybtn" type="button" data-copy="import-cmd">复制</button>
+<pre><code id="import-cmd"># 导入一本书 / PDF / 网页 / EPUB / Word
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py import \
+  --source pdf --path /path/to/file.pdf --project "书名"
+
+# 导入整个 Obsidian vault（自动跳过 .teach-me / .obsidian / 系统生成笔记）
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py import \
+  --source obsidian --path /path/to/obsidian/vault --project "My Obsidian"</code></pre>
+      </div>
+      <p class="note">更自然的方式：直接对 agent 说"导入我的 Obsidian vault：<code>/path/to/vault</code>"，或者把一本 PDF 拖给它，说"帮我导入这本书"。</p>
     </div>
   </section>
 

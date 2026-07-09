@@ -304,6 +304,28 @@ h1{
 .terminal-head span:nth-child(3){background:var(--green)}
 .terminal pre{margin:0;padding:18px;overflow:auto;font:14px/1.75 var(--mono);color:var(--body);white-space:pre-wrap;overflow-wrap:anywhere}
 .band{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
+.quote-section{padding:64px 22px}
+.quote-block{max-width:46rem;margin:0 auto;text-align:center}
+.quote-mark{
+  display:block;
+  margin:0 0 6px;
+  color:var(--accent);
+  font:400 54px/1 var(--serif);
+  opacity:.55;
+}
+.quote-block blockquote{
+  margin:0 0 18px;
+  color:var(--ink);
+  font:400 clamp(23px,3.2vw,32px)/1.55 var(--serif);
+  font-style:italic;
+}
+.quote-block cite{
+  display:block;
+  color:var(--muted);
+  font:650 13px/1.6 var(--mono);
+  font-style:normal;
+  letter-spacing:.04em;
+}
 .try-grid{
   display:grid;
   grid-template-columns:minmax(0,1fr) minmax(0,1fr);
@@ -575,6 +597,7 @@ pre{
       <a href="#workflow">Workflow</a>
       <a href="#hooks">Hooks</a>
       <a href="#install">Install</a>
+      <a href="#import">Import</a>
       <a href="../" hreflang="zh-CN">中文</a>
       <a href="https://github.com/dull-bird/teach-me-skill">GitHub</a>
     </div>
@@ -599,11 +622,6 @@ pre{
         <div class="stat"><strong>1–3</strong><span>high-value notes, never a raw activity log</span></div>
       </div>
     </div>
-    <div class="hero-diagram">
-      <figure class="visual" aria-label="Teach Me's four skills forming one learning loop">
-        <img src="../assets/teach-me-workflow-en.png" alt="Teach Me workflow: while you code, configure, or research, Teach Me judges whether the work is worth learning from, captures and refines the key point, writes it to your local vault, updates your learner portrait, then Teach Me Recap and Exam schedule reviews and tests — closing the loop" loading="lazy" width="1504" height="1046">
-      </figure>
-    </div>
   </section>
 
   <section>
@@ -611,6 +629,14 @@ pre{
       <figure class="visual" aria-label="Do, capture, review">
         <img src="../assets/teach-me-story-en.jpg" alt="Three-panel illustration: in the Do phase you focus on solving problems and writing code; in the Capture phase questions, solutions, key points, and code snippets get organized into a growing knowledge tree; in the Review phase a checklist brings you back to reinforce memory" loading="lazy" width="1672" height="941">
       </figure>
+    </div>
+  </section>
+
+  <section class="quote-section">
+    <div class="wrap quote-block">
+      <span class="quote-mark" aria-hidden="true">"</span>
+      <blockquote>Treat the continuous building of your own mind as the one task that matters in this life.</blockquote>
+      <cite>— Li Xiaolai, <em>The Truth About Focus</em></cite>
     </div>
   </section>
 
@@ -714,6 +740,9 @@ preview in place first, then Apply to save.
       <p class="kicker">Skills</p>
       <h2>Four skills that form a learning loop.</h2>
       <p class="section-sub">Not one bloated tool, but four small skills that work together.</p>
+      <figure class="visual" aria-label="Teach Me's four skills forming one learning loop" style="margin-bottom:22px">
+        <img src="../assets/teach-me-workflow-en.png" alt="Teach Me workflow: while you code, configure, or research, Teach Me judges whether the work is worth learning from, captures and refines the key point, writes it to your local vault, updates your learner portrait, then Teach Me Recap and Exam schedule reviews and tests — closing the loop" loading="lazy" width="1504" height="1046">
+      </figure>
       <div class="grid-2">
         <article class="card">
           <h3>🌱 Teach Me</h3>
@@ -839,6 +868,25 @@ Enable Git sync with remote git@github.com:user/teach-me-vault.git and auto-sync
           </div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section id="import">
+    <div class="wrap">
+      <p class="kicker">Import</p>
+      <h2>Already have notes? Bring them in.</h2>
+      <p class="section-sub">A book, a PDF, a web page, a Word doc, an EPUB, or an entire Obsidian vault — Teach Me can absorb any of them. It reads through the material first, asks how familiar you already are, then decides whether to file it away briefly or quiz you on it right away. Import is a one-time knowledge injection — the source file and your Teach Me vault stay independent afterward.</p>
+      <div class="copybox">
+        <button class="copybtn" type="button" data-copy="import-cmd">Copy</button>
+<pre><code id="import-cmd"># Import a book / PDF / web page / EPUB / Word doc
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py import \
+  --source pdf --path /path/to/file.pdf --project "Book Name"
+
+# Import an entire Obsidian vault (skips .teach-me / .obsidian / system-generated notes)
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py import \
+  --source obsidian --path /path/to/obsidian/vault --project "My Obsidian"</code></pre>
+      </div>
+      <p class="note">More naturally: just tell your agent "Import my Obsidian vault: <code>/path/to/vault</code>", or hand it a PDF and say "import this book for me."</p>
     </div>
   </section>
 
