@@ -169,6 +169,29 @@ python3 ~/.codex/skills/check/scripts/check_me.py report
 python3 ~/.codex/skills/check/scripts/check_me.py manual
 ```
 
+### Teach Me Recap
+
+用间隔重复 + 主动回忆来复习已记录的知识：
+
+```bash
+python3 ~/.codex/skills/recap/scripts/recap.py next   # 出一道复习题
+python3 ~/.codex/skills/recap/scripts/recap.py rate "概念名" good  # 记录结果
+python3 ~/.codex/skills/recap/scripts/recap.py due    # 今天到期项
+python3 ~/.codex/skills/recap/scripts/recap.py stats  # 统计
+```
+
+自然语言示例：
+
+- “帮我复习一下”
+- “考考我”
+- “把 `PDF4QT page tree mutation` 标为 easy”
+
+完整操作手册：
+
+```bash
+python3 ~/.codex/skills/recap/scripts/recap.py manual
+```
+
 ### 开发测试（普通用户可跳过）
 
 ```bash
@@ -323,6 +346,29 @@ Full operation manual:
 
 ```bash
 python3 ~/.codex/skills/check/scripts/check_me.py manual
+```
+
+### Teach Me Recap
+
+Review captured knowledge with spaced repetition and active recall:
+
+```bash
+python3 ~/.codex/skills/recap/scripts/recap.py next              # next review prompt
+python3 ~/.codex/skills/recap/scripts/recap.py rate "Concept" good  # record result
+python3 ~/.codex/skills/recap/scripts/recap.py due               # due today
+python3 ~/.codex/skills/recap/scripts/recap.py stats             # statistics
+```
+
+Natural-language examples:
+
+- “Help me review”
+- “Quiz me”
+- “Mark `PDF4QT page tree mutation` as easy”
+
+Full operation manual:
+
+```bash
+python3 ~/.codex/skills/recap/scripts/recap.py manual
 ```
 
 ### Developer tests (users can skip)

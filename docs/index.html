@@ -514,7 +514,7 @@ Teach Me learning context:
           <p>把这段发给 Claude Code、Codex、OpenClaw 或 Kimi Code CLI。</p>
           <div class="copybox">
             <button class="copybtn" type="button" data-copy="agent-install">复制</button>
-<pre><code id="agent-install">请帮我安装 Teach Me 这个 Agent Skill（会同时安装 Teach Me 和 Teach Me Check）：
+<pre><code id="agent-install">请帮我安装 Teach Me 这个 Agent Skill（会同时安装 Teach Me、Teach Me Check 和 Teach Me Recap）：
 1. 克隆 https://github.com/dull-bird/teach-me-skill.git
 2. 进入 teach-me-skill，运行 ./install.sh（只复制 skill 文件，不要安装任何额外依赖或测试工具）
 3. 如果我使用 Claude Code，运行 ./claude-code/install-hook.sh
@@ -526,7 +526,9 @@ Teach Me learning context:
    或对应 agent skills 目录下的 scripts/teach_me.py context
 8. 之后可以随时检查状态：
    python3 ~/.codex/skills/check/scripts/check_me.py report
-9. 第一次写学习笔记前，先让我确认 vault 路径、笔记语言，以及是否启用 Git sync</code></pre>
+9. 想复习时可以说“帮我复习一下”，agent 会调用：
+   python3 ~/.codex/skills/recap/scripts/recap.py next
+10. 第一次写学习笔记前，先让我确认 vault 路径、笔记语言，以及是否启用 Git sync</code></pre>
           </div>
         </div>
 

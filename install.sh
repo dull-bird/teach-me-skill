@@ -5,6 +5,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEACH_ME_SRC="$REPO_DIR/skills/teach-me"
 CHECK_SRC="$REPO_DIR/skills/check"
+RECAP_SRC="$REPO_DIR/skills/recap"
 
 install_skill() {
   local src="$1"
@@ -25,6 +26,7 @@ install_into() {
 
   install_skill "$TEACH_ME_SRC" "$target_root" "$label" "teach-me"
   install_skill "$CHECK_SRC" "$target_root" "$label" "check"
+  install_skill "$RECAP_SRC" "$target_root" "$label" "recap"
 }
 
 installed_any=false
@@ -54,9 +56,9 @@ if [ -d "$HOME/.openclaw" ]; then
 fi
 
 if [ "$installed_any" = false ]; then
-  echo "No known agent home was detected. Manually copy skills/teach-me and skills/check into an agent skills directory."
+  echo "No known agent home was detected. Manually copy skills/teach-me, skills/check, and skills/recap into an agent skills directory."
   exit 1
 fi
 
 echo
-echo "Teach Me and Teach Me Check skills installed. First capture will ask to confirm ~/.teach_me_skill/vault, note language, and optional Git sync."
+echo "Teach Me, Teach Me Check, and Teach Me Recap skills installed. First capture will ask to confirm ~/.teach_me_skill/vault, note language, and optional Git sync."
