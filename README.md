@@ -153,7 +153,7 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 | Kimi Code CLI | prompt/tool/stop hooks | 复用 `~/.agents/skills/teach-me`，按支持事件记录证据 |
 | OpenClaw | `message:received`, `agent:bootstrap` | 注入 bootstrap context；真正的 final-review 需要插件层支持 |
 
-### 测试
+### 开发测试（普通用户可跳过）
 
 ```bash
 python3 -m unittest -v tests.test_teach_me_hook
@@ -293,7 +293,7 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 | Kimi Code CLI | prompt/tool/stop hooks | Reuses `~/.agents/skills/teach-me` and records evidence through supported events |
 | OpenClaw | `message:received`, `agent:bootstrap` | Injects bootstrap context; true final-review behavior needs plugin support |
 
-### Tests
+### Developer tests (users can skip)
 
 ```bash
 python3 -m unittest -v tests.test_teach_me_hook
