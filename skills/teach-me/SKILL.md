@@ -115,16 +115,24 @@ because the agent's actual tool activity can reveal useful learning material.
   approach, concurrency idea, or other reusable design thought.
 - User confusion signal: the user asked "why", used uncertain wording, asked for
   review, or manually triggered teaching.
+- Concept importance: the idea itself is foundational or field-defining, scored
+  on its own merit — independent of how much tool activity produced it.
 
 Tool evidence is domain-agnostic. File edits, database migrations, test runs,
 builds, configuration changes, media processing, data analysis, browser automation,
-and error signals all count toward a Stop-hook review.
+and error signals all count toward a Stop-hook review. But low tool activity is
+not evidence of low value: a phase spent reading a book/PDF, working through
+documentation, or discussing an article can be entirely conceptual with no
+edits, tests, or builds at all, and should be judged on Concept importance and
+Novelty rather than discounted for lacking tool evidence. The manual `import`
+workflow's summarize step should apply this rubric directly rather than
+deferring to the hook's tool-activity score.
 
 Default behavior:
 
-- Score 8 or more: capture a full note.
-- Score 5-7: capture a compact note only if it is among the top 1-3 items.
-- Score below 5: do not teach; at most log a lightweight event.
+- Score 9 or more: capture a full note.
+- Score 6-8: capture a compact note only if it is among the top 1-3 items.
+- Score below 6: do not teach; at most log a lightweight event.
 - Manual trigger: teach even if the current phase is small.
 
 Capture 1-3 core items by default. Capture more only when several items are

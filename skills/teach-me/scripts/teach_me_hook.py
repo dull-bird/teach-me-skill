@@ -371,10 +371,14 @@ def classify_tool(tool: str, command: str, file_path: str, output: str) -> tuple
         tags.add("quality_check")
         score += 3
 
-    # Research / reading / searching
+    # Research / reading / searching. Weighted higher than a bare "tool use"
+    # fallback because reading-only phases (importing a book/PDF, working
+    # through docs, discussing an article) have no write/verify/build
+    # evidence at all — without this, conceptually important but code-free
+    # work would almost never cross the auto-review threshold.
     if RESEARCH_RE.search(command) or any(k in lowered_tool for k in ("read", "search", "fetch", "grep", "glob", "web", "open", "browse")):
         tags.add("research")
-        score += 1
+        score += 2
 
     # Errors and failures are strong learning signals across all domains
     if ERROR_RE.search(combined):

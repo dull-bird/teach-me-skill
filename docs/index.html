@@ -139,7 +139,16 @@ object-fit:contain;
   filter:blur(6px);
   pointer-events:none;
 }
-.hero-text{max-width:var(--measure);margin-bottom:42px}
+.hero-text{
+  max-width:50rem;
+  margin:0 auto 42px;
+  text-align:center;
+}
+.hero-text .lede{margin-left:auto;margin-right:auto}
+.hero-text .cta{justify-content:center}
+.hero-text .note{text-align:center}
+.hero-text .stats{margin-left:auto;margin-right:auto;justify-content:center}
+.hero-text .stat{text-align:left}
 .hero-diagram{margin-top:18px}
 .stats{
   display:flex;
@@ -193,17 +202,17 @@ object-fit:contain;
 .eyebrow{
   display:inline-flex;
   align-items:center;
-  gap:8px;
+  gap:9px;
   margin:0 0 18px;
   color:var(--accent-ink);
-  font:650 12px/1.2 var(--mono);
-  letter-spacing:.08em;
+  font:700 16px/1.3 var(--mono);
+  letter-spacing:.06em;
   text-transform:uppercase;
 }
 .eyebrow:before{
   content:"";
-  width:8px;
-  height:8px;
+  width:9px;
+  height:9px;
   border-radius:50%;
   background:var(--accent);
 }
@@ -262,6 +271,9 @@ h1{
   overflow:hidden;
   max-width:100%;
   min-width:0;
+  display:flex;
+  flex-direction:column;
+  flex:1;
 }
 .note-card .note-head{
   padding:11px 14px;
@@ -271,16 +283,30 @@ h1{
   font:13px/1.5 var(--mono);
   overflow-wrap:anywhere;
 }
-.note-card pre{
-  padding:18px;
+.note-card .note-body{
+  padding:22px 24px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  flex:1;
+}
+.note-card .note-body h4{
   margin:0;
-  border:0;
-  border-radius:0;
-  background:var(--card);
+  color:var(--ink);
+  font:400 21px/1.4 var(--serif);
+}
+.note-card .note-body p{
+  margin:0;
   color:var(--body);
-  font:14px/1.75 var(--mono);
-  white-space:pre-wrap;
-  overflow-wrap:anywhere;
+  font-size:14.5px;
+  line-height:1.75;
+}
+.note-card .note-body p strong{color:var(--ink)}
+.note-card .note-body .note-meta{color:var(--muted);font-size:13px}
+.note-card .note-body .note-meta.note-foot{
+  margin-top:auto;
+  padding-top:12px;
+  border-top:1px solid var(--line);
 }
 .terminal{
   margin-top:14px;
@@ -330,8 +356,9 @@ h1{
   display:grid;
   grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   gap:22px;
-  align-items:start;
+  align-items:stretch;
 }
+.try-col{display:flex;flex-direction:column;min-width:0}
 .try-col-label{
   display:block;
   margin:0 0 12px;
@@ -346,7 +373,27 @@ h1{
   background:var(--card);
   padding:26px;
   min-width:0;
+  min-height:660px;
+  display:flex;
+  flex-direction:column;
+  flex:1;
 }
+.quiz-question-view{display:flex;flex-direction:column;flex:1}
+.quiz-result-view{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  flex:1;
+  gap:10px;
+  text-align:center;
+  padding:12px 8px;
+}
+.quiz-result-score{
+  font:400 50px/1 var(--serif);
+  color:var(--accent-ink);
+}
+.quiz-result-msg{color:var(--muted);font-size:15px;line-height:1.6;max-width:36ch}
 .quiz-head{
   display:flex;
   justify-content:space-between;
@@ -401,14 +448,24 @@ h1{
 .quiz-option[disabled]:not(.correct):not(.wrong){opacity:.5}
 .quiz-explain{
   margin-top:18px;
-  padding:14px 16px;
+  padding:16px;
   border-radius:10px;
   background:var(--paper-2);
   color:var(--body);
   font-size:14.5px;
   line-height:1.7;
+  min-height:118px;
+  flex:1;
+  display:flex;
+  align-items:center;
+  border:1px solid transparent;
 }
 .quiz-explain strong{color:var(--ink)}
+.quiz-explain .quiz-hint{color:var(--muted);font-weight:600}
+.quiz-explain.answered{
+  background:var(--accent-soft);
+  border-color:color-mix(in srgb,var(--accent) 30%,var(--line));
+}
 .quiz-actions{margin-top:18px;display:flex;justify-content:flex-end;min-height:44px}
 section{padding:70px 22px}
 .wrap{max-width:var(--max);margin:0 auto;min-width:0}
@@ -680,36 +737,35 @@ pre{
       <h2>它真的会写笔记，真的会考你。</h2>
       <p class="section-sub">下面不是效果图，是 Teach Me 实际产出的两种东西：左边是复盘后写进 vault 的一条笔记；右边是 Teach Me Exam 出的选择题——直接点一下试试看。</p>
       <div class="try-grid">
-        <div>
+        <div class="try-col">
           <span class="try-col-label">复盘后写入 vault</span>
           <figure class="visual note-card" aria-label="Teach Me 自动沉淀的笔记示例">
             <div class="note-head">02_Concepts/PDF4QT-page-tree-mutation.md</div>
-<pre><code>## PDF4QT page tree mutation
-
-**类型**：concept · **项目**：inkwell
-
-**核心思想**
-删除、重排、裁剪这类页面级编辑，如果只在
-PyMuPDF 后端写新文件，Qt 主视图无法自然拥
-有 undo/apply/save 状态。
-
-**为什么重要**
-直接写出新 PDF 会让用户看到文件跳转；返回
-intent 则可先原位预览，再由用户 Apply 保存。
-
-**掌握度**：seen · **下次复习**：2026-07-12</code></pre>
+            <div class="note-body">
+              <h4>PDF4QT page tree mutation</h4>
+              <p class="note-meta"><strong>类型</strong>：concept &nbsp;·&nbsp; <strong>项目</strong>：inkwell</p>
+              <p><strong>核心思想</strong><br>删除、重排、裁剪这类页面级编辑，如果只在 PyMuPDF 后端写新文件，Qt 主视图无法自然拥有 undo/apply/save 状态。</p>
+              <p><strong>为什么重要</strong><br>直接写出新 PDF 会让用户看到文件跳转；返回 intent 则可先原位预览，再由用户 Apply 保存。</p>
+              <p class="note-meta note-foot">掌握度：seen &nbsp;·&nbsp; 下次复习：2026-07-12</p>
+            </div>
           </figure>
         </div>
-        <div>
-          <span class="try-col-label">Teach Me Exam 出的题</span>
+        <div class="try-col">
+          <span class="try-col-label">Teach Me Exam 出的题 · 点一个答案试试看</span>
           <div class="quiz-card" id="quiz">
             <div class="quiz-head">
               <span id="quiz-progress">第 1 / 3 题</span>
               <span class="quiz-score" id="quiz-score">答对 0</span>
             </div>
-            <p class="quiz-question" id="quiz-question"></p>
-            <div class="quiz-options" id="quiz-options"></div>
-            <div class="quiz-explain" id="quiz-explain" hidden></div>
+            <div class="quiz-question-view" id="quiz-question-view">
+              <p class="quiz-question" id="quiz-question"></p>
+              <div class="quiz-options" id="quiz-options"></div>
+              <div class="quiz-explain" id="quiz-explain"></div>
+            </div>
+            <div class="quiz-result-view" id="quiz-result-view" hidden>
+              <div class="quiz-result-score" id="quiz-result-score">0 / 3</div>
+              <p class="quiz-result-msg" id="quiz-result-msg"></p>
+            </div>
             <div class="quiz-actions">
               <button class="btn primary" id="quiz-next" type="button" hidden>下一题</button>
             </div>
@@ -963,15 +1019,23 @@ cd teach-me-skill
   const nextBtn=document.getElementById("quiz-next");
   const progressEl=document.getElementById("quiz-progress");
   const scoreEl=document.getElementById("quiz-score");
+  const questionView=document.getElementById("quiz-question-view");
+  const resultView=document.getElementById("quiz-result-view");
+  const resultScoreEl=document.getElementById("quiz-result-score");
+  const resultMsgEl=document.getElementById("quiz-result-msg");
   if(!qEl)return;
   const letters=["A","B","C","D"];
+  const HINT="点一个答案试试看，马上告诉你对不对、为什么。";
   function renderQuiz(){
+    questionView.hidden=false;
+    resultView.hidden=true;
     const item=quizData[quizIndex];
     progressEl.textContent=`第 ${quizIndex+1} / ${quizData.length} 题`;
     scoreEl.textContent=`答对 ${quizScore}`;
     qEl.textContent=item.q;
     optsEl.innerHTML="";
-    explainEl.hidden=true;
+    explainEl.classList.remove("answered");
+    explainEl.innerHTML=`<span class="quiz-hint">👆 ${HINT}</span>`;
     nextBtn.hidden=true;
     item.options.forEach((opt,i)=>{
       const b=document.createElement("button");
@@ -993,18 +1057,40 @@ cd teach-me-skill
         });
         if(correct)quizScore++;
         scoreEl.textContent=`答对 ${quizScore}`;
-        explainEl.hidden=false;
-        explainEl.innerHTML=`<strong>${correct?"答对了。":"差一点。"}</strong> ${item.explain}`;
+        explainEl.classList.add("answered");
+        explainEl.innerHTML=`<span><strong>${correct?"答对了。":"差一点。"}</strong> ${item.explain}</span>`;
         nextBtn.hidden=false;
-        nextBtn.textContent=quizIndex<quizData.length-1?"下一题":"再来一遍";
+        nextBtn.textContent=quizIndex<quizData.length-1?"下一题":"查看结果";
       });
       optsEl.appendChild(b);
     });
   }
+  function renderResult(){
+    questionView.hidden=true;
+    resultView.hidden=false;
+    progressEl.textContent="已完成";
+    resultScoreEl.textContent=`${quizScore} / ${quizData.length}`;
+    resultMsgEl.textContent=quizScore===quizData.length
+      ?"全对！这几条你已经能跟别人讲清楚了。"
+      :quizScore===0
+      ?"别灰心，Teach Me Exam 就是拿来查漏的——回头看看解析，下次再战。"
+      :"还不错，剩下没答对的正好是该复盘的地方。";
+    nextBtn.hidden=false;
+    nextBtn.textContent="重新开始";
+  }
   nextBtn.addEventListener("click",()=>{
-    quizIndex=(quizIndex+1)%quizData.length;
-    if(quizIndex===0)quizScore=0;
-    renderQuiz();
+    if(!resultView.hidden){
+      quizIndex=0;
+      quizScore=0;
+      renderQuiz();
+      return;
+    }
+    if(quizIndex<quizData.length-1){
+      quizIndex++;
+      renderQuiz();
+    }else{
+      renderResult();
+    }
   });
   renderQuiz();
 })();

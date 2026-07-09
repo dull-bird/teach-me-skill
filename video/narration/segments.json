@@ -1,0 +1,62 @@
+[
+  {
+    "id": "hook",
+    "scene": "hook",
+    "text": "你有没有过这种感觉——功能是跟着 AI 撸完的，可三天之后，连自己当时为什么这么改都想不起来了。"
+  },
+  {
+    "id": "intro",
+    "scene": "intro",
+    "text": "这是 Teach Me，一套给 Claude Code、Codex、Kimi Code CLI、OpenClaw 用的 Agent Skill。它的目标很简单：做事，顺便学明白。"
+  },
+  {
+    "id": "why",
+    "scene": "why",
+    "text": "AI 帮你执行得越来越快，但真正值得留下的东西，往往没有人帮你整理过。这个 bug 为什么出现，这个设计为什么这样做，过几天就忘了。"
+  },
+  {
+    "id": "steps12",
+    "scene": "story",
+    "text": "Teach Me 会安安静静观察你这一轮到底做了什么——写代码、调配置、查资料，或者你直接说一句教我。你改了什么、测了什么、报了什么错，它都记在心里，但不会打扰你。"
+  },
+  {
+    "id": "steps34",
+    "scene": "workflow-steps",
+    "text": "等这段工作告一段落，它才会判断，这里面有没有真正值得留下的东西。信号弱就安静过去，信号强，才会停下来，用一两句话帮你把关键点讲清楚，写成笔记，更新知识树，安排下一次复习。"
+  },
+  {
+    "id": "skills",
+    "scene": "workflow-skills",
+    "text": "围绕这个循环，一共有四个小技能。Teach Me 负责核心的收集和复盘，Teach Me Check 帮你检查安装状态和学习画像，Teach Me Recap 用间隔重复帮你复习，Teach Me Exam 会直接从你的学习画像出题，考考你到底学扎实了没有。"
+  },
+  {
+    "id": "try",
+    "scene": "quiz",
+    "text": "它出的题长什么样？比如这道：你刚用 git rebase 压缩了几个提交，rebase 和 merge 的本质区别是什么？网页上可以直接点进去试一试，选完马上告诉你对不对，为什么。"
+  },
+  {
+    "id": "vault",
+    "scene": "vault",
+    "text": "所有笔记都是普通的 Markdown 文件，存在你自己电脑上的一个 vault 里。默认完全本地，不连任何云端，要不要开 Git 同步，由你自己决定。"
+  },
+  {
+    "id": "import",
+    "scene": "import",
+    "text": "如果你手头已经有笔记呢？一本 PDF、一篇网页，甚至一整个 Obsidian vault，都可以直接喂给它。Teach Me 会先读一遍，问你熟不熟，再决定是简单归档，还是直接考你。"
+  },
+  {
+    "id": "install",
+    "scene": "install",
+    "text": "安装很快。克隆仓库，跑一下 install 点 sh，再按你用的 agent 装上对应的 hook，几分钟就能跑起来。"
+  },
+  {
+    "id": "quote",
+    "scene": "quote",
+    "text": "《专注的真相》里有句话，我很喜欢：把持续建设自己的大脑，当作此生唯一重要的任务。"
+  },
+  {
+    "id": "outro",
+    "scene": "outro",
+    "text": "Teach Me，做事，顺便学明白。去 GitHub 搜索 teach-me-skill，免费开源，现在就试试看。"
+  }
+]

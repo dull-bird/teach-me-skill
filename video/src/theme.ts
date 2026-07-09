@@ -1,0 +1,17 @@
+export const theme = {
+  paper: "#fbfaf7",
+  paper2: "#f2f0ea",
+  card: "#ffffff",
+  ink: "#1b1a18",
+  body: "#4a4742",
+  muted: "#756f66",
+  line: "#e2ddd2",
+  accent: "#2d6a4f",
+  accentSoft: "#e9f5ec",
+  accentInk: "#1f4d3a",
+  coral: "#b46b43",
+  blue: "#476f9e",
+  sans: '-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif',
+  serif: 'Georgia,"Songti SC","Noto Serif CJK SC","Source Han Serif SC",serif',
+  mono: 'ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace',
+} as const;

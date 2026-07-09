@@ -90,6 +90,11 @@ pull --rebase, and push after `assess`, `capture`, and `style`.
 }
 ```
 
+`importance` (0-10) should reflect the value-rubric's Concept importance dimension
+scaled up (0/1/2 → roughly 0-2/3-6/7-10): how foundational or field-defining the
+idea is on its own merit, not how much tool activity produced it. A concept read
+from a book with zero file edits can still score high here.
+
 ## Item Types
 
 - `concept`: goes to `02_Concepts/`
