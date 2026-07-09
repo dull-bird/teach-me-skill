@@ -281,6 +281,69 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertIn("Teach Me detected", data["reason"])
         self.assertNotIn("hookSpecificOutput", data)
 
+    def test_claude_code_stop_uses_decision_block_format(self) -> None:
+        """Claude Code's Stop payload also carries transcript_path (it's a common
+        field on every event, not Codex-specific), so it must hit the same
+        top-level {"decision": "block", "reason": ...} branch as Codex, not the
+        hookSpecificOutput.permissionDecision branch (invalid for Stop hooks
+        per Claude Code's own hook schema)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "pytest"},
+                    "tool_response": {"stdout": "1 passed", "stderr": ""},
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "transcript_path": "/Users/dev/.claude/projects/repo/abc123.jsonl",
+                    "permission_mode": "default",
+                },
+                home,
+            )
+            result = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "测试通过。",
+                    "transcript_path": "/Users/dev/.claude/projects/repo/abc123.jsonl",
+                    "permission_mode": "default",
+                },
+                home,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = parse_stdout(result)
+        self.assertEqual(data["decision"], "block")
+        self.assertIn("🌱", data["reason"])
+        self.assertNotIn("hookSpecificOutput", data)
+
+    def test_claude_code_manual_prompt_uses_decision_block_format(self) -> None:
+        """Same as above but for the UserPromptSubmit manual-teach branch."""
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_hook(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "prompt": "教我这个 hook 是怎么工作的",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "transcript_path": "/Users/dev/.claude/projects/repo/abc123.jsonl",
+                    "permission_mode": "default",
+                },
+                Path(tmp),
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = parse_stdout(result)
+        self.assertEqual(data.get("decision"), "block")
+        self.assertNotIn("hookSpecificOutput", data)
+
     def test_stop_stays_silent_without_meaningful_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
