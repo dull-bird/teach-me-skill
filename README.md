@@ -153,6 +153,22 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 | Kimi Code CLI | prompt/tool/stop hooks | 复用 `~/.agents/skills/teach-me`，按支持事件记录证据 |
 | OpenClaw | `message:received`, `agent:bootstrap` | 注入 bootstrap context；真正的 final-review 需要插件层支持 |
 
+### Teach Me Check
+
+随时查看安装状态、vault 位置和最近记录：
+
+```bash
+python3 ~/.codex/skills/check/scripts/check_me.py report
+```
+
+也可以让 agent 直接说“帮我检查 Teach Me 状态”。检查完成后，你可以用自然语言继续要求修改路径、开启 Git sync、查看学习记录等。
+
+完整操作手册：
+
+```bash
+python3 ~/.codex/skills/check/scripts/check_me.py manual
+```
+
 ### 开发测试（普通用户可跳过）
 
 ```bash
@@ -292,6 +308,22 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 | Codex | `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Stop` | Same, plus adds `~/.teach_me_skill` as a writable root |
 | Kimi Code CLI | prompt/tool/stop hooks | Reuses `~/.agents/skills/teach-me` and records evidence through supported events |
 | OpenClaw | `message:received`, `agent:bootstrap` | Injects bootstrap context; true final-review behavior needs plugin support |
+
+### Teach Me Check
+
+Check installation status, vault location, and recent activity at any time:
+
+```bash
+python3 ~/.codex/skills/check/scripts/check_me.py report
+```
+
+You can also ask your agent: “Check my Teach Me status.” After the report, use natural language to change the vault path, enable Git sync, view learning records, etc.
+
+Full operation manual:
+
+```bash
+python3 ~/.codex/skills/check/scripts/check_me.py manual
+```
 
 ### Developer tests (users can skip)
 
