@@ -146,6 +146,15 @@ def parse_date(value: str | None) -> date | None:
         return None
 
 
+def _normalize_importance(value: Any) -> int:
+    """Return importance as an integer in 1-5 range."""
+    try:
+        importance = int(value)
+    except (TypeError, ValueError):
+        importance = 5
+    return max(1, min(5, importance))
+
+
 def item_sort_key(item: dict[str, Any]) -> tuple:
     """Lower tuple = higher priority for review."""
     next_review = parse_date(item.get("next_review"))
@@ -153,7 +162,7 @@ def item_sort_key(item: dict[str, Any]) -> tuple:
         next_review = date.min
     # Due or overdue first, then by mastery score (lower = weaker), then by importance
     mastery_score = item.get("score", 0)
-    importance = item.get("importance", 5)
+    importance = _normalize_importance(item.get("importance", 5))
     return (next_review, mastery_score, -importance)
 
 
@@ -175,7 +184,7 @@ def collect_review_items(state: dict[str, Any]) -> list[dict[str, Any]]:
         item.setdefault("review_interval_days", 0)
         item.setdefault("last_seen", None)
         item.setdefault("next_review", None)
-        item.setdefault("importance", 5)
+        item["importance"] = _normalize_importance(item.get("importance", 5))
         items.append(item)
 
     tree = state.get("knowledge_tree", {})
@@ -196,7 +205,7 @@ def collect_review_items(state: dict[str, Any]) -> list[dict[str, Any]]:
         item.setdefault("review_interval_days", 0)
         item.setdefault("last_seen", None)
         item.setdefault("next_review", None)
-        item.setdefault("importance", 5)
+        item["importance"] = _normalize_importance(item.get("importance", 5))
         items.append(item)
 
     return items
@@ -215,7 +224,7 @@ def due_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def weak_items(items: list[dict[str, Any]], limit: int = 10) -> list[dict[str, Any]]:
     """Items with lowest mastery scores, regardless of due date."""
-    scored = sorted(items, key=lambda i: (i.get("score", 0), i.get("importance", 5)))
+    scored = sorted(items, key=lambda i: (i.get("score", 0), _normalize_importance(i.get("importance", 5))))
     return scored[:limit]
 
 

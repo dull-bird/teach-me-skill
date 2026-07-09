@@ -72,13 +72,14 @@ vault/
 
 所有可读笔记都是普通 Markdown。机器状态放在 `.teach-me/`，包括你的学习画像（知识树、掌握度、风格偏好）。默认本地保存，不会推送到远端。
 
-### 三个技能
+### 四个技能
 
 | 技能 | 作用 | 典型说法 |
 | --- | --- | --- |
 | **Teach Me** | 工作时收集证据，阶段边界触发复盘，写笔记 | “复盘一下刚才的调试” |
 | **Teach Me Check** | 检查安装状态、vault 内容、学习画像、用户与风格 | “帮我检查 Teach Me 状态” |
 | **Teach Me Recap** | 用间隔重复 + 主动回忆复习已记录知识 | “帮我复习一下” |
+| **Teach Me Exam** | 从学习画像生成自适应测验和考试 | “考考我” |
 
 ### AI 的教学个性，由你塑造
 
@@ -178,6 +179,9 @@ python3 ~/.codex/skills/check/scripts/check_me.py report
 
 # 复习
 python3 ~/.codex/skills/recap/scripts/recap.py next
+
+# 考试 / 测验
+python3 ~/.codex/skills/exam/scripts/exam.py plan --time 15
 ```
 
 更自然的方式是直接说：
@@ -185,6 +189,9 @@ python3 ~/.codex/skills/recap/scripts/recap.py next
 - “帮我检查 Teach Me 状态”
 - “复盘一下刚才的调试”
 - “帮我复习一下”
+- “考考我”
+- “导入我的 Obsidian vault：`/path/to/vault`”
+- “关闭所有 Teach Me 钩子” / “打开所有 Teach Me 钩子”
 - “把 vault 改到 ~/Documents/Teach-Me”
 
 ### 安装
@@ -225,6 +232,29 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
 想换 vault 位置：
 
 > “把 Teach Me vault 放到 ~/Documents/Teach-Me-Vault。”
+
+### 导入已有知识
+
+你可以把已有的资料或整个 Obsidian vault 导入知识库：
+
+```bash
+# 导入 PDF / URL / Markdown / EPUB / Word
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py import --source pdf --path /path/to/file.pdf --project "Book Name"
+
+# 导入整个 Obsidian vault（自动跳过 .teach-me / .obsidian / 系统生成笔记）
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py import --source obsidian --path /path/to/obsidian/vault --project "My Obsidian"
+```
+
+导入后，AI 会先简要介绍材料内容，询问你的掌握程度；如果你已经很熟悉，可以直接发起测验。
+
+### 开关 hooks
+
+临时关闭或重新开启所有 agent 的 Teach Me hooks：
+
+```bash
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py hooks --disable
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py hooks --enable
+```
 
 ### 可选 Git sync
 
@@ -323,13 +353,14 @@ vault/
 
 Readable notes are plain Markdown. Machine state lives under `.teach-me/`, including your learner portrait (knowledge tree, mastery, style preferences). Local by default; nothing is pushed remotely unless you enable Git sync.
 
-### The three skills
+### The four skills
 
 | Skill | Purpose | Typical prompt |
 | --- | --- | --- |
 | **Teach Me** | Collects evidence while you work, triggers reviews at phase boundaries, writes notes | “Review the debugging we just did” |
 | **Teach Me Check** | Checks installation status, vault contents, learner portrait, users, and style | “Check my Teach Me status” |
 | **Teach Me Recap** | Reviews captured knowledge with spaced repetition and active recall | “Help me review” |
+| **Teach Me Exam** | Generates adaptive quizzes and exams from your learner portrait | “Quiz me” |
 
 ### Shape the AI's teaching personality
 
@@ -429,6 +460,9 @@ python3 ~/.codex/skills/check/scripts/check_me.py report
 
 # Review
 python3 ~/.codex/skills/recap/scripts/recap.py next
+
+# Quiz / exam
+python3 ~/.codex/skills/exam/scripts/exam.py plan --time 15
 ```
 
 Or just speak naturally:
@@ -436,6 +470,9 @@ Or just speak naturally:
 - “Check my Teach Me status”
 - “Review the debugging we just did”
 - “Help me review”
+- “Quiz me”
+- “Import my Obsidian vault: `/path/to/vault`”
+- “Disable all Teach Me hooks” / “Enable all Teach Me hooks”
 - “Move my vault to ~/Documents/Teach-Me”
 
 ### Install
@@ -476,6 +513,29 @@ Before writing the first note, Teach Me asks you to confirm:
 To use a custom vault path:
 
 > “Put my Teach Me vault in ~/Documents/Teach-Me-Vault.”
+
+### Import existing knowledge
+
+You can import existing material or an entire Obsidian vault into your knowledge base:
+
+```bash
+# Import PDF / URL / Markdown / EPUB / Word
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py import --source pdf --path /path/to/file.pdf --project "Book Name"
+
+# Import an entire Obsidian vault (skips .teach-me / .obsidian / system-generated notes)
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py import --source obsidian --path /path/to/obsidian/vault --project "My Obsidian"
+```
+
+After importing, the AI will summarize the material, ask how familiar you are with it, and offer a quiz if you already know it well.
+
+### Toggle hooks
+
+Temporarily disable or re-enable Teach Me hooks across all agents:
+
+```bash
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py hooks --disable
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py hooks --enable
+```
 
 ### Optional Git sync
 

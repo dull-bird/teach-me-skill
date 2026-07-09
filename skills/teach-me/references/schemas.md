@@ -9,16 +9,30 @@ vault's `.teach-me/` directory.
 
 ```json
 {
-  "version": 1,
-  "initialized": true,
-  "vault_path": "~/.teach_me_skill/vault",
-  "language": "auto",
-  "max_notes_per_phase": 3,
-  "git_sync": {
-    "enabled": true,
-    "remote": "git@github.com:user/teach-me-vault.git",
-    "branch": "main",
-    "auto_sync": true
+  "version": 2,
+  "current_user": "default",
+  "users": {
+    "default": {
+      "name": "Default User",
+      "github": null,
+      "vault_path": "~/.teach_me_skill/vault",
+      "language": "auto",
+      "max_notes_per_phase": 3,
+      "linked_vaults": [
+        {
+          "path": "/path/to/obsidian/vault",
+          "project": "My Obsidian",
+          "linked_at": "2026-07-09T10:00:00"
+        }
+      ],
+      "git_sync": {
+        "enabled": true,
+        "remote": "git@github.com:user/teach-me-vault.git",
+        "branch": "main",
+        "auto_sync": true
+      },
+      "initialized": true
+    }
   }
 }
 ```
@@ -170,9 +184,49 @@ generated `07_Learning_Profile/Knowledge_Tree.md`.
   "graph_edges": [
     {"source": "dependency graph", "relation": "enables", "target": "incremental rebuild"}
   ],
-  "assessments": []
+  "assessments": [],
+  "imports": [
+    {
+      "import_id": "import-20260709-100000",
+      "timestamp": "2026-07-09T10:00:00",
+      "source_type": "pdf",
+      "detected_type": "pdf",
+      "path": "/path/to/file.pdf",
+      "project": "Book Name",
+      "phase": "external import",
+      "pages": "1-10",
+      "status": "ok",
+      "extracted_length": 15420,
+      "extracted_items": ["event sourcing", "CQRS"]
+    },
+    {
+      "import_id": "import-20260709-110000",
+      "timestamp": "2026-07-09T11:00:00",
+      "source_type": "obsidian",
+      "detected_type": "obsidian",
+      "path": "/path/to/obsidian/vault",
+      "project": "My Obsidian",
+      "phase": "external import",
+      "status": "ok",
+      "extracted_length": 45200,
+      "note_count": 12,
+      "skipped_count": 4,
+      "note_paths": ["Projects/web-ui.md", "Readings/event-sourcing.md"],
+      "skipped_paths": [".obsidian/workspace.json", ".teach-me/learning-state.json"],
+      "extracted_items": ["event sourcing", "CQRS"]
+    }
+  ]
 }
 ```
+
+Import `status` values:
+
+- `ok` — text was extracted successfully.
+- `fallback_encoding` — text was extracted using a fallback encoding.
+- `no_extractor` — the source needs a parser that is not installed (e.g., PDF without `pymupdf`/`pypdf`).
+- `unreadable` — the source could not be read at all.
+- `self_import` — the Obsidian vault path is inside the current Teach Me vault.
+- `no_content` — the Obsidian vault contained no importable Markdown after filtering.
 
 ## Style Profile
 

@@ -50,6 +50,8 @@ After the report, explicitly tell the user they can speak naturally to change th
 - “把笔记语言改成英文/中文/自动”
 - “开启 Git sync 到 `github.com/user/repo.git`”
 - “关闭自动同步”
+- “导入我的 Obsidian vault：`/path/to/vault`”
+- “关闭所有 Teach Me 钩子” / “打开所有 Teach Me 钩子”
 - “给我看看最近的学习记录”
 - “帮我整理一下知识图谱”
 

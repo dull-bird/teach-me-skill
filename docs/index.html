@@ -121,12 +121,9 @@ object-fit:contain;
   max-width:var(--max);
   margin:0 auto;
   padding:76px 22px 58px;
-  display:grid;
-  grid-template-columns:minmax(0,1.02fr) minmax(320px,.98fr);
-  gap:46px;
-  align-items:center;
 }
-.hero>*{min-width:0}
+.hero-text{max-width:var(--measure);margin-bottom:42px}
+.hero-diagram{margin-top:18px}
 .eyebrow{
   display:inline-flex;
   align-items:center;
@@ -261,6 +258,11 @@ h2{
 .grid{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+}
+.grid-2{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
   gap:14px;
 }
 .card{
@@ -432,30 +434,29 @@ pre{
 
 <main id="main">
   <section class="hero">
-    <div>
+    <div class="hero-text">
       <p class="eyebrow">做事，顺便学明白</p>
       <h1>Teach Me：你的 AI 学习搭子</h1>
-      <p class="lede">写代码、调配置、处理数据、整理文档、研究问题……Teach Me 在你使用工具的过程中自动识别值得留下的瞬间，把关键概念、隐藏机制、决策理由整理成你的本地知识库。它还会慢慢画出你的学习画像，让 AI 按你喜欢的方式教你。</p>
+      <p class="lede">你每天都在用 AI 写代码、查资料、解决问题。但很多时候，任务跑通了，真正值得记住的东西却没留下来。Teach Me 帮你把工作中的关键概念、踩过的坑、做过的取舍，自动整理成一份属于你的本地知识库，并在合适的时机提醒你复习。</p>
       <div class="cta">
-        <a class="btn primary" href="#install">装到我的 agent</a>
-        <a class="btn" href="#workflow">看怎么工作</a>
+        <a class="btn primary" href="#install">免费安装</a>
+        <a class="btn" href="#workflow">看它是怎么工作的</a>
       </div>
-      <p class="note">支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。数据默认写在本地 <code>~/.teach_me_skill/vault</code>，Git 同步完全可选。</p>
+      <p class="note">支持 Claude Code、Codex、Kimi Code CLI、OpenClaw。所有笔记存在本地，Git 同步完全可选。</p>
     </div>
-    <div>
+    <div class="hero-diagram">
       <figure class="visual" aria-label="Teach Me 工作流程">
-<pre class="mermaid">flowchart LR
-    A([你使用工具<br/>代码/数据/文档/配置]) --> B{Hooks 收集证据}
-    B --> C{信号够强?}
-    C -->|弱| D[安静继续]
-    C -->|强| E[AI 教你一点东西]
-    E --> F[写入本地 vault]
-    F --> G[学习画像]
-    G --> H[Teach Me Recap<br/>间隔重复复习]
+<pre class="mermaid">flowchart TD
+    A([你写代码、调配置、处理数据]) --> B{这段工作里有值得学的东西吗？}
+    B -->|不明显| C[继续干活，不打扰]
+    B -->|有| D[AI 用一句话讲清楚关键点]
+    D --> E[写成你的本地笔记]
+    E --> F[更新你的学习画像]
+    F --> G[到点提醒复习]
     style A fill:#e9f5ec,stroke:#2d6a4f,stroke-width:2px
-    style E fill:#fff4e6,stroke:#b08900,stroke-width:2px
-    style F fill:#e7f3ff,stroke:#1565c0,stroke-width:2px
-    style G fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style D fill:#fff4e6,stroke:#b08900,stroke-width:2px
+    style E fill:#e7f3ff,stroke:#1565c0,stroke-width:2px
+    style F fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
 </pre>
       </figure>
     </div>
@@ -465,35 +466,31 @@ pre{
     <div class="wrap">
       <p class="kicker">Why</p>
       <h2>每次做事，都该带走一点真正属于自己的东西。</h2>
-      <p class="section-sub">Teach Me 自动捕捉工作过程中值得留下的内容：你理解的概念、踩过的坑、做过的取舍、可能埋下的风险。让你从“跑通任务”走到“真正学会”。</p>
+      <p class="section-sub">跑通一个任务和真正学会它，是两件事。Teach Me 帮你把日常工作里的关键瞬间留下来，慢慢变成你能调用、能迁移的知识。</p>
       <div class="grid">
         <article class="card">
-          <h3>从真实工作里学</h3>
-          <p>不用额外找教程。你正在写的项目、处理的数据、调试的配置，都是最好的课程，每一轮工具使用都可能变成概念笔记或知识树节点。</p>
+          <h3>不用额外上课</h3>
+          <p>你正在做的项目、调试的代码、查的资料，本身就是最好的学习材料。Teach Me 在恰当的时候帮你提炼出概念和思路。</p>
         </article>
         <article class="card">
-          <h3>hook 感知，不是关键词匹配</h3>
-          <p>通过 prompt、tool、stop hooks 观察实际发生的行为：编辑、测试、构建、报错、验证、配置改动、数据处理。不是你说“教我”才写笔记。</p>
+          <h3>只记真正重要的</h3>
+          <p>不会把每一步操作都存下来。只抓能迁移到其他任务的点：隐藏机制、决策理由、可复用思路、未来可能踩的坑。</p>
         </article>
         <article class="card">
-          <h3>只记高价值点</h3>
-          <p>默认只抓 1-3 个能迁移到其他任务的点：隐藏机制、决策理由、可复用思路、未来风险。避免笔记泛滥。</p>
+          <h3>自动整理，不打扰</h3>
+          <p>工作期间安静旁观，只在阶段结束时判断要不要复盘。信号弱就继续，信号强才停下来讲一句。</p>
         </article>
         <article class="card">
-          <h3>画出你的学习画像</h3>
-          <p>记录你掌握过什么、哪里还模糊、喜欢怎么被教。教学和复习会越来越贴合你，而不是套用固定模板。</p>
+          <h3>越用越懂你</h3>
+          <p>记录你掌握了什么、哪里还模糊、喜欢怎么被解释。慢慢的，AI 会按你的节奏和风格来教。</p>
         </article>
         <article class="card">
-          <h3>AI 教学个性由你塑造</h3>
-          <p>通过 style 设置说话风格和教学人格：严厉导师、好奇伙伴、简洁教练……Teach Me 会按这个方式解释和提问。</p>
+          <h3>学了还能记住</h3>
+          <p>Teach Me Recap 用间隔重复和主动回忆，把“当时懂了”变成“之后还能用”。</p>
         </article>
         <article class="card">
-          <h3>学了还能复习</h3>
-          <p>Teach Me Recap 用间隔重复 + 主动回忆，把“看过”变成“记得住、用得出来”。</p>
-        </article>
-        <article class="card">
-          <h3>本地优先，完全可控</h3>
-          <p>所有可读笔记都是普通 Markdown，存在本地。Git 同步是可选项，默认不碰任何云端。</p>
+          <h3>你的数据你做主</h3>
+          <p>所有笔记都是普通 Markdown，存在本地。Git 同步是可选项，默认不碰任何云端。</p>
         </article>
       </div>
     </div>
@@ -503,12 +500,12 @@ pre{
     <div class="wrap">
       <p class="kicker">How</p>
       <h2>四步把一段工作变成知识。</h2>
-      <p class="section-sub">Teach Me 不替代你的 agent。它像一位知道什么时候该复盘的老师：先看证据，再决定要不要整理。</p>
+      <p class="section-sub">Teach Me 不会替代你正在用的 AI 工具。它更像一位知道什么时候该复盘的老师：先观察，再决定要不要停下来讲一句。</p>
       <div class="steps">
-        <div class="step"><strong>1. 感知场景</strong><span>工作、学习、调试、研究，或你说“教我”“为什么”时，注入 Teach Me context。</span></div>
-        <div class="step"><strong>2. 收集证据</strong><span>Pre / Post / Failure tool hooks 记录真实的编辑、测试、构建、报错、验证、配置改动、数据处理。</span></div>
-        <div class="step"><strong>3. Stop 评分</strong><span>阶段结束时按证据打分：信号弱就安静，信号强才请求一次短复盘。</span></div>
-        <div class="step"><strong>4. 沉淀资产</strong><span>只写 1-3 个高价值点：概念、可复用思路、工作地图、未来风险，更新知识树、学习画像和复习计划。</span></div>
+        <div class="step"><strong>1. 感知场景</strong><span>你在写代码、调配置、查资料、处理数据，或者主动说“教我”“为什么”。</span></div>
+        <div class="step"><strong>2. 收集证据</strong><span>它默默记录这段工作里真正发生的事：改了什么、测了什么、报了什么错、验证了哪些假设。</span></div>
+        <div class="step"><strong>3. 判断价值</strong><span>阶段结束时评估：这件事有没有值得留下的概念、思路或风险？没有就继续，有就复盘。</span></div>
+        <div class="step"><strong>4. 沉淀成笔记</strong><span>只写 1-3 个高价值点，更新你的知识树和学习画像，并安排好下次复习时间。</span></div>
       </div>
     </div>
   </section>
@@ -516,9 +513,9 @@ pre{
   <section id="skills" class="band">
     <div class="wrap">
       <p class="kicker">Skills</p>
-      <h2>三个技能，覆盖“记录 - 检查 - 复习”。</h2>
-      <p class="section-sub">不是一个大而全的工具，而是三个只做一件事、但能串成学习闭环的小技能。</p>
-      <div class="grid">
+      <h2>四个技能，串成学习闭环。</h2>
+      <p class="section-sub">不是一个大而全的工具，而是四个只做一件事、但能配合起来的小技能。</p>
+      <div class="grid-2">
         <article class="card">
           <h3>🌱 Teach Me</h3>
           <p>核心技能。工作时收集证据，阶段边界触发复盘，把高价值知识写入本地 vault，同时更新你的学习画像。</p>
@@ -531,15 +528,19 @@ pre{
           <h3>🔄 Teach Me Recap</h3>
           <p>复习技能。用间隔重复 + 主动回忆帮你复习已记录的概念，防止学完就忘。</p>
         </article>
+        <article class="card">
+          <h3>📝 Teach Me Exam</h3>
+          <p>测验技能。从学习画像生成自适应 quiz 和测试，检查你哪些地方真懂了，哪些地方还需要再补。</p>
+        </article>
       </div>
     </div>
   </section>
 
   <section id="hooks">
     <div class="wrap">
-      <p class="kicker">Hooks</p>
-      <h2>安装要可撤、可重复，不碰别人的配置。</h2>
-      <p class="section-sub">安装脚本只追加 Teach Me 自己的 marker，不覆盖已有 hook。Codex 会补 <code>[features]</code> 和 writable root；Kimi 会只重写 <code>hooks = [...]</code> 这一段。</p>
+      <p class="kicker">Details</p>
+      <h2>它是怎么接入你正在用的 AI 工具的？</h2>
+      <p class="section-sub">Teach Me 通过各 agent 的 hook 机制接入，只追加自己的配置，不会覆盖你已有的设置。安装和卸载都是可逆的。</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -580,21 +581,21 @@ pre{
   <section id="install" class="band">
     <div class="wrap">
       <p class="kicker">Install</p>
-      <h2>先装 skill，再按你用的工具装 hook。</h2>
-      <p class="section-sub">想省事就把第一段复制给 agent。手动装也很直接：根目录 <code>install.sh</code> 负责复制 skill，各平台的 <code>install-hook.sh</code> 负责接入 hook。</p>
+      <h2>几分钟就能装好。</h2>
+      <p class="section-sub">把下面这段复制给你的 AI 工具，它会自动克隆、安装并接入 hook。你也可以手动运行 <code>install.sh</code>。</p>
       <div class="ways">
         <div class="way">
-          <h3>让 agent 自动安装 <span class="status">技能 + hook</span></h3>
-          <p>把这段发给 Claude Code、Codex、OpenClaw 或 Kimi Code CLI。</p>
+          <h3>让 agent 自动安装 <span class="status">推荐</span></h3>
+          <p>把这段发给 Claude Code、Codex、Kimi Code CLI 或 OpenClaw。</p>
           <div class="copybox">
             <button class="copybtn" type="button" data-copy="agent-install">复制</button>
-<pre><code id="agent-install">请帮我安装 Teach Me 这个 Agent Skill（会同时安装 Teach Me、Teach Me Check 和 Teach Me Recap）：
+<pre><code id="agent-install">请帮我安装 Teach Me 这个 Agent Skill（会同时安装 Teach Me、Teach Me Check、Teach Me Recap 和 Teach Me Exam）：
 1. 克隆 https://github.com/dull-bird/teach-me-skill.git
 2. 进入 teach-me-skill，运行 ./install.sh（只复制 skill 文件，不要安装任何额外依赖或测试工具）
 3. 如果我使用 Claude Code，运行 ./claude-code/install-hook.sh
 4. 如果我使用 Codex，运行 ./codex/install-hook.sh
-5. 如果我使用 OpenClaw，运行 ./openclaw/install-hook.sh
-6. 如果我使用 Kimi Code CLI，运行 ./kimi/install-hook.sh
+5. 如果我使用 Kimi Code CLI，运行 ./kimi/install-hook.sh
+6. 如果我使用 OpenClaw，运行 ./openclaw/install-hook.sh
 7. 安装后运行：
    python3 ~/.codex/skills/teach-me/scripts/teach_me.py context
    或对应 agent skills 目录下的 scripts/teach_me.py context
@@ -602,7 +603,9 @@ pre{
    python3 ~/.codex/skills/check/scripts/check_me.py report
 9. 想复习时可以说“帮我复习一下”，agent 会调用：
    python3 ~/.codex/skills/recap/scripts/recap.py next
-10. 第一次写学习笔记前，先让我确认 vault 路径、笔记语言，以及是否启用 Git sync</code></pre>
+10. 想测验时可以说“考考我”，agent 会调用：
+    python3 ~/.codex/skills/exam/scripts/exam.py plan --time 15
+11. 第一次写学习笔记前，先让我确认 vault 路径、笔记语言，以及是否启用 Git sync</code></pre>
           </div>
         </div>
 

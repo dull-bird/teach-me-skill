@@ -384,6 +384,101 @@ Example:
 我顺手把这条记进了 vault：[[单文件 WebUI 的集中状态驱动动画]]。
 ```
 
+## Importing external knowledge
+
+When the user explicitly asks to import knowledge from an external source — PDF, URL, text file, Markdown, EPUB, Word doc, or an entire Obsidian vault — use the `import` command:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py import --source pdf --path /path/to/file.pdf --project "Book Name"
+python3 <teach-me-skill-dir>/scripts/teach_me.py import --source url --path https://example.com/article.html --project "Blog"
+python3 <teach-me-skill-dir>/scripts/teach_me.py import --source text --path /path/to/notes.md --project "Docs"
+python3 <teach-me-skill-dir>/scripts/teach_me.py import --source stdin --project "Chat" < article.txt
+python3 <teach-me-skill-dir>/scripts/teach_me.py import --source obsidian --path /path/to/obsidian/vault --project "My Obsidian"
+```
+
+The skill will:
+
+1. Try to extract text from the source (soft dependencies: `pymupdf`, `pypdf`, `python-docx`).
+2. Record the import provenance in `learning-state.json`.
+3. Output an `import_id` and a `prompt_for_ai` for you to extract knowledge points.
+4. If text extraction fails, it still records the attempt and asks you or the user to provide the text.
+
+### Obsidian vault import
+
+To import an existing Obsidian vault, use `--source obsidian` and point `--path` at the vault root. The runtime will:
+
+- Walk all `.md` files recursively.
+- Skip `.teach-me/`, `.obsidian/`, `.trash/`, `.git/`, generated system notes (`00_Index.md`, `01_Knowledge_Graph.md`, `Knowledge_Tree.md`, `Exam_History.md`), and any note whose frontmatter says `type: teach-me/...`.
+- Refuse to import the vault into itself.
+
+Natural-language triggers:
+
+- “导入我的 Obsidian vault”
+- “link my Obsidian vault to Teach Me”
+- “把我磁盘上的 Obsidian 笔记导入知识库”
+
+### After `import`: teach first, then ask familiarity
+
+After `import` succeeds, do **not** silently inject notes. Follow this flow:
+
+1. **Summarize the material for the user.** In 2–4 sentences, explain the core ideas, why they matter, and how they connect to concepts already in the vault (if any). Match the user's configured `speaking_style` and `teach_me_persona`. Keep it concrete and avoid hype.
+2. **Confirm it is in the knowledge base.** Say something like: “这段材料已经记录进你的知识库，接下来我会把它拆成知识点。” / “I've added this material to your knowledge base and will extract the key concepts.”
+3. **Ask how familiar the user is.**
+   - In agents that support forms (Kimi Code CLI, Claude Code, Codex), use `AskUserQuestion` with one single-select question:
+     - **Question:** “你对这份材料的掌握程度大概是？” / “How familiar are you with this material?”
+     - **Options:**
+       - “已经很熟 —— 直接考我” / "Very familiar — test me now"
+       - “大概了解” / "Somewhat familiar"
+       - “大部分是新内容” / "Mostly new"
+       - “完全没接触过” / "Completely new"
+   - In agents without form support (e.g., OpenClaw, which only injects bootstrap context), ask the same question in plain chat text and let the user reply with the option number or phrase.
+4. **If the user says they are very familiar**, offer to start an exam:
+   - Run `python3 <exam-skill-dir>/scripts/exam.py plan --time 10 --topic <imported project>`.
+   - Generate the quiz from the plan and let the user take it.
+5. **If the user says lower familiarity**, extract knowledge points using `assess` or `capture` as usual. Set initial mastery to `seen` for imported material, not higher.
+
+When extracting, reference the source in `evidence` or `current_project_context`.
+
+Example:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py assess <<'JSON'
+{
+  "project": {"name": "Book Name"},
+  "summary": "Imported from PDF chapter 3",
+  "nodes": [
+    {
+      "title": "event sourcing",
+      "type": "concept",
+      "mastery": "seen",
+      "why_it_matters": "Stores state as a sequence of events instead of only the latest snapshot.",
+      "evidence": [{"type": "pdf_import", "summary": "Chapter 3 of Book Name", "timestamp": "2026-07-09T10:00:00"}]
+    }
+  ]
+}
+JSON
+```
+
+## Hook control
+
+Users can enable or disable Teach Me hooks across installed agents with natural language.
+
+Natural-language triggers:
+
+- “关闭所有 Teach Me 钩子” / “disable all Teach Me hooks"
+- “打开所有 Teach Me 钩子” / “enable all Teach Me hooks"
+- “stop Teach Me from interrupting me”
+- “turn on Teach Me hooks”
+
+Run:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py hooks --disable
+python3 <teach-me-skill-dir>/scripts/teach_me.py hooks --enable
+```
+
+The command tries each installed agent (Claude Code, Codex, Kimi, OpenClaw) and reports which succeeded. Failures are non-fatal.
+
 ## Mastery Updates
 
 Use these mastery levels:

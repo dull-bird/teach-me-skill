@@ -9,14 +9,20 @@ updates, and lightweight event logging.
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
+import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.error import URLError
+from urllib.request import urlopen
 
 
 TEACH_ME_HOME = Path(
@@ -210,6 +216,32 @@ def persist_user_config(user_cfg: dict[str, Any]) -> None:
     top.setdefault("users", {})[user_id] = clean
 
 
+def _record_linked_vault(user_cfg: dict[str, Any], vault_path_str: str, project: str) -> None:
+    """Remember an external Obsidian vault path in the user config."""
+    linked = user_cfg.setdefault("linked_vaults", [])
+    if not isinstance(linked, list):
+        linked = []
+        user_cfg["linked_vaults"] = linked
+    try:
+        normalized = str(Path(vault_path_str).expanduser().resolve())
+    except OSError:
+        normalized = vault_path_str
+    for entry in linked:
+        if isinstance(entry, dict):
+            entry_path = str(entry.get("path", ""))
+            try:
+                if Path(entry_path).expanduser().resolve() == Path(normalized):
+                    return
+            except OSError:
+                if entry_path == normalized:
+                    return
+    linked.append({
+        "path": normalized,
+        "project": project,
+        "linked_at": now_iso(),
+    })
+
+
 def vault_path(config: dict[str, Any]) -> Path:
     return Path(config.get("vault_path") or DEFAULT_VAULT).expanduser()
 
@@ -256,6 +288,344 @@ def style_path(config: dict[str, Any]) -> Path:
 
 def events_path(config: dict[str, Any]) -> Path:
     return meta_dir(config) / "events.jsonl"
+
+
+# ---------------------------------------------------------------------------
+# External source text extraction (soft dependencies)
+# ---------------------------------------------------------------------------
+
+
+def _read_file_as_text(path: Path) -> str | None:
+    """Try to read a file as UTF-8 text. Fall back to Latin-1."""
+    for encoding in ("utf-8", "latin-1"):
+        try:
+            return path.read_text(encoding=encoding)
+        except (UnicodeDecodeError, OSError):
+            continue
+    return None
+
+
+def _strip_html_tags(text: str) -> str:
+    """Minimal HTML tag stripper for fallback use."""
+    return re.sub(r"<[^>]+>", "", text)
+
+
+# Paths and file types to skip when importing an Obsidian vault so that
+# Teach Me does not import its own metadata or generated system notes.
+OBSIDIAN_SKIP_DIRS = {".teach-me", ".obsidian", ".trash", ".git"}
+OBSIDIAN_SKIP_FILES = {
+    "00_Index.md",
+    "01_Knowledge_Graph.md",
+    "07_Learning_Profile/Knowledge_Tree.md",
+    "07_Learning_Profile/Exam_History.md",
+}
+OBSIDIAN_MAX_TOTAL_CHARS = 200_000
+OBSIDIAN_MAX_PER_FILE_CHARS = 50_000
+
+
+def _is_teach_me_note(text: str) -> bool:
+    """Return True if the note frontmatter marks it as a Teach Me generated note."""
+    if not text.startswith("---"):
+        return False
+    end = text.find("---", 3)
+    if end == -1:
+        return False
+    frontmatter = text[:end]
+    return "type: teach-me/" in frontmatter
+
+
+def _extract_obsidian_vault_text(
+    path: Path,
+    user_vault: Path | None = None,
+) -> tuple[str | None, dict[str, Any], str]:
+    """
+    Extract text from an Obsidian vault directory.
+
+    Skips Teach Me metadata, Obsidian config/workspace cache, trash, generated
+    system notes, and any note whose frontmatter marks it as a teach-me note.
+
+    Returns (text, metadata, status). Status values:
+    - ok: content was extracted
+    - unreadable: path is not a directory or cannot be read
+    - self_import: target is inside the current Teach Me vault
+    - no_content: no markdown files remained after filtering
+    """
+    path = path.expanduser().resolve()
+    if not path.is_dir():
+        return None, {}, "unreadable"
+
+    if user_vault is not None:
+        user_vault = user_vault.expanduser().resolve()
+        if path == user_vault or user_vault in path.parents:
+            return (
+                None,
+                {"error": "cannot import the current Teach Me vault into itself"},
+                "self_import",
+            )
+
+    note_paths: list[str] = []
+    skipped_paths: list[str] = []
+    chunks: list[str] = []
+    total_chars = 0
+
+    for file_path in sorted(path.rglob("*.md")):
+        rel = file_path.relative_to(path)
+        rel_str = str(rel).replace("\\", "/")
+        parts = rel.parts
+
+        if any(part in OBSIDIAN_SKIP_DIRS for part in parts):
+            skipped_paths.append(rel_str)
+            continue
+
+        if rel_str in OBSIDIAN_SKIP_FILES:
+            skipped_paths.append(rel_str)
+            continue
+
+        text = _read_file_as_text(file_path)
+        if text is None:
+            skipped_paths.append(rel_str)
+            continue
+
+        if _is_teach_me_note(text):
+            skipped_paths.append(rel_str)
+            continue
+
+        note_paths.append(rel_str)
+        header = f"\n\n--- From {rel_str} ---\n\n"
+        remaining = OBSIDIAN_MAX_TOTAL_CHARS - total_chars
+        if remaining <= 0:
+            break
+        file_limit = min(OBSIDIAN_MAX_PER_FILE_CHARS, remaining)
+        file_text = text[:file_limit]
+        chunks.append(header + file_text)
+        total_chars += len(header) + len(file_text)
+
+    metadata = {
+        "note_count": len(note_paths),
+        "skipped_count": len(skipped_paths),
+        "note_paths": note_paths,
+        "skipped_paths": skipped_paths[:100],
+    }
+
+    if not chunks:
+        return None, metadata, "no_content"
+
+    return "".join(chunks), metadata, "ok"
+
+
+def _extract_pdf_text(path: Path, pages: str | None = None) -> str | None:
+    """Try multiple PDF extraction strategies."""
+    page_numbers: list[int] | None = None
+    if pages:
+        try:
+            page_numbers = []
+            for part in pages.split(","):
+                if "-" in part:
+                    start, end = part.split("-", 1)
+                    page_numbers.extend(range(int(start), int(end) + 1))
+                else:
+                    page_numbers.append(int(part))
+        except ValueError:
+            page_numbers = None
+
+    # Try PyMuPDF
+    try:
+        import fitz  # type: ignore
+
+        doc = fitz.open(path)
+        selected = page_numbers or range(1, len(doc) + 1)
+        chunks = []
+        for p in selected:
+            idx = p - 1
+            if 0 <= idx < len(doc):
+                chunks.append(doc.load_page(idx).get_text())
+        return "\n".join(chunks)
+    except Exception:
+        pass
+
+    # Try pypdf
+    try:
+        from pypdf import PdfReader  # type: ignore
+
+        reader = PdfReader(path)
+        selected = page_numbers or range(1, len(reader.pages) + 1)
+        chunks = []
+        for p in selected:
+            idx = p - 1
+            if 0 <= idx < len(reader.pages):
+                chunks.append(reader.pages[idx].extract_text() or "")
+        return "\n".join(chunks)
+    except Exception:
+        pass
+
+    # Try pdftotext command
+    try:
+        cmd = ["pdftotext"]
+        if page_numbers:
+            cmd.extend(["-f", str(min(page_numbers)), "-l", str(max(page_numbers))])
+        cmd.extend([str(path), "-"])
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        if result.returncode == 0 and result.stdout:
+            return result.stdout
+    except Exception:
+        pass
+
+    return None
+
+
+def _extract_docx_text(path: Path) -> str | None:
+    """Extract text from DOCX using optional python-docx or stdlib zip+xml."""
+    try:
+        import docx  # type: ignore
+
+        document = docx.Document(path)
+        return "\n".join(p.text for p in document.paragraphs)
+    except Exception:
+        pass
+
+    try:
+        with zipfile.ZipFile(path) as zf:
+            xml = zf.read("word/document.xml").decode("utf-8", errors="ignore")
+            texts = re.findall(r"<w:t[^>]*>([^<]+)</w:t>", xml)
+            return "\n".join(texts)
+    except Exception:
+        pass
+
+    return None
+
+
+def _extract_epub_text(path: Path) -> str | None:
+    """Extract text from EPUB by reading XHTML/HTML files inside."""
+    try:
+        chunks: list[str] = []
+        with zipfile.ZipFile(path) as zf:
+            for name in zf.namelist():
+                if name.endswith((".xhtml", ".html", ".htm")):
+                    data = zf.read(name).decode("utf-8", errors="ignore")
+                    chunks.append(_strip_html_tags(data))
+        return "\n".join(chunks)
+    except Exception:
+        return None
+
+
+def _fetch_url_text(url: str) -> str | None:
+    """Fetch a URL and strip HTML."""
+    try:
+        with urlopen(url, timeout=30) as response:
+            data = response.read()
+            try:
+                text = data.decode("utf-8")
+            except UnicodeDecodeError:
+                text = data.decode("latin-1")
+            return _strip_html_tags(text)
+    except (URLError, OSError):
+        return None
+
+
+def _detect_source_type(path: Path) -> str:
+    """Guess source type from extension and content."""
+    if path.is_dir():
+        if (path / ".obsidian").is_dir():
+            return "obsidian"
+        # Treat directories with several markdown files as an Obsidian vault.
+        md_count = sum(1 for _ in path.rglob("*.md"))
+        if md_count >= 3:
+            return "obsidian"
+        return "text"
+
+    ext = path.suffix.lower()
+    if ext in (".pdf",):
+        return "pdf"
+    if ext in (".docx",):
+        return "docx"
+    if ext in (".epub",):
+        return "epub"
+    if ext in (".html", ".htm", ".xhtml"):
+        return "html"
+    if ext in (".md", ".txt", ".rst", ".csv", ".json", ".yaml", ".yml"):
+        return "text"
+
+    # Magic-byte checks
+    try:
+        header = path.read_bytes()[:8]
+        if header.startswith(b"%PDF"):
+            return "pdf"
+        if header.startswith(b"PK"):
+            # Could be docx or epub; try epub first by content probe
+            try:
+                with zipfile.ZipFile(path) as zf:
+                    names = zf.namelist()
+                    if any("META-INF/container.xml" in n for n in names):
+                        return "epub"
+                    if any(n.startswith("word/") for n in names):
+                        return "docx"
+            except Exception:
+                pass
+    except OSError:
+        pass
+
+    return "text"
+
+
+def extract_text(
+    source_type: str,
+    source_path: str,
+    pages: str | None = None,
+) -> tuple[str | None, str]:
+    """
+    Extract text from an external source.
+    Returns (text, status) where status is one of:
+    - ok
+    - fallback_encoding
+    - no_extractor
+    - unreadable
+    """
+    if source_type == "stdin":
+        try:
+            return sys.stdin.read(), "ok"
+        except OSError:
+            return None, "unreadable"
+
+    if source_type == "url":
+        text = _fetch_url_text(source_path)
+        return text, "ok" if text is not None else "unreadable"
+
+    path = Path(source_path).expanduser().resolve()
+    if not path.exists():
+        return None, "unreadable"
+
+    if source_type == "auto":
+        source_type = _detect_source_type(path)
+
+    if source_type == "pdf":
+        text = _extract_pdf_text(path, pages)
+        if text is not None:
+            return text, "ok"
+        return None, "no_extractor"
+
+    if source_type == "docx":
+        text = _extract_docx_text(path)
+        if text is not None:
+            return text, "ok"
+        return None, "no_extractor"
+
+    if source_type == "epub":
+        text = _extract_epub_text(path)
+        if text is not None:
+            return text, "ok"
+        return None, "no_extractor"
+
+    if source_type == "html":
+        text = _read_file_as_text(path)
+        if text is not None:
+            return _strip_html_tags(text), "ok"
+        return None, "unreadable"
+
+    # Default: try to read as text
+    text = _read_file_as_text(path)
+    if text is not None:
+        return text, "ok"
+    return None, "unreadable"
 
 
 def git_sync_config(config: dict[str, Any]) -> dict[str, Any]:
@@ -442,6 +812,14 @@ def read_style(config: dict[str, Any]) -> dict[str, Any]:
     base = default_style(config.get("language", "auto"))
     base.update(style)
     return base
+
+
+def detect_language(config: dict[str, Any]) -> str:
+    """Return the effective language for output messages."""
+    lang = str(config.get("language", "auto")).lower()
+    if lang != "auto":
+        return lang
+    return "zh"
 
 
 def ensure_vault(config: dict[str, Any]) -> None:
@@ -903,6 +1281,18 @@ def rewrite_index(config: dict[str, Any], state: dict[str, Any]) -> None:
             lines.append(f"- {stamp}: {phase} - {titles}")
     else:
         lines.append("- No captures yet.")
+    imports = state.get("imports", [])[-10:]
+    lines.extend(["", "## Recent Imports", ""])
+    if imports:
+        for imp in reversed(imports):
+            stamp = imp.get("timestamp", "")[:10]
+            src = imp.get("source_type", "unknown")
+            path = imp.get("path", "unknown")
+            status = imp.get("status", "unknown")
+            lines.append(f"- {stamp}: {src} import from `{path}` ({status})")
+    else:
+        lines.append("- No imports yet.")
+
     lines.extend(["", "## Concepts", ""])
     if concepts:
         for title in sorted(concepts):
@@ -1413,6 +1803,331 @@ def cmd_capture(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_import(args: argparse.Namespace) -> int:
+    """Import knowledge from an external source (pdf, url, text, stdin, auto)."""
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    if not user_cfg.get("initialized"):
+        print(
+            "Teach Me is not initialized. Ask the user to confirm the vault path "
+            "and language, then run `teach_me.py configure`.",
+            file=sys.stderr,
+        )
+        return 2
+    ensure_vault(user_cfg)
+
+    source_type = args.source
+    source_path = args.path or ""
+    project = str(args.project or "").strip()
+    phase = str(args.phase or "external import").strip()
+    pages = args.pages
+
+    # Validate stdin path semantics
+    if source_type == "stdin":
+        source_path = "<stdin>"
+    elif not source_path:
+        print("--path is required unless --source stdin is used.", file=sys.stderr)
+        return 1
+
+    extracted_text: str | None = None
+    obsidian_meta: dict[str, Any] = {}
+    if source_type == "obsidian":
+        extracted_text, obsidian_meta, status = _extract_obsidian_vault_text(
+            Path(source_path), vault_path(user_cfg)
+        )
+    else:
+        extracted_text, status = extract_text(source_type, source_path, pages)
+
+    import_id = f"import-{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S')}"
+    state = read_state(user_cfg)
+
+    detected_type = source_type
+    if source_type == "auto" and source_path:
+        detected_type = _detect_source_type(Path(source_path).expanduser().resolve())
+
+    import_record: dict[str, Any] = {
+        "import_id": import_id,
+        "timestamp": now_iso(),
+        "source_type": source_type,
+        "path": source_path,
+        "detected_type": detected_type,
+        "project": project,
+        "phase": phase,
+        "pages": pages,
+        "status": status,
+        "extracted_length": len(extracted_text) if extracted_text else 0,
+        "extracted_items": [],
+    }
+    import_record.update(obsidian_meta)
+    state.setdefault("imports", []).append(import_record)
+    write_json(state_path(user_cfg), state)
+    rewrite_index(user_cfg, state)
+    append_jsonl(events_path(user_cfg), {"type": "import", **import_record})
+
+    if source_type == "obsidian" and status == "ok":
+        _record_linked_vault(user_cfg, source_path, project)
+        persist_user_config(user_cfg)
+        save_config(user_cfg["_top_level"])
+
+    sync_result = auto_sync_vault(user_cfg, "import")
+
+    lang = detect_language(user_cfg)
+    if extracted_text:
+        text_preview = extracted_text[:2000].strip()
+    else:
+        text_preview = ""
+
+    prompt_for_ai = build_import_prompt(
+        source_type=source_type,
+        source_path=source_path,
+        project=project,
+        phase=phase,
+        text_preview=text_preview,
+        status=status,
+    )
+
+    output: dict[str, Any] = {
+        "import_id": import_id,
+        "user": user_cfg["_user_id"],
+        "source_type": source_type,
+        "detected_type": import_record["detected_type"],
+        "path": source_path,
+        "project": project,
+        "phase": phase,
+        "status": status,
+        "extracted_length": import_record["extracted_length"],
+        "prompt_for_ai": prompt_for_ai,
+    }
+    for key in ("note_count", "skipped_count", "note_paths", "skipped_paths", "error"):
+        if key in import_record:
+            output[key] = import_record[key]
+    if text_preview:
+        output["text_preview"] = text_preview
+    if sync_result is not None:
+        output["sync"] = sync_result
+
+    if args.json:
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        return 0
+
+    if lang.startswith("zh"):
+        print(f"## 外部知识导入计划")
+        print(f"- 来源类型：{source_type}")
+        if source_type == "auto":
+            print(f"- 检测类型：{import_record['detected_type']}")
+        print(f"- 路径：{source_path}")
+        if project:
+            print(f"- 项目：{project}")
+        print(f"- 状态：{status}")
+        if "note_count" in import_record:
+            print(f"- 导入笔记数：{import_record['note_count']}")
+        if "skipped_count" in import_record:
+            print(f"- 跳过笔记/目录数：{import_record['skipped_count']}")
+        print(f"- 提取字数：{import_record['extracted_length']}")
+        print(f"- import_id：`{import_id}`")
+        print("")
+        if status == "unreadable":
+            print("无法读取该来源。你可以把内容复制后通过 `--source stdin` 导入，或粘贴到对话里让我处理。")
+        elif status == "no_extractor":
+            print("未安装 PDF/Word 解析器，但已记录导入计划。你可以安装 pymupdf / pypdf / python-docx，或把内容粘贴到对话里让我处理。")
+        elif status == "self_import":
+            print("不能将当前 Teach Me vault 导入它自己。请选择一个外部的 Obsidian vault 或文件。")
+        elif status == "no_content":
+            print("该目录下没有可导入的 Markdown 内容（已跳过系统目录和 Teach Me 自身文件）。")
+        else:
+            print("我已提取文本并记录导入计划。接下来我会分析内容并提取知识点。")
+        print("")
+        print("AI 提取提示已包含在 JSON 输出中。用 `--json` 查看完整内容。")
+    else:
+        print(f"## External knowledge import plan")
+        print(f"- Source type: {source_type}")
+        if source_type == "auto":
+            print(f"- Detected type: {import_record['detected_type']}")
+        print(f"- Path: {source_path}")
+        if project:
+            print(f"- Project: {project}")
+        print(f"- Status: {status}")
+        if "note_count" in import_record:
+            print(f"- Notes imported: {import_record['note_count']}")
+        if "skipped_count" in import_record:
+            print(f"- Skipped notes/directories: {import_record['skipped_count']}")
+        print(f"- Extracted length: {import_record['extracted_length']}")
+        print(f"- import_id: `{import_id}`")
+        print("")
+        if status == "unreadable":
+            print("Could not read the source. Copy the content and use `--source stdin`, or paste it into the chat.")
+        elif status == "no_extractor":
+            print("No PDF/Word parser installed, but the import plan was recorded. Install pymupdf / pypdf / python-docx, or paste the content into the chat.")
+        elif status == "self_import":
+            print("Cannot import the current Teach Me vault into itself. Choose an external Obsidian vault or file.")
+        elif status == "no_content":
+            print("No importable Markdown content found in that directory (system directories and Teach Me files were skipped).")
+        else:
+            print("Text extracted and import plan recorded. I will now analyze the content and extract knowledge points.")
+        print("")
+        print("AI extraction prompt included in JSON output. Use `--json` to see it.")
+    return 0
+
+
+def _find_hook_installer(skill_dir: Path, agent: str) -> Path | None:
+    """Locate the hook installer for an agent inside or beside the skill dir."""
+    internal = skill_dir / f"install-{agent}-hook.py"
+    if internal.exists():
+        return internal
+    repo_root = skill_dir.parent.parent
+    repo_installer = repo_root / agent / "install_hook.py"
+    if repo_installer.exists():
+        return repo_installer
+    return None
+
+
+def _run_python_hook_installer(agent: str, installer: Path, enable: bool) -> tuple[bool, str]:
+    cmd = [sys.executable, str(installer)]
+    if not enable:
+        cmd.append("--uninstall")
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        output = (result.stdout.strip() + "\n" + result.stderr.strip()).strip()
+        return result.returncode == 0, output
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _set_openclaw_hook(enabled: bool) -> tuple[bool, str]:
+    action = "enable" if enabled else "disable"
+    if not shutil.which("openclaw"):
+        return False, "openclaw command not found"
+    try:
+        result = subprocess.run(
+            ["openclaw", "hooks", action, "teach-me-learning"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        output = (result.stdout.strip() + "\n" + result.stderr.strip()).strip()
+        return result.returncode == 0, output
+    except Exception as exc:
+        return False, str(exc)
+
+
+def cmd_hooks(args: argparse.Namespace) -> int:
+    """Enable or disable Teach Me hooks across installed agents."""
+    if args.enable and args.disable:
+        print("Cannot use both --enable and --disable.", file=sys.stderr)
+        return 1
+    if not args.enable and not args.disable:
+        print("Specify --enable or --disable.", file=sys.stderr)
+        return 1
+
+    enable = args.enable
+    skill_dir = Path(__file__).resolve().parent.parent
+    lang = detect_language({"language": "auto"})
+    is_zh = lang.startswith("zh")
+
+    agent_home_dirs: dict[str, Path] = {
+        "claude-code": Path.home() / ".claude",
+        "codex": Path.home() / ".codex",
+        "kimi": Path.home() / ".kimi",
+        "openclaw": Path.home() / ".openclaw",
+    }
+
+    results: list[dict[str, Any]] = []
+    for agent in ("claude-code", "codex", "kimi", "openclaw"):
+        home_dir = agent_home_dirs[agent]
+        installer = _find_hook_installer(skill_dir, agent) if agent != "openclaw" else None
+        detected = home_dir.exists() or (installer is not None) or (agent == "openclaw" and shutil.which("openclaw") is not None)
+
+        if not detected:
+            results.append({"agent": agent, "ok": None, "message": "not detected"})
+            continue
+
+        if agent == "openclaw":
+            ok, message = _set_openclaw_hook(enable)
+        elif installer is not None:
+            ok, message = _run_python_hook_installer(agent, installer, enable)
+        else:
+            ok, message = False, "hook installer not found; run the matching install-hook.sh from the teach-me-skill repo"
+
+        results.append({"agent": agent, "ok": ok, "message": message})
+
+    if args.json:
+        print(json.dumps({"enabled": enable, "results": results}, ensure_ascii=False, indent=2))
+        return 0
+
+    action_label = "Enabled" if enable else "Disabled"
+    if is_zh:
+        print(f"## 已{'启用' if enable else '关闭'} Teach Me hooks")
+    else:
+        print(f"## {action_label} Teach Me hooks")
+
+    for r in results:
+        agent = r["agent"]
+        ok = r["ok"]
+        message = r["message"]
+        if ok is None:
+            symbol = "-"
+            status_text = "not detected" if not is_zh else "未检测到"
+        elif ok:
+            symbol = "✅"
+            status_text = "ok" if not is_zh else "成功"
+        else:
+            symbol = "❌"
+            status_text = "failed" if not is_zh else "失败"
+        print(f"{symbol} {agent}: {status_text}")
+        if message:
+            for line in message.splitlines()[:3]:
+                print(f"   {line}")
+    return 0
+
+
+def build_import_prompt(
+    source_type: str,
+    source_path: str,
+    project: str,
+    phase: str,
+    text_preview: str,
+    status: str,
+) -> str:
+    """Build a prompt for the AI to extract knowledge from an imported source."""
+    if status != "ok":
+        return (
+            f"The user wants to import knowledge from {source_type} source: {source_path}.\n"
+            f"Status: {status}. The skill could not extract text automatically.\n"
+            "Please ask the user to paste the content, then extract knowledge points from it "
+            "and call `teach_me.py assess` or `teach_me.py capture` to inject them into the vault."
+        )
+
+    return (
+        f"You are importing knowledge from a {source_type} source into the user's Teach Me vault.\n"
+        f"Source: {source_path}\n"
+        f"Project: {project or '(none)'}\n"
+        f"Phase: {phase}\n\n"
+        "Read the source text below and extract as many important knowledge points as possible.\n\n"
+        "For each knowledge point, decide whether to use `assess` (structured knowledge-tree node) "
+        "or `capture` (full Markdown note).\n\n"
+        "When using `assess`, emit nodes with:\n"
+        "- title\n"
+        "- type: concept | algorithmic_idea | project_map\n"
+        "- mastery: seen (default for imported material)\n"
+        "- one_line or why_it_matters\n"
+        "- prerequisites\n"
+        "- probes (Socratic questions)\n"
+        "- evidence summary referencing the source\n\n"
+        "When using `capture`, emit items with:\n"
+        "- title\n"
+        "- type: concept | algorithmic_idea | project_map\n"
+        "- one_line\n"
+        "- why_it_matters\n"
+        "- first_principles\n"
+        "- body (detailed notes from the source)\n"
+        "- relationships\n\n"
+        "Source text preview (analyze the full text if available):\n"
+        "---\n"
+        f"{text_preview}\n"
+        "---\n"
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Teach Me runtime")
     parser.add_argument("--user", help="Target user ID (defaults to current_user)")
@@ -1470,6 +2185,21 @@ def build_parser() -> argparse.ArgumentParser:
 
     capture = sub.add_parser("capture", help="Capture learning notes from JSON stdin")
     capture.set_defaults(func=cmd_capture)
+
+    import_cmd = sub.add_parser("import", help="Import knowledge from an external source")
+    import_cmd.add_argument("--source", choices=["auto", "pdf", "url", "text", "stdin", "obsidian"], default="auto", help="Source type")
+    import_cmd.add_argument("--path", help="File path or URL")
+    import_cmd.add_argument("--project", help="Project/namespace for imported concepts")
+    import_cmd.add_argument("--phase", default="external import", help="Phase label")
+    import_cmd.add_argument("--pages", help="Page range for PDFs, e.g. 1-10")
+    import_cmd.add_argument("--json", action="store_true", help="Output structured JSON")
+    import_cmd.set_defaults(func=cmd_import)
+
+    hooks_cmd = sub.add_parser("hooks", help="Enable or disable Teach Me hooks across installed agents")
+    hooks_cmd.add_argument("--enable", action="store_true", help="Install/enable hooks for all detected agents")
+    hooks_cmd.add_argument("--disable", action="store_true", help="Uninstall/disable hooks for all detected agents")
+    hooks_cmd.add_argument("--json", action="store_true", help="Output structured JSON")
+    hooks_cmd.set_defaults(func=cmd_hooks)
     return parser
 
 

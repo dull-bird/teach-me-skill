@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -194,14 +195,55 @@ def count_knowledge_tree_nodes(path: Path) -> int:
         return 0
 
 
+TEACH_ME_HOOK_MARKER = "teach-me/scripts/teach_me_hook.py"
+
+
+def _json_config_has_hook(path: Path) -> bool:
+    if not path.exists():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
+    return TEACH_ME_HOOK_MARKER in json.dumps(data, ensure_ascii=False)
+
+
+def _text_config_has_hook(path: Path) -> bool:
+    if not path.exists():
+        return False
+    try:
+        return TEACH_ME_HOOK_MARKER in path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+
+
+def _openclaw_hook_enabled() -> bool:
+    hook_dir = Path.home() / ".openclaw" / "hooks" / "teach-me-learning"
+    if not hook_dir.exists():
+        return False
+    if shutil.which("openclaw") is None:
+        return False
+    try:
+        result = subprocess.run(
+            ["openclaw", "hooks", "info", "teach-me-learning"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        output = (result.stdout + result.stderr).lower()
+        return result.returncode == 0 and "disabled" not in output
+    except (subprocess.SubprocessError, FileNotFoundError):
+        return False
+
+
 def detect_installations() -> dict[str, bool]:
-    """Detect which agent hooks appear to be installed."""
+    """Detect which agent hooks are actually registered and enabled."""
     home = Path.home()
     return {
-        "claude-code": (home / ".claude" / "settings.json").exists(),
-        "codex": (home / ".codex" / "config.toml").exists(),
-        "kimi": (home / ".kimi" / "config.toml").exists(),
-        "openclaw": (home / ".openclaw" / "hooks" / "teach-me-learning").exists(),
+        "claude-code": _json_config_has_hook(home / ".claude" / "settings.json"),
+        "codex": _text_config_has_hook(home / ".codex" / "config.toml"),
+        "kimi": _text_config_has_hook(home / ".kimi" / "config.toml"),
+        "openclaw": _openclaw_hook_enabled(),
     }
 
 
@@ -424,6 +466,8 @@ def _format_zh(report: dict[str, Any]) -> str:
         lines.append("- “关闭 Git sync” / “关闭自动同步”")
     else:
         lines.append("- “开启 Git sync 到 `github.com/user/repo.git`”")
+    lines.append("- “导入我的 Obsidian vault：`/path/to/vault`”")
+    lines.append("- “关闭所有 Teach Me 钩子” / “打开所有 Teach Me 钩子”")
     lines.append("- “给我看看最近的学习记录”")
     lines.append("- “帮我整理一下知识图谱”")
     lines.append("")
@@ -529,6 +573,8 @@ def _format_en(report: dict[str, Any]) -> str:
         lines.append("- “Disable Git sync” / “Turn off auto-sync”")
     else:
         lines.append("- “Enable Git sync to `github.com/user/repo.git`”")
+    lines.append("- “Import my Obsidian vault: `/path/to/vault`”")
+    lines.append("- “Disable all Teach Me hooks” / “Enable all Teach Me hooks”")
     lines.append("- “Show my recent learning records”")
     lines.append("- “Help me organize my knowledge graph”")
     lines.append("")

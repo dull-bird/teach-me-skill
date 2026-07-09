@@ -70,7 +70,9 @@ class CheckSkillTests(unittest.TestCase):
             # Create fake hook detection targets inside temp HOME
             fake_home = Path(tmp)
             (fake_home / ".codex").mkdir()
-            (fake_home / ".codex" / "config.toml").write_text("")
+            (fake_home / ".codex" / "config.toml").write_text(
+                'hooks = [{ event = "Stop", command = "python3 ~/.codex/skills/teach-me/scripts/teach_me_hook.py" }]\n'
+            )
 
             env = os.environ.copy()
             env["TEACH_ME_HOME"] = str(home)
@@ -131,7 +133,9 @@ class CheckSkillTests(unittest.TestCase):
             # Create fake hook detection targets inside temp HOME
             fake_home = Path(tmp)
             (fake_home / ".codex").mkdir()
-            (fake_home / ".codex" / "config.toml").write_text("")
+            (fake_home / ".codex" / "config.toml").write_text(
+                'hooks = [{ event = "Stop", command = "python3 ~/.codex/skills/teach-me/scripts/teach_me_hook.py" }]\n'
+            )
 
             env = os.environ.copy()
             env["TEACH_ME_HOME"] = str(home)
