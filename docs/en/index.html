@@ -51,6 +51,7 @@
   }
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{
   margin:0;
@@ -73,9 +74,11 @@ code{font-family:var(--mono);font-size:.92em}
   position:sticky;
   top:0;
   z-index:10;
-  border-bottom:1px solid color-mix(in srgb,var(--line) 76%,transparent);
-  background:color-mix(in srgb,var(--paper) 86%,transparent);
-  backdrop-filter:blur(16px);
+  border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);
+  background:color-mix(in srgb,var(--paper) 58%,transparent);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  box-shadow:0 1px 0 color-mix(in srgb,#fff 40%,transparent) inset,0 12px 30px -22px rgba(20,18,12,.35);
 }
 .nav{
   max-width:var(--max);
@@ -118,12 +121,75 @@ object-fit:contain;
 }
 .nav-links a:hover{color:var(--accent-ink)}
 .hero{
+  position:relative;
   max-width:var(--max);
   margin:0 auto;
   padding:76px 22px 58px;
+  overflow:hidden;
+}
+.hero-bg{
+  position:absolute;
+  inset:-18% -10% auto -10%;
+  height:560px;
+  z-index:-1;
+  background:
+    radial-gradient(440px 380px at 12% 15%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%),
+    radial-gradient(380px 340px at 88% 5%,color-mix(in srgb,var(--blue) 16%,transparent),transparent 72%),
+    radial-gradient(320px 280px at 55% 55%,color-mix(in srgb,var(--coral) 10%,transparent),transparent 74%);
+  filter:blur(6px);
+  pointer-events:none;
 }
 .hero-text{max-width:var(--measure);margin-bottom:42px}
 .hero-diagram{margin-top:18px}
+.stats{
+  display:flex;
+  flex-wrap:wrap;
+  gap:32px;
+  margin:32px 0 0;
+  padding-top:24px;
+  border-top:1px solid var(--line);
+  max-width:38rem;
+}
+.stat strong{
+  display:block;
+  color:var(--ink);
+  font:400 clamp(26px,3vw,34px)/1 var(--serif);
+  font-variant-numeric:tabular-nums;
+}
+.stat span{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:13px;
+  letter-spacing:.02em;
+}
+.art-slot{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:200px;
+  border:1.5px dashed var(--line-strong);
+  border-radius:14px;
+  background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--accent) 7%,transparent) 0 14px,transparent 14px 28px);
+  color:var(--muted);
+  padding:26px;
+  text-align:center;
+}
+.art-slot .art-icon{font-size:26px;line-height:1}
+.art-slot strong{color:var(--ink);font-size:14.5px;font-weight:650}
+.art-slot span{font-size:12.5px;max-width:46ch;line-height:1.6;color:var(--muted)}
+.art-slot .art-tag{
+  display:inline-flex;
+  margin-top:2px;
+  border:1px solid var(--line-strong);
+  border-radius:999px;
+  padding:2px 9px;
+  font:650 11px/1.6 var(--mono);
+  color:var(--accent-ink);
+  background:var(--accent-soft);
+}
 .eyebrow{
   display:inline-flex;
   align-items:center;
@@ -188,8 +254,6 @@ h1{
   max-width:100%;
 }
 .visual img{display:block;width:100%;height:auto}
-.visual .mermaid{padding:18px}
-.visual .mermaid svg{max-width:100%;height:auto}
 .note-card{
   margin:0;
   border:1px solid var(--line);
@@ -240,6 +304,90 @@ h1{
 .terminal-head span:nth-child(3){background:var(--green)}
 .terminal pre{margin:0;padding:18px;overflow:auto;font:14px/1.75 var(--mono);color:var(--body);white-space:pre-wrap;overflow-wrap:anywhere}
 .band{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
+.try-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:22px;
+  align-items:start;
+}
+.try-col-label{
+  display:block;
+  margin:0 0 12px;
+  color:var(--muted);
+  font:650 12px/1.4 var(--mono);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.quiz-card{
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--card);
+  padding:26px;
+  min-width:0;
+}
+.quiz-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+  font:650 12px/1.4 var(--mono);
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.quiz-score{color:var(--accent-ink)}
+.quiz-question{
+  color:var(--ink);
+  font:400 clamp(19px,2.4vw,23px)/1.5 var(--serif);
+  margin-bottom:20px;
+}
+.quiz-options{display:grid;gap:10px}
+.quiz-option{
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  width:100%;
+  text-align:left;
+  padding:13px 15px;
+  border:1px solid var(--line-strong);
+  border-radius:10px;
+  background:var(--paper);
+  color:var(--body);
+  font:15px/1.55 var(--sans);
+  cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.quiz-option:hover:not([disabled]){border-color:var(--accent);background:var(--accent-soft)}
+.quiz-option .opt-letter{
+  flex:0 0 auto;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  border:1px solid var(--line-strong);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font:650 12px/1 var(--mono);
+  color:var(--muted);
+  background:var(--card);
+}
+.quiz-option.correct{border-color:#2d8a5f;background:color-mix(in srgb,#2d8a5f 14%,var(--card))}
+.quiz-option.correct .opt-letter{background:#2d8a5f;border-color:#2d8a5f;color:#fff}
+.quiz-option.wrong{border-color:#c24444;background:color-mix(in srgb,#c24444 10%,var(--card))}
+.quiz-option.wrong .opt-letter{background:#c24444;border-color:#c24444;color:#fff}
+.quiz-option[disabled]{cursor:default}
+.quiz-option[disabled]:not(.correct):not(.wrong){opacity:.5}
+.quiz-explain{
+  margin-top:18px;
+  padding:14px 16px;
+  border-radius:10px;
+  background:var(--paper-2);
+  color:var(--body);
+  font-size:14.5px;
+  line-height:1.7;
+}
+.quiz-explain strong{color:var(--ink)}
+.quiz-actions{margin-top:18px;display:flex;justify-content:flex-end;min-height:44px}
 section{padding:70px 22px}
 .wrap{max-width:var(--max);margin:0 auto;min-width:0}
 .narrow{max-width:var(--measure)}
@@ -400,6 +548,7 @@ pre{
   .hero{grid-template-columns:1fr;padding-top:52px}
   .grid{grid-template-columns:1fr}
   .steps{grid-template-columns:1fr 1fr}
+  .try-grid{grid-template-columns:1fr}
 }
 @media(max-width:620px){
   .nav{align-items:flex-start;flex-direction:column}
@@ -408,13 +557,12 @@ pre{
   .hero{padding-left:18px;padding-right:18px}
   .steps{grid-template-columns:1fr}
   .copybox pre{padding-right:18px;padding-top:54px}
+  .stats{gap:22px}
 }
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#e9f5ec', primaryTextColor: '#1b1a18', primaryBorderColor: '#2d6a4f', lineColor: '#756f66', secondaryColor: '#f2f0ea', tertiaryColor: '#fff', background: '#fbfaf7', fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' } });</script>
 </head>
 <body data-accent="green">
 <a class="skip" href="#main">Skip to content</a>
@@ -423,6 +571,7 @@ pre{
     <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="../assets/seedling_1f331_once.webp" alt=""></span><span>Teach Me</span></a>
     <div class="nav-links">
       <a href="#why">Why</a>
+      <a href="#try">Try it</a>
       <a href="#workflow">Workflow</a>
       <a href="#hooks">Hooks</a>
       <a href="#install">Install</a>
@@ -434,30 +583,33 @@ pre{
 
 <main id="main">
   <section class="hero">
+    <div class="hero-bg" aria-hidden="true"></div>
     <div class="hero-text">
       <p class="eyebrow">Learn by doing, with your tools</p>
       <h1>Teach Me: your AI learning companion</h1>
       <p class="lede">You already use AI to code, research, and solve problems. But often the task gets done while the valuable insight slips away. Teach Me captures the key concepts, pitfalls, and tradeoffs from your work and turns them into a local knowledge base — then reminds you to review them at the right time.</p>
       <div class="cta">
         <a class="btn primary" href="#install">Install for free</a>
-        <a class="btn" href="#workflow">See how it works</a>
+        <a class="btn" href="#try">See a question it wrote</a>
       </div>
       <p class="note">Works with Claude Code, Codex, Kimi Code CLI, and OpenClaw. Your notes stay local. Git sync is optional.</p>
+      <div class="stats">
+        <div class="stat"><strong>4</strong><span>skills working together: teach, check, recap, exam</span></div>
+        <div class="stat"><strong>0</strong><span>cloud dependencies — notes land as local Markdown</span></div>
+        <div class="stat"><strong>1–3</strong><span>high-value notes, never a raw activity log</span></div>
+      </div>
     </div>
     <div class="hero-diagram">
-      <figure class="visual" aria-label="Teach Me workflow">
-<pre class="mermaid">flowchart TD
-    A([You code, configure, analyze data]) --> B{Is there something worth learning here?}
-    B -->|not really| C[Keep working, no interruption]
-    B -->|yes| D[AI explains the key point in one sentence]
-    D --> E[Write to your local notes]
-    E --> F[Update your learner portrait]
-    F --> G[Remind you to review later]
-    style A fill:#e9f5ec,stroke:#2d6a4f,stroke-width:2px
-    style D fill:#fff4e6,stroke:#b08900,stroke-width:2px
-    style E fill:#e7f3ff,stroke:#1565c0,stroke-width:2px
-    style F fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-</pre>
+      <figure class="visual" aria-label="Teach Me's four skills forming one learning loop">
+        <img src="../assets/teach-me-workflow-en.png" alt="Teach Me workflow: while you code, configure, or research, Teach Me judges whether the work is worth learning from, captures and refines the key point, writes it to your local vault, updates your learner portrait, then Teach Me Recap and Exam schedule reviews and tests — closing the loop" loading="lazy" width="1504" height="1046">
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <figure class="visual" aria-label="Do, capture, review">
+        <img src="../assets/teach-me-story-en.jpg" alt="Three-panel illustration: in the Do phase you focus on solving problems and writing code; in the Capture phase questions, solutions, key points, and code snippets get organized into a growing knowledge tree; in the Review phase a checklist brings you back to reinforce memory" loading="lazy" width="1672" height="941">
       </figure>
     </div>
   </section>
@@ -492,6 +644,53 @@ pre{
           <h3>Your data, your machine</h3>
           <p>All notes are plain Markdown stored locally. Git sync is optional and disabled by default.</p>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="try">
+    <div class="wrap">
+      <p class="kicker">Try it</p>
+      <h2>It really does write notes, and really does quiz you.</h2>
+      <p class="section-sub">This isn't a mockup. On the left is a note Teach Me actually writes to your vault after a review; on the right is the kind of multiple-choice question Teach Me Exam generates — click an answer and see for yourself.</p>
+      <div class="try-grid">
+        <div>
+          <span class="try-col-label">Written to the vault after a review</span>
+          <figure class="visual note-card" aria-label="Example note Teach Me writes">
+            <div class="note-head">02_Concepts/PDF4QT-page-tree-mutation.md</div>
+<pre><code>## PDF4QT page tree mutation
+
+**Type**: concept · **Project**: inkwell
+
+**Core idea**
+Page-level edits like delete/reorder/crop can't
+give the Qt main view a natural undo/apply/save
+state if the PyMuPDF backend only writes a new
+file.
+
+**Why it matters**
+Writing a new PDF directly makes the file jump
+under the user. Returning an intent lets you
+preview in place first, then Apply to save.
+
+**Mastery**: seen · **Next review**: 2026-07-12</code></pre>
+          </figure>
+        </div>
+        <div>
+          <span class="try-col-label">A question Teach Me Exam wrote</span>
+          <div class="quiz-card" id="quiz">
+            <div class="quiz-head">
+              <span id="quiz-progress">Question 1 / 3</span>
+              <span class="quiz-score" id="quiz-score">Correct 0</span>
+            </div>
+            <p class="quiz-question" id="quiz-question"></p>
+            <div class="quiz-options" id="quiz-options"></div>
+            <div class="quiz-explain" id="quiz-explain" hidden></div>
+            <div class="quiz-actions">
+              <button class="btn primary" id="quiz-next" type="button" hidden>Next question</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -677,6 +876,95 @@ Enable Git sync with remote git@github.com:user/teach-me-vault.git and auto-sync
 </footer>
 
 <script>
+(()=>{
+  const quizData=[
+    {
+      q:"You just used git rebase -i to squash a few commits. What's the real difference between rebase and merge?",
+      options:[
+        "rebase creates a new merge commit; merge does not",
+        "rebase replays each commit onto a new base, generating brand-new commit hashes; merge keeps both histories and adds one new commit that ties the branches together",
+        "rebase only works on local branches; merge only works on remote branches",
+        "They produce identical results — only the command differs"
+      ],
+      correct:1,
+      explain:"rebase \"replays\": every commit is regenerated on the new base, so all hashes change. merge \"splices\": both histories stay intact, joined by one extra merge commit. That's also why rebasing an already-pushed branch is usually discouraged."
+    },
+    {
+      q:"When does Teach Me's Stop hook actually interrupt you to ask for a review?",
+      options:[
+        "After every single tool call",
+        "Only when you explicitly say \"teach me\"",
+        "At the end of a phase, after scoring the evidence from that work — only a strong signal (a hidden mechanism, a decision rationale, a transferable idea) triggers a request",
+        "On a fixed timer, regardless of what happened"
+      ],
+      correct:2,
+      explain:"The Stop hook is evidence-driven, not time- or command-driven. Weak signal passes quietly; only strong signal triggers one short review — that's what keeps it from breaking your flow."
+    },
+    {
+      q:"With Teach Me Recap's spaced repetition, why does a concept you remember well get a longer interval before its next review?",
+      options:[
+        "To keep the number of vault files small",
+        "Easier recall means slower forgetting, so review time is better spent on things you're more likely to forget",
+        "It's purely random, with no real reason",
+        "Well-mastered concepts never need reviewing again"
+      ],
+      correct:1,
+      explain:"Spaced repetition tries to time each review right at the point you're about to forget but haven't yet. The better you know something, the longer the gap — so you maintain long-term memory with the fewest possible reviews."
+    }
+  ];
+  let quizIndex=0,quizScore=0;
+  const qEl=document.getElementById("quiz-question");
+  const optsEl=document.getElementById("quiz-options");
+  const explainEl=document.getElementById("quiz-explain");
+  const nextBtn=document.getElementById("quiz-next");
+  const progressEl=document.getElementById("quiz-progress");
+  const scoreEl=document.getElementById("quiz-score");
+  if(!qEl)return;
+  const letters=["A","B","C","D"];
+  function renderQuiz(){
+    const item=quizData[quizIndex];
+    progressEl.textContent=`Question ${quizIndex+1} / ${quizData.length}`;
+    scoreEl.textContent=`Correct ${quizScore}`;
+    qEl.textContent=item.q;
+    optsEl.innerHTML="";
+    explainEl.hidden=true;
+    nextBtn.hidden=true;
+    item.options.forEach((opt,i)=>{
+      const b=document.createElement("button");
+      b.type="button";
+      b.className="quiz-option";
+      const letter=document.createElement("span");
+      letter.className="opt-letter";
+      letter.textContent=letters[i];
+      const text=document.createElement("span");
+      text.textContent=opt;
+      b.append(letter,text);
+      b.addEventListener("click",()=>{
+        if(b.disabled)return;
+        const correct=i===item.correct;
+        [...optsEl.children].forEach((el,j)=>{
+          el.disabled=true;
+          if(j===item.correct)el.classList.add("correct");
+          else if(el===b)el.classList.add("wrong");
+        });
+        if(correct)quizScore++;
+        scoreEl.textContent=`Correct ${quizScore}`;
+        explainEl.hidden=false;
+        explainEl.innerHTML=`<strong>${correct?"Correct.":"Not quite."}</strong> ${item.explain}`;
+        nextBtn.hidden=false;
+        nextBtn.textContent=quizIndex<quizData.length-1?"Next question":"Start over";
+      });
+      optsEl.appendChild(b);
+    });
+  }
+  nextBtn.addEventListener("click",()=>{
+    quizIndex=(quizIndex+1)%quizData.length;
+    if(quizIndex===0)quizScore=0;
+    renderQuiz();
+  });
+  renderQuiz();
+})();
+
 const accents=["green","coral","blue"];
 let accentIndex=0;
 document.addEventListener("pointerdown",()=>{

@@ -83,7 +83,7 @@ vault/
 
 ### AI 的教学个性，由你塑造
 
-你可以告诉 Teach Me 你喜欢怎么被教：
+你可以告诉 Teach Me 你喜欢怎么被教，之后它会按这个风格解释、提问、反馈，而不是套用默认模板：
 
 ```bash
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py style \
@@ -97,8 +97,6 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py style \
 python3 ~/.codex/skills/check/scripts/check_me.py style \
   --set speaking_style "concise mentor"
 ```
-
-之后 Teach Me 会按这个风格解释、提问、反馈，而不是套用默认模板。
 
 ### 它也在绘制你的学习画像
 
@@ -129,23 +127,6 @@ python3 ~/.codex/skills/check/scripts/check_me.py profile --switch alice
 ```
 
 用户解析顺序：hook payload 中的 `user_id` → 环境变量 `TEACH_ME_USER` → git config 中已存在的 GitHub 用户 → `config.current_user`。
-
-### 对话风格
-
-你可以自定义 Teach Me 的说话风格和教学人格：
-
-```bash
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py style \
-  --speaking-style "friendly coach" \
-  --teach-me-persona "a curious peer who explains simply and asks one short question"
-```
-
-或用 Check skill：
-
-```bash
-python3 ~/.codex/skills/check/scripts/check_me.py style \
-  --set speaking_style "concise mentor"
-```
 
 ### 适合谁
 
@@ -364,7 +345,7 @@ Readable notes are plain Markdown. Machine state lives under `.teach-me/`, inclu
 
 ### Shape the AI's teaching personality
 
-You can tell Teach Me how you like to be taught:
+You can tell Teach Me how you like to be taught. After that, it explains, asks, and responds in that style instead of using a default template:
 
 ```bash
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py style \
@@ -378,8 +359,6 @@ Or use the Check skill:
 python3 ~/.codex/skills/check/scripts/check_me.py style \
   --set speaking_style "concise mentor"
 ```
-
-After that, Teach Me explains, asks, and responds in that style instead of using a default template.
 
 ### It draws your learner portrait
 
@@ -410,23 +389,6 @@ python3 ~/.codex/skills/check/scripts/check_me.py profile --switch alice
 ```
 
 User resolution order: `user_id` from the hook payload → `TEACH_ME_USER` environment variable → an existing GitHub user matching git config → `config.current_user`.
-
-### Conversation style
-
-Customize how Teach Me speaks and what persona it adopts:
-
-```bash
-python3 ~/.codex/skills/teach-me/scripts/teach_me.py style \
-  --speaking-style "friendly coach" \
-  --teach-me-persona "a curious peer who explains simply and asks one short question"
-```
-
-Or use the Check skill:
-
-```bash
-python3 ~/.codex/skills/check/scripts/check_me.py style \
-  --set speaking_style "concise mentor"
-```
 
 ### Who it is for
 

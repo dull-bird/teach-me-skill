@@ -51,6 +51,7 @@
   }
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{
   margin:0;
@@ -73,9 +74,11 @@ code{font-family:var(--mono);font-size:.92em}
   position:sticky;
   top:0;
   z-index:10;
-  border-bottom:1px solid color-mix(in srgb,var(--line) 76%,transparent);
-  background:color-mix(in srgb,var(--paper) 86%,transparent);
-  backdrop-filter:blur(16px);
+  border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);
+  background:color-mix(in srgb,var(--paper) 58%,transparent);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  box-shadow:0 1px 0 color-mix(in srgb,#fff 40%,transparent) inset,0 12px 30px -22px rgba(20,18,12,.35);
 }
 .nav{
   max-width:var(--max);
@@ -118,12 +121,75 @@ object-fit:contain;
 }
 .nav-links a:hover{color:var(--accent-ink)}
 .hero{
+  position:relative;
   max-width:var(--max);
   margin:0 auto;
   padding:76px 22px 58px;
+  overflow:hidden;
+}
+.hero-bg{
+  position:absolute;
+  inset:-18% -10% auto -10%;
+  height:560px;
+  z-index:-1;
+  background:
+    radial-gradient(440px 380px at 12% 15%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%),
+    radial-gradient(380px 340px at 88% 5%,color-mix(in srgb,var(--blue) 16%,transparent),transparent 72%),
+    radial-gradient(320px 280px at 55% 55%,color-mix(in srgb,var(--coral) 10%,transparent),transparent 74%);
+  filter:blur(6px);
+  pointer-events:none;
 }
 .hero-text{max-width:var(--measure);margin-bottom:42px}
 .hero-diagram{margin-top:18px}
+.stats{
+  display:flex;
+  flex-wrap:wrap;
+  gap:32px;
+  margin:32px 0 0;
+  padding-top:24px;
+  border-top:1px solid var(--line);
+  max-width:38rem;
+}
+.stat strong{
+  display:block;
+  color:var(--ink);
+  font:400 clamp(26px,3vw,34px)/1 var(--serif);
+  font-variant-numeric:tabular-nums;
+}
+.stat span{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:13px;
+  letter-spacing:.02em;
+}
+.art-slot{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:200px;
+  border:1.5px dashed var(--line-strong);
+  border-radius:14px;
+  background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--accent) 7%,transparent) 0 14px,transparent 14px 28px);
+  color:var(--muted);
+  padding:26px;
+  text-align:center;
+}
+.art-slot .art-icon{font-size:26px;line-height:1}
+.art-slot strong{color:var(--ink);font-size:14.5px;font-weight:650}
+.art-slot span{font-size:12.5px;max-width:46ch;line-height:1.6;color:var(--muted)}
+.art-slot .art-tag{
+  display:inline-flex;
+  margin-top:2px;
+  border:1px solid var(--line-strong);
+  border-radius:999px;
+  padding:2px 9px;
+  font:650 11px/1.6 var(--mono);
+  color:var(--accent-ink);
+  background:var(--accent-soft);
+}
 .eyebrow{
   display:inline-flex;
   align-items:center;
@@ -188,8 +254,6 @@ h1{
   max-width:100%;
 }
 .visual img{display:block;width:100%;height:auto}
-.visual .mermaid{padding:18px}
-.visual .mermaid svg{max-width:100%;height:auto}
 .note-card{
   margin:0;
   border:1px solid var(--line);
@@ -240,6 +304,90 @@ h1{
 .terminal-head span:nth-child(3){background:var(--green)}
 .terminal pre{margin:0;padding:18px;overflow:auto;font:14px/1.75 var(--mono);color:var(--body);white-space:pre-wrap;overflow-wrap:anywhere}
 .band{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
+.try-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:22px;
+  align-items:start;
+}
+.try-col-label{
+  display:block;
+  margin:0 0 12px;
+  color:var(--muted);
+  font:650 12px/1.4 var(--mono);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.quiz-card{
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--card);
+  padding:26px;
+  min-width:0;
+}
+.quiz-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+  font:650 12px/1.4 var(--mono);
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.quiz-score{color:var(--accent-ink)}
+.quiz-question{
+  color:var(--ink);
+  font:400 clamp(19px,2.4vw,23px)/1.5 var(--serif);
+  margin-bottom:20px;
+}
+.quiz-options{display:grid;gap:10px}
+.quiz-option{
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  width:100%;
+  text-align:left;
+  padding:13px 15px;
+  border:1px solid var(--line-strong);
+  border-radius:10px;
+  background:var(--paper);
+  color:var(--body);
+  font:15px/1.55 var(--sans);
+  cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.quiz-option:hover:not([disabled]){border-color:var(--accent);background:var(--accent-soft)}
+.quiz-option .opt-letter{
+  flex:0 0 auto;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  border:1px solid var(--line-strong);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font:650 12px/1 var(--mono);
+  color:var(--muted);
+  background:var(--card);
+}
+.quiz-option.correct{border-color:#2d8a5f;background:color-mix(in srgb,#2d8a5f 14%,var(--card))}
+.quiz-option.correct .opt-letter{background:#2d8a5f;border-color:#2d8a5f;color:#fff}
+.quiz-option.wrong{border-color:#c24444;background:color-mix(in srgb,#c24444 10%,var(--card))}
+.quiz-option.wrong .opt-letter{background:#c24444;border-color:#c24444;color:#fff}
+.quiz-option[disabled]{cursor:default}
+.quiz-option[disabled]:not(.correct):not(.wrong){opacity:.5}
+.quiz-explain{
+  margin-top:18px;
+  padding:14px 16px;
+  border-radius:10px;
+  background:var(--paper-2);
+  color:var(--body);
+  font-size:14.5px;
+  line-height:1.7;
+}
+.quiz-explain strong{color:var(--ink)}
+.quiz-actions{margin-top:18px;display:flex;justify-content:flex-end;min-height:44px}
 section{padding:70px 22px}
 .wrap{max-width:var(--max);margin:0 auto;min-width:0}
 .narrow{max-width:var(--measure)}
@@ -400,6 +548,7 @@ pre{
   .hero{grid-template-columns:1fr;padding-top:52px}
   .grid{grid-template-columns:1fr}
   .steps{grid-template-columns:1fr 1fr}
+  .try-grid{grid-template-columns:1fr}
 }
 @media(max-width:620px){
   .nav{align-items:flex-start;flex-direction:column}
@@ -408,13 +557,12 @@ pre{
   .hero{padding-left:18px;padding-right:18px}
   .steps{grid-template-columns:1fr}
   .copybox pre{padding-right:18px;padding-top:54px}
+  .stats{gap:22px}
 }
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#e9f5ec', primaryTextColor: '#1b1a18', primaryBorderColor: '#2d6a4f', lineColor: '#756f66', secondaryColor: '#f2f0ea', tertiaryColor: '#fff', background: '#fbfaf7', fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' } });</script>
 </head>
 <body data-accent="green">
 <a class="skip" href="#main">跳到正文</a>
@@ -423,6 +571,7 @@ pre{
     <a class="brand" href="#"><span class="mark" aria-hidden="true"><img src="assets/seedling_1f331_once.webp" alt=""></span><span>Teach Me</span></a>
     <div class="nav-links">
       <a href="#why">为什么</a>
+      <a href="#try">试一试</a>
       <a href="#workflow">工作流</a>
       <a href="#hooks">Hooks</a>
       <a href="#install">安装</a>
@@ -434,30 +583,33 @@ pre{
 
 <main id="main">
   <section class="hero">
+    <div class="hero-bg" aria-hidden="true"></div>
     <div class="hero-text">
       <p class="eyebrow">做事，顺便学明白</p>
       <h1>Teach Me：你的 AI 学习搭子</h1>
       <p class="lede">你每天都在用 AI 写代码、查资料、解决问题。但很多时候，任务跑通了，真正值得记住的东西却没留下来。Teach Me 帮你把工作中的关键概念、踩过的坑、做过的取舍，自动整理成一份属于你的本地知识库，并在合适的时机提醒你复习。</p>
       <div class="cta">
         <a class="btn primary" href="#install">免费安装</a>
-        <a class="btn" href="#workflow">看它是怎么工作的</a>
+        <a class="btn" href="#try">先看一道它出的题</a>
       </div>
       <p class="note">支持 Claude Code、Codex、Kimi Code CLI、OpenClaw。所有笔记存在本地，Git 同步完全可选。</p>
+      <div class="stats">
+        <div class="stat"><strong>4</strong><span>协同技能：教学 · 诊断 · 复习 · 测验</span></div>
+        <div class="stat"><strong>0</strong><span>云端依赖，笔记全部落地本地 Markdown</span></div>
+        <div class="stat"><strong>1–3</strong><span>条高价值笔记，而不是流水账</span></div>
+      </div>
     </div>
     <div class="hero-diagram">
-      <figure class="visual" aria-label="Teach Me 工作流程">
-<pre class="mermaid">flowchart TD
-    A([你写代码、调配置、处理数据]) --> B{这段工作里有值得学的东西吗？}
-    B -->|不明显| C[继续干活，不打扰]
-    B -->|有| D[AI 用一句话讲清楚关键点]
-    D --> E[写成你的本地笔记]
-    E --> F[更新你的学习画像]
-    F --> G[到点提醒复习]
-    style A fill:#e9f5ec,stroke:#2d6a4f,stroke-width:2px
-    style D fill:#fff4e6,stroke:#b08900,stroke-width:2px
-    style E fill:#e7f3ff,stroke:#1565c0,stroke-width:2px
-    style F fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-</pre>
+      <figure class="visual" aria-label="Teach Me 四个技能串成的学习闭环">
+        <img src="assets/teach-me-workflow.png" alt="Teach Me 工作流程：你在写代码、调配置、查资料时，Teach Me 判断这段工作是否值得学，值得就捕获并提炼关键点，写入本地 Vault，更新学习画像，再由 Teach Me Recap 和 Exam 安排复习与测试，形成学习闭环" loading="lazy" width="1494" height="1053">
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <figure class="visual" aria-label="做事、沉淀、复习三个阶段">
+        <img src="assets/teach-me-story.jpg" alt="三格插画：做事阶段专注解决问题、写代码；沉淀阶段把问题记录、解决方案、关键要点和代码片段整理成一棵知识树；复习阶段用复习清单定期回顾，加深记忆" loading="lazy" width="1672" height="941">
       </figure>
     </div>
   </section>
@@ -492,6 +644,51 @@ pre{
           <h3>你的数据你做主</h3>
           <p>所有笔记都是普通 Markdown，存在本地。Git 同步是可选项，默认不碰任何云端。</p>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="try">
+    <div class="wrap">
+      <p class="kicker">Try it</p>
+      <h2>它真的会写笔记，真的会考你。</h2>
+      <p class="section-sub">下面不是效果图，是 Teach Me 实际产出的两种东西：左边是复盘后写进 vault 的一条笔记；右边是 Teach Me Exam 出的选择题——直接点一下试试看。</p>
+      <div class="try-grid">
+        <div>
+          <span class="try-col-label">复盘后写入 vault</span>
+          <figure class="visual note-card" aria-label="Teach Me 自动沉淀的笔记示例">
+            <div class="note-head">02_Concepts/PDF4QT-page-tree-mutation.md</div>
+<pre><code>## PDF4QT page tree mutation
+
+**类型**：concept · **项目**：inkwell
+
+**核心思想**
+删除、重排、裁剪这类页面级编辑，如果只在
+PyMuPDF 后端写新文件，Qt 主视图无法自然拥
+有 undo/apply/save 状态。
+
+**为什么重要**
+直接写出新 PDF 会让用户看到文件跳转；返回
+intent 则可先原位预览，再由用户 Apply 保存。
+
+**掌握度**：seen · **下次复习**：2026-07-12</code></pre>
+          </figure>
+        </div>
+        <div>
+          <span class="try-col-label">Teach Me Exam 出的题</span>
+          <div class="quiz-card" id="quiz">
+            <div class="quiz-head">
+              <span id="quiz-progress">第 1 / 3 题</span>
+              <span class="quiz-score" id="quiz-score">答对 0</span>
+            </div>
+            <p class="quiz-question" id="quiz-question"></p>
+            <div class="quiz-options" id="quiz-options"></div>
+            <div class="quiz-explain" id="quiz-explain" hidden></div>
+            <div class="quiz-actions">
+              <button class="btn primary" id="quiz-next" type="button" hidden>下一题</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -677,6 +874,95 @@ cd teach-me-skill
 </footer>
 
 <script>
+(()=>{
+  const quizData=[
+    {
+      q:"你刚用 git rebase -i 压缩了几个提交。rebase 和 merge 的本质区别是什么？",
+      options:[
+        "rebase 会创建一个新的合并提交，merge 不会",
+        "rebase 把提交逐个重放到新base上、生成全新的提交哈希；merge 保留双方历史，用一个新提交把两条线接起来",
+        "rebase 只能用在本地分支，merge 只能用在远程分支",
+        "两者效果完全等价，只是命令不同"
+      ],
+      correct:1,
+      explain:"rebase 是“重放”：每个提交都在新 base 上重新生成，哈希全部改变；merge 是“接线”：两条历史都保留，只多一个合并提交把它们连起来。这也是为什么已推送的分支通常不建议 rebase。"
+    },
+    {
+      q:"Teach Me 的 Stop hook 什么时候才会真正打断你、请求一次复盘？",
+      options:[
+        "每次工具调用结束都会请求",
+        "只有你主动说“教我”的时候",
+        "阶段结束时先给这段工作的证据打分，只有信号强（有隐藏机制、决策理由、可迁移思路）才请求",
+        "每隔固定时间自动请求一次"
+      ],
+      correct:2,
+      explain:"Stop hook 是证据驱动，不是时间驱动或指令驱动。弱信号就安静过去，只有强信号才会停下来问一句——这样才不会打断你的心流。"
+    },
+    {
+      q:"Teach Me Recap 用间隔重复复习时，为什么“记得越牢的概念，下次复习间隔越长”？",
+      options:[
+        "为了减少 vault 里的文件数量",
+        "回忆越轻松，说明遗忘得越慢，把复习资源让给更容易遗忘的内容更有效率",
+        "纯粹随机分配，没有具体原因",
+        "掌握好的概念以后完全不需要再复习"
+      ],
+      correct:1,
+      explain:"间隔重复的核心是把复习时间精确对准“快要忘记、但还没忘”的那一刻。掌握越牢，间隔拉得越长，用最少的复习次数维持长期记忆。"
+    }
+  ];
+  let quizIndex=0,quizScore=0;
+  const qEl=document.getElementById("quiz-question");
+  const optsEl=document.getElementById("quiz-options");
+  const explainEl=document.getElementById("quiz-explain");
+  const nextBtn=document.getElementById("quiz-next");
+  const progressEl=document.getElementById("quiz-progress");
+  const scoreEl=document.getElementById("quiz-score");
+  if(!qEl)return;
+  const letters=["A","B","C","D"];
+  function renderQuiz(){
+    const item=quizData[quizIndex];
+    progressEl.textContent=`第 ${quizIndex+1} / ${quizData.length} 题`;
+    scoreEl.textContent=`答对 ${quizScore}`;
+    qEl.textContent=item.q;
+    optsEl.innerHTML="";
+    explainEl.hidden=true;
+    nextBtn.hidden=true;
+    item.options.forEach((opt,i)=>{
+      const b=document.createElement("button");
+      b.type="button";
+      b.className="quiz-option";
+      const letter=document.createElement("span");
+      letter.className="opt-letter";
+      letter.textContent=letters[i];
+      const text=document.createElement("span");
+      text.textContent=opt;
+      b.append(letter,text);
+      b.addEventListener("click",()=>{
+        if(b.disabled)return;
+        const correct=i===item.correct;
+        [...optsEl.children].forEach((el,j)=>{
+          el.disabled=true;
+          if(j===item.correct)el.classList.add("correct");
+          else if(el===b)el.classList.add("wrong");
+        });
+        if(correct)quizScore++;
+        scoreEl.textContent=`答对 ${quizScore}`;
+        explainEl.hidden=false;
+        explainEl.innerHTML=`<strong>${correct?"答对了。":"差一点。"}</strong> ${item.explain}`;
+        nextBtn.hidden=false;
+        nextBtn.textContent=quizIndex<quizData.length-1?"下一题":"再来一遍";
+      });
+      optsEl.appendChild(b);
+    });
+  }
+  nextBtn.addEventListener("click",()=>{
+    quizIndex=(quizIndex+1)%quizData.length;
+    if(quizIndex===0)quizScore=0;
+    renderQuiz();
+  });
+  renderQuiz();
+})();
+
 const accents=["green","coral","blue"];
 let accentIndex=0;
 document.addEventListener("pointerdown",()=>{
