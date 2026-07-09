@@ -191,6 +191,34 @@ h1{
   max-width:100%;
 }
 .visual img{display:block;width:100%;height:auto}
+.note-card{
+  margin:0;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--card);
+  overflow:hidden;
+  max-width:100%;
+  min-width:0;
+}
+.note-card .note-head{
+  padding:11px 14px;
+  border-bottom:1px solid var(--line);
+  background:var(--paper-2);
+  color:var(--muted);
+  font:13px/1.5 var(--mono);
+  overflow-wrap:anywhere;
+}
+.note-card pre{
+  padding:18px;
+  margin:0;
+  border:0;
+  border-radius:0;
+  background:var(--card);
+  color:var(--body);
+  font:14px/1.75 var(--mono);
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
 .terminal{
   margin-top:14px;
   border:1px solid var(--line);
@@ -401,35 +429,41 @@ pre{
 <main id="main">
   <section class="hero">
     <div>
-      <p class="eyebrow">把开发过程变成学习资产</p>
-      <h1>AI 写完代码后，你真正留下了什么？</h1>
-      <p class="lede">Teach Me 不替你做项目，也不每步都讲课。它在阶段边界观察你这一轮真正做了什么——改代码、跑测试、踩坑、验证——当工作值得学习时，自动沉淀成概念笔记、知识树和复习计划。你做的每个项目，都会变成一叠能带走的学习资产。</p>
+      <p class="eyebrow">coding to learning</p>
+      <h1>Teach Me：把开发变成学习</h1>
+      <p class="lede">在你写代码、调试、重构、测试的过程中，Teach Me 自动识别值得学习的瞬间，把关键概念、设计取舍和踩坑经验整理成本地知识库。每个项目做完，你都多了一叠能带走的学习资产。</p>
       <div class="cta">
         <a class="btn primary" href="#install">装到我的 agent</a>
-        <a class="btn" href="#why">看它解决什么</a>
+        <a class="btn" href="#workflow">看怎么工作</a>
       </div>
       <p class="note">支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。数据默认写在本地 <code>~/.teach_me_skill/vault</code>，Git 同步完全可选。</p>
     </div>
     <div>
-      <figure class="visual">
-        <img src="assets/teach-me-flow.zh.svg" alt="Teach Me 从 prompt 和工具证据，到 Stop 评分、短复盘、本地 Obsidian vault 的工作流图">
+      <figure class="visual note-card" aria-label="Teach Me 自动沉淀的笔记示例">
+        <div class="note-head">02_Concepts/PDF4QT-page-tree-mutation.md</div>
+<pre><code>## PDF4QT page tree mutation
+
+**类型**：concept · **项目**：inkwell
+
+**核心思想**
+删除、重排、裁剪这类页面级编辑，如果只在
+PyMuPDF 后端写新文件，Qt 主视图无法自然拥
+有 undo/apply/save 状态。
+
+**为什么重要**
+直接写出新 PDF 会让用户看到文件跳转；返回
+intent 则可先原位预览，再由用户 Apply 保存。
+
+**掌握度**：seen · **下次复习**：2026-07-11</code></pre>
       </figure>
-      <div class="terminal" aria-label="Teach Me terminal example">
-        <div class="terminal-head"><span></span><span></span><span></span></div>
-<pre><code>$ python3 skills/teach-me/scripts/teach_me.py context
-Teach Me learning context:
-- vault: ~/.teach_me_skill/vault
-- capture only high-value development knowledge
-- keep implementation flow uninterrupted</code></pre>
-      </div>
     </div>
   </section>
 
   <section id="why" class="band">
     <div class="wrap">
       <p class="kicker">Why</p>
-      <h2>vibe coding 很快，但三天后你可能改不动那段代码。</h2>
-      <p class="section-sub">Teach Me 不是让 AI 更快，而是让你<strong>真正学会</strong>。它自动捕捉开发过程中值得留下的东西：你理解的概念、踩过的坑、做过的取舍、可能埋下的 bug 风险。</p>
+      <h2>每个项目做完，你都该带走一些真正属于自己的东西。</h2>
+      <p class="section-sub">Teach Me 自动捕捉开发过程中值得留下的内容：你理解的概念、踩过的坑、做过的取舍、可能埋下的 bug 风险。让你从“跑通代码”走到“真正学会”。</p>
       <div class="grid">
         <article class="card">
           <h3>从真实项目里学</h3>

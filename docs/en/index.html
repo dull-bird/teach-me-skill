@@ -191,6 +191,34 @@ h1{
   max-width:100%;
 }
 .visual img{display:block;width:100%;height:auto}
+.note-card{
+  margin:0;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--card);
+  overflow:hidden;
+  max-width:100%;
+  min-width:0;
+}
+.note-card .note-head{
+  padding:11px 14px;
+  border-bottom:1px solid var(--line);
+  background:var(--paper-2);
+  color:var(--muted);
+  font:13px/1.5 var(--mono);
+  overflow-wrap:anywhere;
+}
+.note-card pre{
+  padding:18px;
+  margin:0;
+  border:0;
+  border-radius:0;
+  background:var(--card);
+  color:var(--body);
+  font:14px/1.75 var(--mono);
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
 .terminal{
   margin-top:14px;
   border:1px solid var(--line);
@@ -401,35 +429,43 @@ pre{
 <main id="main">
   <section class="hero">
     <div>
-      <p class="eyebrow">Turn development work into learning assets</p>
-      <h1>After AI writes the code, what do you actually keep?</h1>
-      <p class="lede">Teach Me does not do your project for you, and it does not lecture after every step. It watches what actually happened in the turn—edits, tests, errors, verification—and when the work is worth learning from, it turns concepts, tradeoffs, pitfalls, and bug risks into your own local knowledge base. Every project you build becomes a stack of portable learning notes.</p>
+      <p class="eyebrow">coding to learning</p>
+      <h1>Teach Me: Coding to Learning</h1>
+      <p class="lede">As you code, debug, refactor, and test, Teach Me spots the moments worth learning from and turns key concepts, tradeoffs, and pitfalls into a local knowledge base. Every project you finish leaves you with a stack of portable learning assets.</p>
       <div class="cta">
         <a class="btn primary" href="#install">Install it for my agent</a>
-        <a class="btn" href="#why">See what it solves</a>
+        <a class="btn" href="#workflow">See how it works</a>
       </div>
       <p class="note">Works with Claude Code, Codex, OpenClaw, and Kimi Code CLI. Your data lives locally in <code>~/.teach_me_skill/vault</code>. Git sync is optional and never enabled by default.</p>
     </div>
     <div>
-      <figure class="visual">
-        <img src="../assets/teach-me-flow.svg" alt="Teach Me hook loop from prompt and tool evidence to stop scoring, review, and a local Obsidian vault">
+      <figure class="visual note-card" aria-label="Example of a note Teach Me captures automatically">
+        <div class="note-head">02_Concepts/PDF4QT-page-tree-mutation.md</div>
+<pre><code>## PDF4QT page tree mutation
+
+**Type**: concept · **Project**: inkwell
+
+**Core idea**
+Page-level edits like delete, reorder, or crop
+only write a new file in the PyMuPDF backend,
+so the Qt main view cannot naturally keep
+undo/apply/save state.
+
+**Why it matters**
+Writing a new PDF directly makes the user see
+a file jump; returning an intent lets the viewer
+preview in place before the user applies it.
+
+**Mastery**: seen · **Next review**: 2026-07-11</code></pre>
       </figure>
-      <div class="terminal" aria-label="Teach Me terminal example">
-        <div class="terminal-head"><span></span><span></span><span></span></div>
-<pre><code>$ python3 skills/teach-me/scripts/teach_me.py context
-Teach Me learning context:
-- vault: ~/.teach_me_skill/vault
-- capture only high-value development knowledge
-- keep implementation flow uninterrupted</code></pre>
-      </div>
     </div>
   </section>
 
   <section id="why" class="band">
     <div class="wrap">
       <p class="kicker">Why</p>
-      <h2>Vibe coding is fast, but three days later you may not be able to change that code.</h2>
-      <p class="section-sub">Teach Me is not about making AI faster. It is about making <strong>you actually learn</strong>. It automatically captures what is worth keeping from development: concepts you understood, pitfalls you hit, tradeoffs you made, and bug risks you introduced.</p>
+      <h2>Every finished project should leave you with something that is truly yours.</h2>
+      <p class="section-sub">Teach Me automatically captures what is worth keeping from development: concepts you understood, pitfalls you hit, tradeoffs you made, and bug risks you introduced. It moves you from “the code runs” to “I actually learned it.”</p>
       <div class="grid">
         <article class="card">
           <h3>Learn from real projects</h3>

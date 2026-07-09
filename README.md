@@ -23,23 +23,19 @@
 
 ## 中文
 
-Teach Me 是一套 Agent Skill，支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。
+**Teach Me：把开发变成学习（coding to learning）。**
 
-**它的核心功能只有一句：把开发过程变成学习资产。**
+它是一套 Agent Skill，支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。在你写代码、调试、重构、测试的过程中，Teach Me 自动识别值得学习的瞬间，把关键概念、设计取舍和踩坑经验整理成本地知识库。每个项目做完，你都多了一叠能带走的学习资产。
 
-AI 能帮你写代码，但写完之后你会不会改、懂不懂为什么，是另一回事。Teach Me 不会替代你的 agent，也不会每个命令都给你上课。它会在你真正完成了一段有学习价值的开发工作之后，轻轻插入一次复盘，把你刚才理解的关键概念、踩过的坑、做过的设计取舍和可能埋下的 bug 风险，沉淀成你自己的本地知识库。
+### 解决的痛点
 
-这样，你做的每个项目都会留下一叠能带走的学习笔记，而不是一坨改不动的 AI 代码。
-
-### 这不是 vibe coding
-
-vibe coding 的问题不是慢，而是**学完还是不会**。你看着 AI 生成代码、跑通测试，但三天后：
+AI 生成代码越来越快，但很多人发现：三天后就改不动那段代码了。因为：
 
 - 为什么这里要这样设计？忘了。
 - 这个 bug 为什么出现？忘了。
 - 这段代码能搬到下一个项目吗？不敢动。
 
-Teach Me 的设定是：**AI 可以替你写，但理解必须你自己有**。它在阶段边界喊停，只把真正值得留下的东西写成笔记，让你能复习、能迁移、能独立改代码。
+Teach Me 在阶段边界帮你整理真正值得留下的东西，让你能复习、能迁移、能独立改代码。
 
 ### 具体怎么做
 
@@ -196,23 +192,19 @@ python3 -m unittest -v tests.test_teach_me_hook
 
 ## English
 
-Teach Me is a set of Agent Skills for Claude Code, Codex, OpenClaw, and Kimi Code CLI.
+**Teach Me: Coding to Learning.**
 
-**Its core promise is simple: turn development work into learning assets.**
+It is a set of Agent Skills for Claude Code, Codex, OpenClaw, and Kimi Code CLI. As you code, debug, refactor, and test, Teach Me spots the moments worth learning from and turns key concepts, tradeoffs, and pitfalls into a local knowledge base. Every project you finish leaves you with a stack of portable learning assets.
 
-AI can write code for you, but whether you can later modify it and understand why it works is a different question. Teach Me does not replace your agent, and it does not lecture you after every command. When you actually finish a meaningful piece of development, it gently asks for a short review, turning the key concepts, pitfalls, design tradeoffs, and bug risks you just encountered into your own local knowledge base.
+### Pain points it solves
 
-This way, every project you build leaves behind a stack of portable learning notes instead of a pile of unmaintainable AI-generated code.
-
-### This is not vibe coding
-
-The problem with vibe coding is not speed—it is that **you still do not learn**. You watch AI generate code and pass tests, but three days later:
+AI generates code faster than ever, but many people find they cannot change that code three days later. Because:
 
 - Why was it designed this way? Forgotten.
 - Why did that bug appear? Forgotten.
 - Can I reuse this code in the next project? Afraid to touch it.
 
-Teach Me is built on one rule: **AI may write for you, but understanding must stay with you**. It pauses at phase boundaries and writes down only what is worth keeping, so you can review it, transfer it, and independently change the code later.
+Teach Me helps you organize what is actually worth keeping at phase boundaries, so you can review it, transfer it, and independently change the code later.
 
 ### How it works
 
