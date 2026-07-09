@@ -268,7 +268,8 @@ def classify_tool(tool: str, command: str, file_path: str, output: str) -> tuple
     lowered_tool = tool.lower()
     combined = f"{command}\n{file_path}\n{output}"
 
-    if lowered_tool in {"edit", "write", "multiedit", "apply_patch", "applypatch"}:
+    # 兼容 Kimi Code CLI 实际工具名：WriteFile、StrReplaceFile、MultiEdit、ApplyPatch 等
+    if any(k in lowered_tool for k in ("write", "edit", "replace", "patch")):
         tags.add("file_edit")
         score += 4
 
@@ -288,7 +289,8 @@ def classify_tool(tool: str, command: str, file_path: str, output: str) -> tuple
         tags.add("repo_inspection")
         score += 2
 
-    if RESEARCH_RE.search(command) or lowered_tool in {"web", "web.run", "search", "read", "open"}:
+    # 兼容 Kimi Code CLI 实际工具名：ReadFile、ReadMediaFile、Grep、Glob、FetchURL、SearchWeb 等
+    if RESEARCH_RE.search(command) or any(k in lowered_tool for k in ("read", "search", "fetch", "grep", "glob", "web", "open")):
         tags.add("investigation")
         score += 1
 
@@ -549,10 +551,12 @@ def handle_stop(payload: dict[str, Any]) -> int:
         return 0
 
     reason = build_stop_reason(config, assessment)
+    # Kimi Code CLI hook runner：exit 0 + hookSpecificOutput.permissionDecision=deny 表示 block
     output = {
-        "decision": "block",
-        "reason": reason,
-        "systemMessage": "🌱",
+        "hookSpecificOutput": {
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }
     }
     print(json.dumps(output, ensure_ascii=False))
     return 0

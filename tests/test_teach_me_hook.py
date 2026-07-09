@@ -179,13 +179,14 @@ class TeachMeHookTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             data = parse_stdout(result)
-            self.assertEqual(data["decision"], "block")
-            self.assertEqual(data["systemMessage"], "🌱")
-            self.assertIn("🌱", data["reason"])
-            self.assertNotIn("🌱 Teach Me:", data["reason"])
-            self.assertIn("Detection evidence", data["reason"])
-            self.assertIn("confirm", data["reason"].lower())
-            self.assertIn("vault", data["reason"].lower())
+            hso = data["hookSpecificOutput"]
+            self.assertEqual(hso["permissionDecision"], "deny")
+            reason = hso["permissionDecisionReason"]
+            self.assertIn("🌱", reason)
+            self.assertNotIn("🌱 Teach Me:", reason)
+            self.assertIn("Detection evidence", reason)
+            self.assertIn("confirm", reason.lower())
+            self.assertIn("vault", reason.lower())
             events = read_events(home)
             stop_decision = events[-1]
             self.assertEqual(stop_decision["type"], "stop_decision")
@@ -224,13 +225,14 @@ class TeachMeHookTests(unittest.TestCase):
 
             self.assertEqual(result.returncode, 0, result.stderr)
             data = parse_stdout(result)
-            self.assertEqual(data["decision"], "block")
-            self.assertEqual(data["systemMessage"], "🌱")
-            self.assertIn("🌱", data["reason"])
-            self.assertNotIn("🌱 Teach Me:", data["reason"])
-            self.assertIn("Detection evidence", data["reason"])
-            self.assertIn("capture", data["reason"].lower())
-            self.assertIn("1-3", data["reason"])
+            hso = data["hookSpecificOutput"]
+            self.assertEqual(hso["permissionDecision"], "deny")
+            reason = hso["permissionDecisionReason"]
+            self.assertIn("🌱", reason)
+            self.assertNotIn("🌱 Teach Me:", reason)
+            self.assertIn("Detection evidence", reason)
+            self.assertIn("capture", reason.lower())
+            self.assertIn("1-3", reason)
             events = read_events(home)
             stop_decision = events[-1]
             self.assertEqual(stop_decision["type"], "stop_decision")
@@ -336,7 +338,7 @@ class TeachMeHookTests(unittest.TestCase):
             )
 
         self.assertEqual(first.returncode, 0, first.stderr)
-        self.assertEqual(parse_stdout(first)["decision"], "block")
+        self.assertEqual(parse_stdout(first)["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(second.stdout, "")
 
@@ -432,9 +434,9 @@ class TeachMeHookTests(unittest.TestCase):
             )
 
         self.assertEqual(first.returncode, 0, first.stderr)
-        self.assertEqual(parse_stdout(first)["decision"], "block")
+        self.assertEqual(parse_stdout(first)["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(second.returncode, 0, second.stderr)
-        self.assertEqual(parse_stdout(second)["decision"], "block")
+        self.assertEqual(parse_stdout(second)["hookSpecificOutput"]["permissionDecision"], "deny")
 
 
 class InstallerTests(unittest.TestCase):
@@ -485,13 +487,14 @@ class InstallerTests(unittest.TestCase):
         self.assertIn('event = "PostToolUse"', text)
         self.assertIn('event = "PreToolUse"', text)
         self.assertIn("teach_me_hook.py", text)
+        self.assertNotIn('matcher = "*"', text)
 
     def test_kimi_installer_uses_array_of_tables_when_no_hooks_exist(self) -> None:
         module = load_module(ROOT / "kimi" / "install_hook.py")
         text = module.install('default_model = "kimi-code/kimi-for-coding"\n')
         self.assertIn("[[hooks]]", text)
         self.assertIn('event = "Stop"', text)
-        self.assertIn('matcher = "*"', text)
+        self.assertNotIn('matcher = "*"', text)
 
 
 if __name__ == "__main__":

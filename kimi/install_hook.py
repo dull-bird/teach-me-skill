@@ -22,9 +22,9 @@ HOOK_COMMAND = "python3 " + os.path.expanduser(
 MARKER = "teach-me/scripts/teach_me_hook.py"
 DEFS = [
     ("UserPromptSubmit", None),
-    ("PreToolUse", "*"),
-    ("PostToolUse", "*"),
-    ("Stop", "*"),
+    ("PreToolUse", None),
+    ("PostToolUse", None),
+    ("Stop", None),
 ]
 
 
