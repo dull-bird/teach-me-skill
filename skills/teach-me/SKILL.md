@@ -358,7 +358,12 @@ JSON
 6. In the final response, do not just announce that you captured notes. Briefly
    teach the user the most valuable point **from the substance of what they did or
    produced**, not from the tool mechanics:
-   - Look at the actual content (the note, code, design, writing, analysis) first.
+   - First, run `python3 <teach-me-skill-dir>/scripts/teach_me.py context` to load
+     the user's learning portrait: weak concepts, knowledge-tree weak nodes,
+     style preferences, and recent captures.
+   - Use the portrait to choose what to teach: avoid repeating mastered concepts
+     and start from the first weak prerequisite.
+   - Look at the actual content (the note, code, design, writing, analysis).
    - Explain the core idea in 1-2 plain sentences.
    - Ask one short follow-up: a Socratic question, a true/false check, or an
      invitation to go deeper (e.g. "要不要我展开讲讲？").

@@ -88,7 +88,7 @@ class TeachMeHookTests(unittest.TestCase):
         data = parse_stdout(result)
         self.assertEqual(data.get("decision"), "block")
         reason = data.get("reason", "")
-        self.assertIn("look up", reason.lower())
+        self.assertIn("context", reason.lower())
         self.assertIn("knowledge tree", reason.lower())
 
     def test_non_learning_prompt_stays_silent_without_tool_evidence(self) -> None:

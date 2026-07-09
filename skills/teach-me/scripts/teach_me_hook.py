@@ -618,15 +618,16 @@ Teach Me skill dir: {skill_dir}
     return f"""Teach Me detected a learning-worthy phase at turn end.
 
 Before finishing, do a short Teach Me review that actually teaches the user something:
-1. First, look at the actual content the user produced or discussed in this phase (the note, code, design, analysis, writing, etc.). Read any modified files or the transcript if needed.
-2. Identify 1-3 valuable ideas, concepts, or insights from that substance.
-3. Only if the phase had no substantive content, reflect on a brief process or tool lesson. If the tool lesson is trivial (e.g. "a CLI was not installed"), skip it entirely.
-4. In 1-2 plain sentences, explain the core idea to the user as if teaching a beginner. Connect it to something they already know if possible.
-5. Ask one short, concrete follow-up: a Socratic question, a true/false check, or "要不要我展开讲讲？". Do not just announce that you wrote a note.
-6. If the user wants to go deeper, explain missing prerequisites first (e.g. "什么是 Canvas", "什么是状态驱动动画"). Never make the user dig through the vault to learn.
-7. Only after teaching, if a durable note is warranted, run `python3 {skill_dir}/scripts/teach_me.py capture{user_flag}` or `assess{user_flag}`.
-8. If nothing is worth capturing after reflection, say so briefly and finish normally.
-9. Prefix the user-visible teaching message with `🌱`.
+1. First, run `python3 {skill_dir}/scripts/teach_me.py context{user_flag}` to load the user's learning portrait: weak concepts, knowledge-tree weak nodes, style preferences, and recent captures. Use this to avoid repeating what they already know and to start from their first weak prerequisite.
+2. Then, look at the actual content the user produced or discussed in this phase (the note, code, design, analysis, writing, etc.). Read any modified files or the transcript if needed.
+3. Identify 1-3 valuable ideas, concepts, or insights from that substance, calibrated to what the user still needs to learn.
+4. Only if the phase had no substantive content, reflect on a brief process or tool lesson. If the tool lesson is trivial (e.g. "a CLI was not installed"), skip it entirely.
+5. In 1-2 plain sentences, explain the core idea to the user as if teaching a beginner. Connect it to something they already know if possible.
+6. Ask one short, concrete follow-up: a Socratic question, a true/false check, or "要不要我展开讲讲？". Do not just announce that you wrote a note.
+7. If the user wants to go deeper, explain missing prerequisites first (e.g. "什么是 Canvas", "什么是状态驱动动画"). Never make the user dig through the vault to learn.
+8. Only after teaching, if a durable note is warranted, run `python3 {skill_dir}/scripts/teach_me.py capture{user_flag}` or `assess{user_flag}`.
+9. If nothing is worth capturing after reflection, say so briefly and finish normally.
+10. Prefix the user-visible teaching message with `🌱`.
 
 Detection evidence:
 {evidence}{modified_hint}
@@ -707,11 +708,12 @@ def handle_prompt(payload: dict[str, Any]) -> int:
 {context}
 
 Do a short Teach Me session right now:
-1. Look up related concepts in the user's vault (run `python3 {skill_dir}/scripts/teach_me.py context{user_flag}` if you need the current state).
-2. Briefly explain the core idea in plain language, matching the user's speaking style.
-3. Ask one short follow-up question (Socratic, true/false, or "要不要我展开讲讲？").
-4. If the user wants deeper explanation, cover missing prerequisites first.
-5. Capture or assess only if the conversation reveals new understanding worth saving.
+1. First, run `python3 {skill_dir}/scripts/teach_me.py context{user_flag}` to load the user's learning portrait: weak concepts, knowledge-tree weak nodes, style preferences, and recent captures.
+2. Use that portrait to decide what to teach: avoid repeating mastered concepts, start from weak prerequisites, and match the user's speaking style.
+3. Briefly explain the core idea in plain language.
+4. Ask one short follow-up question (Socratic, true/false, or "要不要我展开讲讲？").
+5. If the user wants deeper explanation, cover missing prerequisites first.
+6. Capture or assess only if the conversation reveals new understanding worth saving.
 """
         if is_codex:
             output = {"decision": "block", "reason": reason, "systemMessage": "🌱"}
