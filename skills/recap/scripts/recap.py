@@ -30,26 +30,89 @@ def home_dir() -> Path:
     return Path(raw).expanduser().resolve()
 
 
+def default_user_config(user_id: str = "default") -> dict[str, Any]:
+    vault = home_dir() / "vault" if user_id == "default" else home_dir() / "users" / user_id / "vault"
+    return {
+        "name": user_id,
+        "github": None,
+        "vault_path": str(vault),
+        "language": "auto",
+        "max_notes_per_phase": 3,
+        "git_sync": {
+            "enabled": False,
+            "remote": "",
+            "branch": "main",
+            "auto_sync": False,
+        },
+        "initialized": False,
+    }
+
+
+def default_config() -> dict[str, Any]:
+    return {
+        "version": 2,
+        "current_user": "default",
+        "users": {"default": default_user_config()},
+    }
+
+
+def migrate_v1_to_v2(config: dict[str, Any]) -> dict[str, Any]:
+    """Convert legacy single-user config to v2 multi-user config."""
+    if config.get("version") == 2:
+        return config
+    user_cfg = default_user_config()
+    for key in ("vault_path", "language", "max_notes_per_phase", "initialized"):
+        if key in config:
+            user_cfg[key] = config[key]
+    git_sync = config.get("git_sync", {})
+    if git_sync:
+        user_cfg["git_sync"] = {
+            "enabled": bool(git_sync.get("enabled", False)),
+            "remote": str(git_sync.get("remote", "")),
+            "branch": str(git_sync.get("branch", "main")),
+            "auto_sync": bool(git_sync.get("auto_sync", False)),
+        }
+    return {
+        "version": 2,
+        "current_user": "default",
+        "users": {"default": user_cfg},
+    }
+
+
 def load_config() -> dict[str, Any]:
     path = home_dir() / "config.json"
     if path.exists():
         try:
             with path.open("r", encoding="utf-8") as f:
-                return json.load(f)
+                config = json.load(f)
         except (json.JSONDecodeError, OSError):
-            pass
-    return {"vault_path": str(home_dir() / "vault"), "language": "auto"}
+            config = default_config()
+    else:
+        config = default_config()
+    return migrate_v1_to_v2(config)
 
 
-def vault_dir(config: dict[str, Any] | None = None) -> Path:
-    if config is None:
-        config = load_config()
-    raw = config.get("vault_path", "~/.teach_me_skill/vault")
+def resolve_user_config(config: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
+    """Return the active user config, falling back to current_user then default."""
+    uid = user_id or config.get("current_user", "default")
+    users = config.get("users", {})
+    if uid not in users:
+        uid = "default"
+    user_cfg = dict(users.get(uid, default_user_config(uid)))
+    base = default_user_config(uid)
+    base.update(user_cfg)
+    base["_user_id"] = uid
+    base["_top_level"] = config
+    return base
+
+
+def vault_dir(user_cfg: dict[str, Any]) -> Path:
+    raw = user_cfg.get("vault_path", "~/.teach_me_skill/vault")
     return Path(raw).expanduser().resolve()
 
 
-def learning_state_path(config: dict[str, Any] | None = None) -> Path:
-    return vault_dir(config) / ".teach-me" / "learning-state.json"
+def learning_state_path(user_cfg: dict[str, Any]) -> Path:
+    return vault_dir(user_cfg) / ".teach-me" / "learning-state.json"
 
 
 def read_json(path: Path) -> Any | None:
@@ -235,16 +298,16 @@ def mastery_for_score(score: int) -> str:
     return "confident"
 
 
-def load_state(config: dict[str, Any] | None = None) -> dict[str, Any]:
-    path = learning_state_path(config)
+def load_state(user_cfg: dict[str, Any]) -> dict[str, Any]:
+    path = learning_state_path(user_cfg)
     state = read_json(path)
     if state is None:
         return {"version": 1, "concepts": {}, "knowledge_tree": {}}
     return state
 
 
-def save_state(state: dict[str, Any], config: dict[str, Any] | None = None) -> None:
-    write_json(learning_state_path(config), state)
+def save_state(state: dict[str, Any], user_cfg: dict[str, Any]) -> None:
+    write_json(learning_state_path(user_cfg), state)
 
 
 def update_item_in_state(state: dict[str, Any], name: str, quality: int) -> dict[str, Any] | None:
@@ -442,11 +505,12 @@ def detect_language(config: dict[str, Any]) -> str:
 
 
 def cmd_due(args: argparse.Namespace) -> int:
-    config = load_config()
-    state = load_state(config)
+    top_config = load_config()
+    user_cfg = resolve_user_config(top_config, args.user)
+    state = load_state(user_cfg)
     items = collect_review_items(state)
     due = due_items(items)
-    lang = detect_language(config)
+    lang = detect_language(user_cfg)
 
     if args.json:
         print(json.dumps([{"name": i["name"], "type": i.get("type"), "mastery": i.get("mastery"), "next_review": i.get("next_review")} for i in due], ensure_ascii=False, indent=2))
@@ -457,11 +521,12 @@ def cmd_due(args: argparse.Namespace) -> int:
 
 
 def cmd_next(args: argparse.Namespace) -> int:
-    config = load_config()
-    state = load_state(config)
+    top_config = load_config()
+    user_cfg = resolve_user_config(top_config, args.user)
+    state = load_state(user_cfg)
     items = collect_review_items(state)
     due = due_items(items)
-    lang = detect_language(config)
+    lang = detect_language(user_cfg)
 
     if not due:
         # Suggest a weak item even if not strictly due
@@ -480,19 +545,20 @@ def cmd_next(args: argparse.Namespace) -> int:
             "name": item["name"],
             "type": item.get("type"),
             "mastery": item.get("mastery"),
-            "hint": extract_hint(item, vault_dir(config)),
+            "hint": extract_hint(item, vault_dir(user_cfg)),
             "note_path": item.get("note"),
         }, ensure_ascii=False, indent=2))
         return 0
 
-    print(format_next(item, vault_dir(config), lang))
+    print(format_next(item, vault_dir(user_cfg), lang))
     return 0
 
 
 def cmd_rate(args: argparse.Namespace) -> int:
-    config = load_config()
-    state = load_state(config)
-    lang = detect_language(config)
+    top_config = load_config()
+    user_cfg = resolve_user_config(top_config, args.user)
+    state = load_state(user_cfg)
+    lang = detect_language(user_cfg)
 
     try:
         quality = quality_from_string(args.quality)
@@ -505,7 +571,7 @@ def cmd_rate(args: argparse.Namespace) -> int:
         print(f"找不到复习项：{args.name}" if lang.startswith("zh") else f"Item not found: {args.name}")
         return 1
 
-    save_state(state, config)
+    save_state(state, user_cfg)
 
     if args.json:
         print(json.dumps(updated, ensure_ascii=False, indent=2))
@@ -516,10 +582,11 @@ def cmd_rate(args: argparse.Namespace) -> int:
 
 
 def cmd_stats(args: argparse.Namespace) -> int:
-    config = load_config()
-    state = load_state(config)
+    top_config = load_config()
+    user_cfg = resolve_user_config(top_config, args.user)
+    state = load_state(user_cfg)
     stats = gather_stats(state)
-    lang = detect_language(config)
+    lang = detect_language(user_cfg)
 
     if args.json:
         print(json.dumps(stats, ensure_ascii=False, indent=2))
@@ -550,24 +617,29 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--json", action="store_true", help="Output structured JSON")
 
     due_parser = subparsers.add_parser("due", help="List items due today")
+    due_parser.add_argument("--user", help="Target user ID (defaults to current_user)")
     add_json_flag(due_parser)
     due_parser.set_defaults(func=cmd_due)
 
     next_parser = subparsers.add_parser("next", help="Show the next review item")
+    next_parser.add_argument("--user", help="Target user ID (defaults to current_user)")
     add_json_flag(next_parser)
     next_parser.set_defaults(func=cmd_next)
 
     rate_parser = subparsers.add_parser("rate", help="Record a review result")
+    rate_parser.add_argument("--user", help="Target user ID (defaults to current_user)")
     rate_parser.add_argument("name", help="Name of the concept/knowledge item")
     rate_parser.add_argument("quality", help="again/hard/good/easy or 0/3/4/5")
     add_json_flag(rate_parser)
     rate_parser.set_defaults(func=cmd_rate)
 
     stats_parser = subparsers.add_parser("stats", help="Review statistics")
+    stats_parser.add_argument("--user", help="Target user ID (defaults to current_user)")
     add_json_flag(stats_parser)
     stats_parser.set_defaults(func=cmd_stats)
 
     manual_parser = subparsers.add_parser("manual", help="Print operation manual")
+    manual_parser.add_argument("--user", help="Target user ID (defaults to current_user)")
     manual_parser.set_defaults(func=cmd_manual)
 
     args = parser.parse_args(argv)

@@ -192,6 +192,58 @@ class RecapSkillTests(unittest.TestCase):
             self.assertEqual(data["name"], "JSON Test")
             self.assertIn("hint", data)
 
+    def test_user_specific_vault(self) -> None:
+        state = {
+            "version": 1,
+            "concepts": {
+                "Alice Concept": {"score": 1, "next_review": date.today().isoformat(), "review_interval_days": 1, "ease": 2.5}
+            },
+            "knowledge_tree": {},
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "teach_me_home"
+            home.mkdir()
+            default_vault = home / "vault"
+            default_vault.mkdir()
+            alice_vault = home / "users" / "alice" / "vault"
+            alice_vault.mkdir(parents=True)
+            (alice_vault / ".teach-me").mkdir(parents=True)
+            (alice_vault / ".teach-me" / "learning-state.json").write_text(json.dumps(state))
+
+            config = {
+                "version": 2,
+                "current_user": "default",
+                "users": {
+                    "default": {
+                        "name": "Default User",
+                        "github": None,
+                        "vault_path": str(default_vault),
+                        "language": "auto",
+                        "max_notes_per_phase": 3,
+                        "git_sync": {"enabled": False, "remote": "", "branch": "main", "auto_sync": False},
+                        "initialized": True,
+                    },
+                    "alice": {
+                        "name": "Alice",
+                        "github": None,
+                        "vault_path": str(alice_vault),
+                        "language": "auto",
+                        "max_notes_per_phase": 3,
+                        "git_sync": {"enabled": False, "remote": "", "branch": "main", "auto_sync": False},
+                        "initialized": True,
+                    },
+                },
+            }
+            (home / "config.json").write_text(json.dumps(config))
+
+            env = os.environ.copy()
+            env["TEACH_ME_HOME"] = str(home)
+
+            result = self.run_recap(env, "next", "--user", "alice", "--json")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = json.loads(result.stdout)
+            self.assertEqual(data["name"], "Alice Concept")
+
 
 if __name__ == "__main__":
     unittest.main()

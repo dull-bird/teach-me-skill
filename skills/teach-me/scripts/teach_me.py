@@ -24,6 +24,7 @@ TEACH_ME_HOME = Path(
 ).expanduser()
 CONFIG_PATH = TEACH_ME_HOME / "config.json"
 DEFAULT_VAULT = TEACH_ME_HOME / "vault"
+USERS_DIR = TEACH_ME_HOME / "users"
 
 MASTERY_ORDER = [
     "unknown",
@@ -77,20 +78,59 @@ def append_jsonl(path: Path, data: dict[str, Any]) -> None:
         f.write(json.dumps(data, ensure_ascii=False, sort_keys=True) + "\n")
 
 
-def default_config() -> dict[str, Any]:
+def default_git_sync() -> dict[str, Any]:
     return {
-        "version": 1,
-        "initialized": False,
-        "vault_path": str(DEFAULT_VAULT),
+        "enabled": False,
+        "remote": "",
+        "branch": "main",
+        "auto_sync": False,
+    }
+
+
+def default_user_config(user_id: str = "default", name: str = "Default User") -> dict[str, Any]:
+    vault = DEFAULT_VAULT if user_id == "default" else USERS_DIR / user_id / "vault"
+    return {
+        "name": name,
+        "github": None,
+        "vault_path": str(vault),
         "language": "auto",
         "max_notes_per_phase": 3,
-        "git_sync": {
-            "enabled": False,
-            "remote": "",
-            "branch": "main",
-            "auto_sync": False,
-        },
+        "git_sync": default_git_sync(),
+        "initialized": False,
+    }
+
+
+def default_config() -> dict[str, Any]:
+    return {
+        "version": 2,
+        "current_user": "default",
+        "users": {"default": default_user_config()},
         "created_at": now_iso(),
+        "updated_at": now_iso(),
+    }
+
+
+def migrate_v1_to_v2(config: dict[str, Any]) -> dict[str, Any]:
+    """Convert legacy single-user config to v2 multi-user config."""
+    if config.get("version") == 2:
+        return config
+    user_cfg = default_user_config()
+    for key in ("vault_path", "language", "max_notes_per_phase", "initialized"):
+        if key in config:
+            user_cfg[key] = config[key]
+    git_sync = config.get("git_sync", {})
+    if git_sync:
+        user_cfg["git_sync"] = {
+            "enabled": bool(git_sync.get("enabled", False)),
+            "remote": str(git_sync.get("remote", "")),
+            "branch": str(git_sync.get("branch", "main")),
+            "auto_sync": bool(git_sync.get("auto_sync", False)),
+        }
+    return {
+        "version": 2,
+        "current_user": "default",
+        "users": {"default": user_cfg},
+        "created_at": config.get("created_at", now_iso()),
         "updated_at": now_iso(),
     }
 
@@ -103,22 +143,71 @@ def load_config(create: bool = True) -> dict[str, Any]:
         if create:
             write_json(CONFIG_PATH, config)
 
-    config.setdefault("version", 1)
-    config.setdefault("initialized", False)
-    config.setdefault("vault_path", str(DEFAULT_VAULT))
-    config.setdefault("language", "auto")
-    config.setdefault("max_notes_per_phase", 3)
-    git_sync = config.setdefault("git_sync", {})
-    git_sync.setdefault("enabled", False)
-    git_sync.setdefault("remote", "")
-    git_sync.setdefault("branch", "main")
-    git_sync.setdefault("auto_sync", False)
+    config = migrate_v1_to_v2(config)
+    config.setdefault("current_user", "default")
+    users = config.setdefault("users", {"default": default_user_config()})
+    if "default" not in users:
+        users["default"] = default_user_config()
     return config
 
 
 def save_config(config: dict[str, Any]) -> None:
     config["updated_at"] = now_iso()
     write_json(CONFIG_PATH, config)
+
+
+def resolve_user_id(config: dict[str, Any], user_id: str | None = None) -> str:
+    if user_id:
+        return user_id
+    return str(config.get("current_user", "default"))
+
+
+def resolve_user_config(config: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
+    """Return a resolved config dict for the given user."""
+    uid = resolve_user_id(config, user_id)
+    users = config.get("users", {})
+    if uid not in users:
+        uid = "default"
+    user_cfg = dict(users.get(uid, default_user_config()))
+    base = default_user_config(uid, user_cfg.get("name", uid))
+    base.update(user_cfg)
+    base["_user_id"] = uid
+    base["_top_level"] = config
+    return base
+
+
+def switch_current_user(config: dict[str, Any], user_id: str) -> bool:
+    """Switch the active user if the user exists. Returns success."""
+    if user_id not in config.get("users", {}):
+        return False
+    config["current_user"] = user_id
+    return True
+
+
+def add_user(config: dict[str, Any], user_id: str, name: str | None = None, github: str | None = None, vault_path_override: str | None = None) -> dict[str, Any]:
+    """Add a new user to the config. Returns the user config."""
+    users = config.setdefault("users", {})
+    if user_id in users:
+        return resolve_user_config(config, user_id)
+    user_cfg = default_user_config(user_id, name or user_id)
+    if github:
+        user_cfg["github"] = github
+    if vault_path_override:
+        user_cfg["vault_path"] = str(Path(vault_path_override).expanduser())
+    else:
+        user_cfg["vault_path"] = str(USERS_DIR / user_id / "vault")
+    users[user_id] = user_cfg
+    return resolve_user_config(config, user_id)
+
+
+def persist_user_config(user_cfg: dict[str, Any]) -> None:
+    """Write a resolved user config back into the top-level config."""
+    top = user_cfg.get("_top_level")
+    if not top:
+        return
+    user_id = user_cfg.get("_user_id", "default")
+    clean = {k: v for k, v in user_cfg.items() if not k.startswith("_")}
+    top.setdefault("users", {})[user_id] = clean
 
 
 def vault_path(config: dict[str, Any]) -> Path:
@@ -151,6 +240,8 @@ def default_style(language: str = "auto") -> dict[str, Any]:
         "verbosity": "compact",
         "probe_format": "mostly_choice",
         "probe_required": False,
+        "speaking_style": "friendly and direct",
+        "teach_me_persona": "a patient tutor who explains simply and asks one short question",
         "last_feedback_at": None,
     }
 
@@ -869,13 +960,37 @@ def rewrite_graph(config: dict[str, Any], state: dict[str, Any]) -> None:
     )
 
 
+def cmd_switch_user(args: argparse.Namespace) -> int:
+    top_config = load_config(create=True)
+    user_id = args.user_id
+    if switch_current_user(top_config, user_id):
+        save_config(top_config)
+        user_cfg = resolve_user_config(top_config, user_id)
+        print(f"Switched to user '{user_id}'. Vault: {vault_path(user_cfg)}")
+        return 0
+    print(f"User '{user_id}' not found. Use `configure --add-user {user_id}` to create them.", file=sys.stderr)
+    return 1
+
+
 def cmd_configure(args: argparse.Namespace) -> int:
-    config = load_config(create=True)
-    if args.vault:
-        config["vault_path"] = str(Path(args.vault).expanduser())
+    top_config = load_config(create=True)
+
+    if args.add_user:
+        user_cfg = add_user(top_config, args.add_user, args.name, args.github, args.vault)
+        if args.switch or not top_config.get("current_user"):
+            switch_current_user(top_config, args.add_user)
+    else:
+        user_id = args.user
+        if user_id and user_id not in top_config.get("users", {}):
+            user_cfg = add_user(top_config, user_id, args.name, args.github, args.vault)
+        else:
+            user_cfg = resolve_user_config(top_config, user_id)
+
+    if args.vault and not args.add_user:
+        user_cfg["vault_path"] = str(Path(args.vault).expanduser())
     if args.language:
-        config["language"] = args.language
-    sync = git_sync_config(config)
+        user_cfg["language"] = args.language
+    sync = git_sync_config(user_cfg)
     if args.git_remote:
         sync["remote"] = args.git_remote
         sync["enabled"] = True
@@ -890,19 +1005,23 @@ def cmd_configure(args: argparse.Namespace) -> int:
         sync["enabled"] = True
     if args.no_auto_sync:
         sync["auto_sync"] = False
-    config["initialized"] = True
-    save_config(config)
-    ensure_vault(config)
+    user_cfg["initialized"] = True
+
+    persist_user_config(user_cfg)
+    top_config["current_user"] = user_cfg["_user_id"]
+    save_config(top_config)
+
+    ensure_vault(user_cfg)
     if sync.get("enabled"):
-        ensure_git_repo(config)
+        ensure_git_repo(user_cfg)
 
-    style = read_style(config)
-    style["language"] = config.get("language", "auto")
-    write_json(style_path(config), style)
-    rewrite_knowledge_tree(config, read_state(config))
-    sync_result = auto_sync_vault(config, "configure")
+    style = read_style(user_cfg)
+    style["language"] = user_cfg.get("language", "auto")
+    write_json(style_path(user_cfg), style)
+    rewrite_knowledge_tree(user_cfg, read_state(user_cfg))
+    sync_result = auto_sync_vault(user_cfg, "configure")
 
-    print(f"Teach Me configured. Vault: {vault_path(config)}")
+    print(f"Teach Me configured for user '{user_cfg['_user_id']}'. Vault: {vault_path(user_cfg)}")
     if sync.get("enabled"):
         print(
             "Git sync: enabled, "
@@ -919,6 +1038,7 @@ def format_context(config: dict[str, Any]) -> str:
     initialized = bool(config.get("initialized"))
     lines = [
         "Teach Me learning context:",
+        f"- user: {config.get('_user_id', 'default')}",
         f"- initialized: {str(initialized).lower()}",
         f"- default home: {TEACH_ME_HOME}",
         f"- vault: {vault_path(config)}",
@@ -983,6 +1103,8 @@ def format_context(config: dict[str, Any]) -> str:
                 fp=style.get("first_principles_level", "high"),
                 verbosity=style.get("verbosity", "compact"),
             ),
+            f"- speaking style: {style.get('speaking_style', 'friendly and direct')}",
+            f"- teach me persona: {style.get('teach_me_persona', 'a patient tutor')}",
             "- feedback probes: format={fmt}, required={required}; ask mostly multiple-choice or true/false checks, occasional short-answer, and continue if the user skips.".format(
                 fmt=style.get("probe_format", "mostly_choice"),
                 required=str(bool(style.get("probe_required", False))).lower(),
@@ -999,24 +1121,27 @@ def format_context(config: dict[str, Any]) -> str:
 
 
 def cmd_context(args: argparse.Namespace) -> int:
-    config = load_config(create=True)
-    print(format_context(config))
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    print(format_context(user_cfg))
     return 0
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    config = load_config(create=True)
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
     data = {
         "home": str(TEACH_ME_HOME),
         "config": str(CONFIG_PATH),
-        "initialized": bool(config.get("initialized")),
-        "vault": str(vault_path(config)),
-        "language": config.get("language", "auto"),
-        "git_sync": git_sync_config(config),
+        "user": user_cfg.get("_user_id"),
+        "initialized": bool(user_cfg.get("initialized")),
+        "vault": str(vault_path(user_cfg)),
+        "language": user_cfg.get("language", "auto"),
+        "git_sync": git_sync_config(user_cfg),
     }
-    if config.get("initialized"):
-        ensure_vault(config)
-        state = read_state(config)
+    if user_cfg.get("initialized"):
+        ensure_vault(user_cfg)
+        state = read_state(user_cfg)
         data["concept_count"] = len(state.get("concepts", {}))
         data["knowledge_tree_count"] = len(state.get("knowledge_tree", {}))
         data["capture_count"] = len(state.get("captures", []))
@@ -1026,22 +1151,24 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_sync(args: argparse.Namespace) -> int:
-    config = load_config(create=True)
-    result = sync_vault(config, args.reason or "manual")
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    result = sync_vault(user_cfg, args.reason or "manual")
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result.get("ok") else 1
 
 
 def cmd_assess(args: argparse.Namespace) -> int:
-    config = load_config(create=True)
-    if not config.get("initialized"):
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    if not user_cfg.get("initialized"):
         print(
             "Teach Me is not initialized. Ask the user to confirm the vault path "
             "and language, then run `teach_me.py configure`.",
             file=sys.stderr,
         )
         return 2
-    ensure_vault(config)
+    ensure_vault(user_cfg)
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError) as exc:
@@ -1053,7 +1180,7 @@ def cmd_assess(args: argparse.Namespace) -> int:
         print("No assessment nodes provided.", file=sys.stderr)
         return 1
 
-    state = read_state(config)
+    state = read_state(user_cfg)
     project = payload.get("project") or {}
     project_name = str(project.get("name", "")).strip()
     updated: list[str] = []
@@ -1085,17 +1212,17 @@ def cmd_assess(args: argparse.Namespace) -> int:
         "questions": listify(payload.get("questions")),
     }
     state.setdefault("assessments", []).append(assessment)
-    write_json(state_path(config), state)
-    rewrite_knowledge_tree(config, state)
-    rewrite_index(config, state)
-    rewrite_graph(config, state)
-    append_jsonl(events_path(config), {"type": "assessment", **assessment})
-    sync_result = auto_sync_vault(config, "assessment")
+    write_json(state_path(user_cfg), state)
+    rewrite_knowledge_tree(user_cfg, state)
+    rewrite_index(user_cfg, state)
+    rewrite_graph(user_cfg, state)
+    append_jsonl(events_path(user_cfg), {"type": "assessment", **assessment})
+    sync_result = auto_sync_vault(user_cfg, "assessment")
 
     output = {
         "assessed": updated,
-        "vault": str(vault_path(config)),
-        "knowledge_tree": str(vault_path(config) / PROFILE_FOLDER / "Knowledge_Tree.md"),
+        "vault": str(vault_path(user_cfg)),
+        "knowledge_tree": str(vault_path(user_cfg) / PROFILE_FOLDER / "Knowledge_Tree.md"),
     }
     if sync_result is not None:
         output["sync"] = sync_result
@@ -1104,10 +1231,11 @@ def cmd_assess(args: argparse.Namespace) -> int:
 
 
 def cmd_style(args: argparse.Namespace) -> int:
-    config = load_config(create=True)
-    if not config.get("initialized"):
-        ensure_vault(config)
-    style = read_style(config)
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    if not user_cfg.get("initialized"):
+        ensure_vault(user_cfg)
+    style = read_style(user_cfg)
     updates = {
         "analogy_level": args.analogy,
         "socratic_level": args.socratic,
@@ -1116,44 +1244,48 @@ def cmd_style(args: argparse.Namespace) -> int:
         "verbosity": args.verbosity,
         "language": args.language,
         "probe_format": args.probe_format,
+        "speaking_style": args.speaking_style,
+        "teach_me_persona": args.teach_me_persona,
     }
     for key, value in updates.items():
         if value:
             style[key] = value
     style["last_feedback_at"] = now_iso()
-    write_json(style_path(config), style)
-    sync_result = auto_sync_vault(config, "style")
-    print(f"Teach Me style updated: {style_path(config)}")
+    write_json(style_path(user_cfg), style)
+    sync_result = auto_sync_vault(user_cfg, "style")
+    print(f"Teach Me style updated for user '{user_cfg['_user_id']}': {style_path(user_cfg)}")
     if sync_result is not None:
         print("Sync: " + json.dumps(sync_result, ensure_ascii=False))
     return 0
 
 
 def cmd_log_event(args: argparse.Namespace) -> int:
-    config = load_config(create=True)
-    if not config.get("initialized"):
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    if not user_cfg.get("initialized"):
         return 0
-    ensure_vault(config)
+    ensure_vault(user_cfg)
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, ValueError):
         payload = {}
     payload.setdefault("type", args.type)
     payload.setdefault("timestamp", now_iso())
-    append_jsonl(events_path(config), payload)
+    append_jsonl(events_path(user_cfg), payload)
     return 0
 
 
 def cmd_capture(args: argparse.Namespace) -> int:
-    config = load_config(create=True)
-    if not config.get("initialized"):
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    if not user_cfg.get("initialized"):
         print(
             "Teach Me is not initialized. Ask the user to confirm the vault path "
             "and language, then run `teach_me.py configure`.",
             file=sys.stderr,
         )
         return 2
-    ensure_vault(config)
+    ensure_vault(user_cfg)
 
     try:
         payload = json.load(sys.stdin)
@@ -1166,11 +1298,11 @@ def cmd_capture(args: argparse.Namespace) -> int:
         print("No capture items provided.", file=sys.stderr)
         return 1
 
-    max_notes = int(config.get("max_notes_per_phase", 3) or 3)
+    max_notes = int(user_cfg.get("max_notes_per_phase", 3) or 3)
     allow_many = bool(payload.get("allow_many"))
     selected = items if allow_many else items[:max_notes]
 
-    state = read_state(config)
+    state = read_state(user_cfg)
     project = payload.get("project") or {}
     project_name = str(project.get("name", "")).strip()
     phase = str(payload.get("phase", "")).strip()
@@ -1191,7 +1323,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
             mastery = "seen"
             raw_item["mastery"] = mastery
 
-        path = note_path_for_item(config, raw_item)
+        path = note_path_for_item(user_cfg, raw_item)
         existing = path.exists()
         path.parent.mkdir(parents=True, exist_ok=True)
         rendered = render_note(raw_item, payload, existing=existing)
@@ -1221,7 +1353,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
             "review_interval_days": interval,
             "ease": float(current.get("ease", 2.5)),
             "projects": merge_project(current.get("projects", []), project_name),
-            "note": str(path.relative_to(vault_path(config))),
+            "note": str(path.relative_to(vault_path(user_cfg))),
             "importance": raw_item.get("importance"),
         }
         relationships = normalize_relationships(raw_item.get("relationships"))
@@ -1232,7 +1364,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
             raw_item,
             project_name=project_name,
             source="capture",
-            note=str(path.relative_to(vault_path(config))),
+            note=str(path.relative_to(vault_path(user_cfg))),
         )
         captured_titles.append(title)
 
@@ -1244,22 +1376,22 @@ def cmd_capture(args: argparse.Namespace) -> int:
         "timestamp": now_iso(),
         "project": project,
         "phase": phase,
-        "language": payload.get("language", config.get("language", "auto")),
+        "language": payload.get("language", user_cfg.get("language", "auto")),
         "summary": payload.get("summary", ""),
         "items": captured_titles,
     }
     state.setdefault("captures", []).append(capture)
-    write_json(state_path(config), state)
-    rewrite_index(config, state)
-    rewrite_graph(config, state)
-    rewrite_knowledge_tree(config, state)
-    append_jsonl(events_path(config), {"type": "capture", **capture})
-    sync_result = auto_sync_vault(config, "capture")
+    write_json(state_path(user_cfg), state)
+    rewrite_index(user_cfg, state)
+    rewrite_graph(user_cfg, state)
+    rewrite_knowledge_tree(user_cfg, state)
+    append_jsonl(events_path(user_cfg), {"type": "capture", **capture})
+    sync_result = auto_sync_vault(user_cfg, "capture")
 
     output = {
         "captured": captured_titles,
-        "vault": str(vault_path(config)),
-        "index": str(vault_path(config) / "00_Index.md"),
+        "vault": str(vault_path(user_cfg)),
+        "index": str(vault_path(user_cfg) / "00_Index.md"),
     }
     if sync_result is not None:
         output["sync"] = sync_result
@@ -1269,6 +1401,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Teach Me runtime")
+    parser.add_argument("--user", help="Target user ID (defaults to current_user)")
     sub = parser.add_subparsers(dest="command", required=True)
 
     configure = sub.add_parser("configure", help="Initialize or update Teach Me config")
@@ -1280,7 +1413,15 @@ def build_parser() -> argparse.ArgumentParser:
     configure.add_argument("--disable-git-sync", action="store_true", help="Disable vault git sync")
     configure.add_argument("--auto-sync", action="store_true", help="Automatically sync after capture/assess")
     configure.add_argument("--no-auto-sync", action="store_true", help="Disable automatic sync")
+    configure.add_argument("--add-user", help="Add a new user with this ID")
+    configure.add_argument("--name", help="Display name for the user")
+    configure.add_argument("--github", help="GitHub username for the user")
+    configure.add_argument("--switch", action="store_true", help="Switch to the configured user after setup")
     configure.set_defaults(func=cmd_configure)
+
+    switch_user = sub.add_parser("switch-user", help="Switch the active user")
+    switch_user.add_argument("user_id", help="User ID to activate")
+    switch_user.set_defaults(func=cmd_switch_user)
 
     context = sub.add_parser("context", help="Print compact context for an agent")
     context.set_defaults(func=cmd_context)
@@ -1303,6 +1444,8 @@ def build_parser() -> argparse.ArgumentParser:
     style.add_argument("--verbosity", choices=["brief", "compact", "detailed"])
     style.add_argument("--probe-format", choices=["mostly_choice", "mixed", "mostly_short"])
     style.add_argument("--language")
+    style.add_argument("--speaking-style", help="Free-text speaking style, e.g. 'friendly coach'")
+    style.add_argument("--teach-me-persona", help="Persona description, e.g. 'a patient tutor'")
     style.set_defaults(func=cmd_style)
 
     log_event = sub.add_parser("log-event", help="Append a JSON event from stdin")

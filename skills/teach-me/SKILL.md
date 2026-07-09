@@ -1,29 +1,35 @@
 ---
 name: teach-me
-description: Development learning companion that turns meaningful coding work into durable learning notes. Use when coding, debugging, reviewing, refactoring, building frontend/backend/mobile projects, explaining architecture, or when the user asks "teach me", "教我", "复盘", "原理", "grill me", "考我". Also use after completing a meaningful development phase to decide whether to write 1-3 high-value Obsidian notes, update concept mastery, and ask gentle Socratic questions without interrupting the user's flow.
+description: Learning companion that turns meaningful tool-based work into durable notes and a personal learner portrait. Use when coding, debugging, reviewing, refactoring, building frontend/backend/mobile projects, explaining architecture, working with data, media, documents, configuration, or research, or when the user asks "teach me", "教我", "复盘", "原理", "grill me", "考我". Also use after completing a meaningful phase to decide whether to write 1-3 high-value Obsidian notes, update concept mastery, shape the AI's teaching personality to the user, and ask gentle Socratic questions without interrupting the user's flow.
 ---
 
 # Teach Me
 
 ## Operating Principle
 
-Help the user accumulate transferable software knowledge while you do the work.
+Help the user accumulate transferable knowledge while they do tool-based work.
 Do not turn every action into a lesson. Work normally during implementation, then
 at a natural phase boundary decide whether the work produced knowledge worth
 capturing.
 
 Teach Me must behave like a tutor with a growing learner model, not only a
-recap writer. When a new domain appears, build a small prerequisite ladder,
-estimate the user's current level from the conversation, and start teaching at
-the first weak or unknown node. Do not jump into mid-level mechanisms if basic
+recap writer. It should draw a learner portrait over time: what the user knows,
+where they are fuzzy, how they like to be taught, and what they have struggled
+with. When a new domain appears, build a small prerequisite ladder, estimate the
+user's current level from the conversation and the portrait, and start teaching
+at the first weak or unknown node. Do not jump into mid-level mechanisms if basic
 terms are probably unclear.
+
+The AI's teaching personality can be shaped by the user. Respect the configured
+`speaking_style` and `teach_me_persona` when explaining, probing, and reviewing.
+If no style is set, infer a reasonable default from the conversation tone.
 
 Use the local runtime in `scripts/teach_me.py` for configuration, Obsidian note
 creation, mastery state updates, and event logging. Hooks may inject a compact
 Teach Me context and may request one short Stop-hook review after
 learning-worthy tool work. The Stop-hook review must teach the user something:
 explain the core idea in 1-2 sentences, ask a short follow-up, and only then
-capture notes. If hooks are not installed and the task is development-related,
+capture notes. If hooks are not installed and the task involves real tool work,
 run:
 
 ```bash
@@ -52,6 +58,26 @@ python3 <teach-me-skill-dir>/scripts/teach_me.py configure --language auto
 
 Use `--vault <path>` if the user chooses a different vault path.
 
+### Multiple users
+
+Teach Me supports separate vaults per user. The active user is resolved from,
+in order: the hook payload, the `TEACH_ME_USER` environment variable, an existing
+GitHub user that matches git config, or `config.current_user`. To add, switch,
+or inspect users:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py configure --add-user alice --name Alice --github alice
+python3 <teach-me-skill-dir>/scripts/teach_me.py switch-user alice
+python3 <teach-me-skill-dir>/scripts/teach_me.py status
+```
+
+Or use the Check skill:
+
+```bash
+python3 <check-skill-dir>/scripts/check_me.py profile --add alice --name Alice
+python3 <check-skill-dir>/scripts/check_me.py profile --switch alice
+```
+
 Use Git sync options only when the user explicitly opts in:
 
 ```bash
@@ -67,20 +93,23 @@ If the user wants local-only versioning without a remote, use
 ## When To Capture
 
 At the end of a meaningful phase, score the work with this rubric. Hook-triggered
-reviews may happen even when the user's prompt did not include coding or teaching
-keywords, because the agent's actual tool activity can reveal useful learning
-material.
+reviews may happen even when the user's prompt did not include learning keywords,
+because the agent's actual tool activity can reveal useful learning material.
 
 - Novelty: the user is unlikely to already understand it.
-- Transferability: it helps with future projects, not only this file.
-- Project relevance: it explains how the current project actually works.
+- Transferability: it helps with future projects, not only this task.
+- Project relevance: it explains how the current project or workflow actually works.
 - Hidden complexity: it reveals a mechanism that is easy to miss.
-- Future bug risk: misunderstanding it could cause bugs later.
+- Future bug risk: misunderstanding it could cause bugs or mistakes later.
 - Algorithmic value: it captures a reasoning pattern, data flow, tradeoff,
   architecture pattern, state model, dependency graph, caching strategy, parsing
   approach, concurrency idea, or other reusable design thought.
 - User confusion signal: the user asked "why", used uncertain wording, asked for
   review, or manually triggered teaching.
+
+Tool evidence is domain-agnostic. File edits, database migrations, test runs,
+builds, configuration changes, media processing, data analysis, browser automation,
+and error signals all count toward a Stop-hook review.
 
 Default behavior:
 
@@ -190,13 +219,14 @@ Prefer concept-first notes. Capture these categories:
 - Algorithmic ideas: reusable reasoning such as state lifting, incremental
   recomputation, topological ordering, cache invalidation, optimistic updates,
   diffing, debouncing, parsing, normalization, idempotency.
-- Project maps: how components, modules, services, routes, build tools, and data
-  flows relate inside the current project.
+- Workflow maps: how components, modules, services, routes, build tools, data
+  flows, or any other moving parts relate inside the current project or task.
 - Learner-model updates: prerequisite concepts, current mastery, gaps,
-  misconceptions, probes, and evidence about the user's understanding.
+  misconceptions, probes, and evidence about the user's understanding. These
+  updates feed the learner portrait.
 
-Tool names are signals, not the target. Do not capture `npm install` merely
-because a command ran. Capture the underlying idea if it matters.
+Tool names are signals, not the target. Do not capture `npm install` or any
+surface command merely because it ran. Capture the underlying idea if it matters.
 
 Read `references/obsidian-format.md` before changing the vault format. Read
 `references/schemas.md` before producing JSON for the runtime.
@@ -209,17 +239,51 @@ Infer language from the user conversation unless the configured language is not
 Default style:
 
 - Explain from first principles.
-- Tie the idea to the current project.
-- Use a few code-level examples when useful.
+- Tie the idea to the current project or task.
+- Use a few concrete examples when useful.
 - Use analogies at a medium level, then adapt based on feedback.
 - Ask 1-2 gentle, optional probes after important captures, mostly as
   multiple-choice or true/false questions.
+
+Users can shape the AI's teaching personality by setting a free-text speaking
+style and teaching persona:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py style \
+  --speaking-style "friendly coach" \
+  --teach-me-persona "a curious peer who explains simply and asks one short question"
+```
+
+Use these to shape how you talk to the user: formal or casual, concise or
+verbose, mentor or peer, Socratic or direct, etc. Do not ignore them. When a
+style is configured, adopt that voice consistently in explanations, probes, and
+reviews. The Check skill can also update style without running the main runtime:
+
+```bash
+python3 <check-skill-dir>/scripts/check_me.py style --set speaking_style "concise mentor"
+```
+
+## Learner Portrait
+
+Teach Me maintains a local learner portrait for each user. It is built from:
+
+- `learning-state.json`: mastery scores, review history, ease factors, and
+  project associations for every captured concept.
+- `Knowledge_Tree.md` and the knowledge tree data: prerequisites, gaps,
+  misconceptions, probes, and relationships between concepts.
+- `style-profile.json`: how the user prefers to be taught.
+- `events.jsonl`: raw signals about what tools were used and when.
+
+Use the portrait to avoid repeating what the user already knows, to revisit weak
+prerequisites, and to calibrate explanations. Update the portrait with
+`teach_me.py assess` whenever you learn something new about the user's
+understanding. The portrait belongs to the user and stays in their local vault.
 
 Occasionally ask for style feedback after valuable notes, not every time:
 
 ```text
 This explanation used first principles plus project examples. For future notes,
-should I use more analogies, fewer analogies and more code, more questions, or
+should I use more analogies, fewer analogies and more examples, more questions, or
 keep this style?
 ```
 

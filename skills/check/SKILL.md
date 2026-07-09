@@ -1,6 +1,6 @@
 # Teach Me Check
 
-A lightweight diagnostic companion for the Teach Me skill. It reads the local Teach Me configuration and vault, tells the user what is installed, where the vault lives, what is inside, and what can be done next — all in natural language.
+A lightweight diagnostic companion for the Teach Me skill. It reads the local Teach Me configuration and vault, tells the user what is installed, where the vault lives, what is inside, who the current user is, what teaching style is configured, and what can be done next — all in natural language.
 
 ## When to use
 

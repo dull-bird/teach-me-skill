@@ -1,6 +1,6 @@
 # Teach Me Recap
 
-A spaced-repetition review companion for Teach Me. It turns your captured concepts, algorithmic ideas, and project maps into active-recall prompts and schedules the next review based on how well you remember them.
+A spaced-repetition review companion for Teach Me. It turns your captured concepts, reusable reasoning, and workflow maps into active-recall prompts and schedules the next review based on how well you remember them. It uses the learner portrait stored in your vault to pick weak and due items per user.
 
 ## Review method
 

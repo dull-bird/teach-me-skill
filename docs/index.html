@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Teach Me - 把开发过程变成学习资产</title>
-<meta name="description" content="Teach Me 是给 Claude Code、Codex、OpenClaw、Kimi Code CLI 使用的 Agent Skill，用 prompt、tool、stop hooks 把有价值的开发过程沉淀成 Obsidian 学习笔记、知识树和复习问题。">
+<title>Teach Me - 做事，顺便学明白</title>
+<meta name="description" content="Teach Me 是给 Claude Code、Codex、OpenClaw、Kimi Code CLI 使用的 Agent Skill，用 prompt、tool、stop hooks 把有价值的工具使用过程沉淀成 Obsidian 学习笔记、知识树、学习画像和复习问题。">
 <meta name="theme-color" content="#fbfaf7">
 <link rel="icon" type="image/webp" href="assets/seedling_1f331_once.webp">
 <link rel="alternate" hreflang="zh-CN" href="./">
@@ -429,9 +429,9 @@ pre{
 <main id="main">
   <section class="hero">
     <div>
-      <p class="eyebrow">coding to learning</p>
-      <h1>Teach Me：把开发变成学习</h1>
-      <p class="lede">在你写代码、调试、重构、测试的过程中，Teach Me 自动识别值得学习的瞬间，把关键概念、设计取舍和踩坑经验整理成本地知识库。每个项目做完，你都多了一叠能带走的学习资产。</p>
+      <p class="eyebrow">做事，顺便学明白</p>
+      <h1>Teach Me：你的 AI 学习搭子</h1>
+      <p class="lede">写代码、调配置、处理数据、整理文档、研究问题……Teach Me 在你使用工具的过程中自动识别值得留下的瞬间，把关键概念、隐藏机制、决策理由整理成你的本地知识库。它还会慢慢画出你的学习画像，让 AI 按你喜欢的方式教你。</p>
       <div class="cta">
         <a class="btn primary" href="#install">装到我的 agent</a>
         <a class="btn" href="#workflow">看怎么工作</a>
@@ -462,24 +462,28 @@ intent 则可先原位预览，再由用户 Apply 保存。
   <section id="why" class="band">
     <div class="wrap">
       <p class="kicker">Why</p>
-      <h2>每个项目做完，你都该带走一些真正属于自己的东西。</h2>
-      <p class="section-sub">Teach Me 自动捕捉开发过程中值得留下的内容：你理解的概念、踩过的坑、做过的取舍、可能埋下的 bug 风险。让你从“跑通代码”走到“真正学会”。</p>
+      <h2>每次做事，都该带走一点真正属于自己的东西。</h2>
+      <p class="section-sub">Teach Me 自动捕捉工作过程中值得留下的内容：你理解的概念、踩过的坑、做过的取舍、可能埋下的风险。让你从“跑通任务”走到“真正学会”。</p>
       <div class="grid">
         <article class="card">
-          <h3>从真实项目里学</h3>
-          <p>不用额外找教程。你正在写的项目就是最好的课程，每一轮开发都可能变成概念笔记或知识树节点。</p>
+          <h3>从真实工作里学</h3>
+          <p>不用额外找教程。你正在写的项目、处理的数据、调试的配置，都是最好的课程，每一轮工具使用都可能变成概念笔记或知识树节点。</p>
         </article>
         <article class="card">
           <h3>hook 感知，不是关键词匹配</h3>
-          <p>通过 prompt、tool、stop hooks 观察实际发生的行为：编辑、测试、构建、报错、验证。不是你说“教我”才写笔记。</p>
+          <p>通过 prompt、tool、stop hooks 观察实际发生的行为：编辑、测试、构建、报错、验证、配置改动、数据处理。不是你说“教我”才写笔记。</p>
         </article>
         <article class="card">
           <h3>只记高价值点</h3>
-          <p>默认只抓 1-3 个能迁移到其他项目的点：隐藏机制、设计取舍、算法思路、bug 风险。避免笔记泛滥。</p>
+          <p>默认只抓 1-3 个能迁移到其他任务的点：隐藏机制、决策理由、可复用思路、未来风险。避免笔记泛滥。</p>
         </article>
         <article class="card">
-          <h3>结构化知识库</h3>
-          <p>自动整理成 Concepts、Algorithmic Ideas、Project Maps、Socratic Questions、Reviews，配上知识树和掌握度。</p>
+          <h3>画出你的学习画像</h3>
+          <p>记录你掌握过什么、哪里还模糊、喜欢怎么被教。教学和复习会越来越贴合你，而不是套用固定模板。</p>
+        </article>
+        <article class="card">
+          <h3>AI 教学个性由你塑造</h3>
+          <p>通过 style 设置说话风格和教学人格：严厉导师、好奇伙伴、简洁教练……Teach Me 会按这个方式解释和提问。</p>
         </article>
         <article class="card">
           <h3>学了还能复习</h3>
@@ -496,13 +500,13 @@ intent 则可先原位预览，再由用户 Apply 保存。
   <section id="workflow">
     <div class="wrap">
       <p class="kicker">How</p>
-      <h2>四步把一段开发变成知识。</h2>
+      <h2>四步把一段工作变成知识。</h2>
       <p class="section-sub">Teach Me 不替代你的 agent。它像一位知道什么时候该复盘的老师：先看证据，再决定要不要整理。</p>
       <div class="steps">
-        <div class="step"><strong>1. 感知场景</strong><span>开发、调试、重构、测试，或你说“教我”“为什么”时，注入 Teach Me context。</span></div>
-        <div class="step"><strong>2. 收集证据</strong><span>Pre / Post / Failure tool hooks 记录真实的编辑、测试、构建、报错、验证。</span></div>
+        <div class="step"><strong>1. 感知场景</strong><span>工作、学习、调试、研究，或你说“教我”“为什么”时，注入 Teach Me context。</span></div>
+        <div class="step"><strong>2. 收集证据</strong><span>Pre / Post / Failure tool hooks 记录真实的编辑、测试、构建、报错、验证、配置改动、数据处理。</span></div>
         <div class="step"><strong>3. Stop 评分</strong><span>阶段结束时按证据打分：信号弱就安静，信号强才请求一次短复盘。</span></div>
-        <div class="step"><strong>4. 沉淀资产</strong><span>只写 1-3 个高价值点：概念、算法思路、项目地图、bug 风险，更新知识树和复习计划。</span></div>
+        <div class="step"><strong>4. 沉淀资产</strong><span>只写 1-3 个高价值点：概念、可复用思路、工作地图、未来风险，更新知识树、学习画像和复习计划。</span></div>
       </div>
     </div>
   </section>
@@ -515,11 +519,11 @@ intent 则可先原位预览，再由用户 Apply 保存。
       <div class="grid">
         <article class="card">
           <h3>🌱 Teach Me</h3>
-          <p>核心技能。开发时收集证据，阶段边界触发复盘，把高价值知识写入本地 vault。</p>
+          <p>核心技能。工作时收集证据，阶段边界触发复盘，把高价值知识写入本地 vault，同时更新你的学习画像。</p>
         </article>
         <article class="card">
           <h3>🔍 Teach Me Check</h3>
-          <p>诊断技能。查看安装状态、vault 位置、最近记录，并用自然语言提示下一步。</p>
+          <p>诊断技能。查看安装状态、vault 位置、学习画像、用户与风格，并用自然语言提示下一步。</p>
         </article>
         <article class="card">
           <h3>🔄 Teach Me Recap</h3>
@@ -544,7 +548,7 @@ intent 则可先原位预览，再由用户 Apply 保存。
               <td>Claude Code</td>
               <td><code>~/.claude/settings.json</code></td>
               <td><code>UserPromptSubmit</code>、<code>PreToolUse</code>、<code>PostToolUse</code>、<code>Stop</code></td>
-              <td>显式学习/开发提示词注入上下文；工具事件计分；Stop 阶段可能请求一次短复盘。</td>
+              <td>显式学习/工作提示词注入上下文；工具事件计分；Stop 阶段可能请求一次短复盘。</td>
             </tr>
             <tr>
               <td>Codex</td>
@@ -667,7 +671,7 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 
 <footer class="footer">
   <div class="wrap">
-    <span>Teach Me · 把开发过程变成学习资产</span>
+    <span>Teach Me · 做事，顺便学明白</span>
     <span>Markdown vault · Optional Git sync · Local first</span>
   </div>
 </footer>

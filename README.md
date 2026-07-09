@@ -5,8 +5,8 @@
 <h1 align="center">Teach Me</h1>
 
 <p align="center">
-  把开发过程变成学习资产<br>
-  Turn development work into learning assets
+  做事，顺便学明白<br>
+  Learn by doing, with your tools
 </p>
 
 <p align="center">
@@ -23,29 +23,31 @@
 
 ## 中文
 
-**Teach Me：把开发变成学习（coding to learning）。**
+**Teach Me：做事，顺便学明白。**
 
-它是一套 Agent Skill，支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。在你写代码、调试、重构、测试的过程中，Teach Me 自动识别值得学习的瞬间，把关键概念、设计取舍和踩坑经验整理成本地知识库。每个项目做完，你都多了一叠能带走的学习资产。
+它是一套 Agent Skill，支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。在你写代码、调试、重构、测试，或者处理数据、整理文档、剪辑媒体、调试配置、研究问题的过程中，Teach Me 自动识别值得学习的瞬间，把关键概念、隐藏机制、决策理由整理成你的本地知识库。
+
+它还会慢慢画出你的学习画像：你喜欢怎么被教、哪些概念已经掌握、哪些前置知识还模糊。AI 的教学个性可以由你塑造，复习和教学都会围绕你来进行。
 
 ### 解决的痛点
 
-AI 生成代码越来越快，但很多人发现：三天后就改不动那段代码了。因为：
+AI 帮你执行越来越快，但很多人发现：三天后就忘了当时为什么这么做。因为：
 
 - 为什么这里要这样设计？忘了。
 - 这个 bug 为什么出现？忘了。
-- 这段代码能搬到下一个项目吗？不敢动。
+- 这个做法能搬到下一个任务吗？不敢动。
 
-Teach Me 在阶段边界帮你整理真正值得留下的东西，让你能复习、能迁移、能独立改代码。
+Teach Me 在阶段边界帮你整理真正值得留下的东西，让你能复习、能迁移、能独立做事。
 
 ### 具体怎么做
 
 Teach Me 通过 hooks 观察你这一轮到底做了什么，而不是只看你说的话：
 
-1. **Prompt hook** 识别开发/调试/重构/测试场景，或“教我”“复盘”“为什么”这类显式学习意图。
-2. **Tool hooks** 记录实际发生的证据：文件编辑、测试运行、构建、类型检查、报错、验证结果。
+1. **Prompt hook** 识别工作/学习场景，或“教我”“复盘”“为什么”这类显式学习意图。
+2. **Tool hooks** 记录实际发生的证据：文件编辑、测试运行、构建、类型检查、报错、验证结果、配置改动、数据处理、媒体操作、浏览搜索等。
 3. **Stop hook** 在阶段结束时给证据打分。信号弱就安静，信号强才请求一次短复盘。
-4. **Skill rubric** 决定写什么：默认只抓 1-3 个高价值点——能迁移的概念、隐藏机制、设计取舍、算法思路、项目地图、未来 bug 风险。
-5. **本地 runtime** 把内容写入 Obsidian vault，同时更新知识树、掌握度和复习计划。
+4. **Skill rubric** 决定写什么：默认只抓 1-3 个高价值点——能迁移的概念、隐藏机制、决策理由、可复用思路、工作地图、未来风险。
+5. **本地 runtime** 把内容写入 Obsidian vault，同时更新你的知识树、掌握度、学习画像和复习计划。
 
 ### 你会得到什么
 
@@ -68,15 +70,81 @@ vault/
     └── events.jsonl            # 事件日志
 ```
 
-所有可读笔记都是普通 Markdown。机器状态放在 `.teach-me/`。默认本地保存，不会推送到远端。
+所有可读笔记都是普通 Markdown。机器状态放在 `.teach-me/`，包括你的学习画像（知识树、掌握度、风格偏好）。默认本地保存，不会推送到远端。
 
 ### 三个技能
 
 | 技能 | 作用 | 典型说法 |
 | --- | --- | --- |
-| **Teach Me** | 开发时收集证据，阶段边界触发复盘，写笔记 | “复盘一下刚才的调试” |
-| **Teach Me Check** | 检查安装状态、vault 内容、最近记录 | “帮我检查 Teach Me 状态” |
+| **Teach Me** | 工作时收集证据，阶段边界触发复盘，写笔记 | “复盘一下刚才的调试” |
+| **Teach Me Check** | 检查安装状态、vault 内容、学习画像、用户与风格 | “帮我检查 Teach Me 状态” |
 | **Teach Me Recap** | 用间隔重复 + 主动回忆复习已记录知识 | “帮我复习一下” |
+
+### AI 的教学个性，由你塑造
+
+你可以告诉 Teach Me 你喜欢怎么被教：
+
+```bash
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py style \
+  --speaking-style "friendly coach" \
+  --teach-me-persona "a curious peer who explains simply and asks one short question"
+```
+
+或用 Check skill：
+
+```bash
+python3 ~/.codex/skills/check/scripts/check_me.py style \
+  --set speaking_style "concise mentor"
+```
+
+之后 Teach Me 会按这个风格解释、提问、反馈，而不是套用默认模板。
+
+### 它也在绘制你的学习画像
+
+随着你使用和复盘，Teach Me 会记录：
+
+- 你接触过哪些概念，掌握到什么程度
+- 哪些前置知识还模糊
+- 你喜欢类比、代码示例，还是直接讲原理
+- 哪些问题该在什么时候复习
+
+这些画像完全存在你的本地 vault 里，用来让教学和复习越来越贴合你。
+
+### 多用户
+
+Teach Me 支持为不同用户创建独立 vault，适合共用机器或希望把个人学习内容隔离的场景。
+
+```bash
+# 添加用户
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
+  --add-user alice --name Alice --github alice
+
+# 切换当前用户
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py switch-user alice
+
+# 或者用 Check skill 管理用户
+python3 ~/.codex/skills/check/scripts/check_me.py profile --add alice --name Alice
+python3 ~/.codex/skills/check/scripts/check_me.py profile --switch alice
+```
+
+用户解析顺序：hook payload 中的 `user_id` → 环境变量 `TEACH_ME_USER` → git config 中已存在的 GitHub 用户 → `config.current_user`。
+
+### 对话风格
+
+你可以自定义 Teach Me 的说话风格和教学人格：
+
+```bash
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py style \
+  --speaking-style "friendly coach" \
+  --teach-me-persona "a curious peer who explains simply and asks one short question"
+```
+
+或用 Check skill：
+
+```bash
+python3 ~/.codex/skills/check/scripts/check_me.py style \
+  --set speaking_style "concise mentor"
+```
 
 ### 适合谁
 
@@ -192,29 +260,31 @@ python3 -m unittest -v tests.test_teach_me_hook
 
 ## English
 
-**Teach Me: Coding to Learning.**
+**Teach Me: Learn by doing, with your tools.**
 
-It is a set of Agent Skills for Claude Code, Codex, OpenClaw, and Kimi Code CLI. As you code, debug, refactor, and test, Teach Me spots the moments worth learning from and turns key concepts, tradeoffs, and pitfalls into a local knowledge base. Every project you finish leaves you with a stack of portable learning assets.
+It is a set of Agent Skills for Claude Code, Codex, OpenClaw, and Kimi Code CLI. As you code, debug, refactor, and test — or work with data, media, documents, configuration, and research — Teach Me spots the moments worth learning from and turns key concepts, hidden mechanisms, and decision rationales into a local knowledge base.
+
+It also builds a growing learner portrait: how you like to be taught, which concepts you have mastered, and which prerequisites are still fuzzy. The AI's teaching personality is shaped by you, and reviews and explanations are centered on you.
 
 ### Pain points it solves
 
-AI generates code faster than ever, but many people find they cannot change that code three days later. Because:
+AI executes faster than ever, but many people find they cannot reproduce or adapt what they did three days later. Because:
 
 - Why was it designed this way? Forgotten.
 - Why did that bug appear? Forgotten.
-- Can I reuse this code in the next project? Afraid to touch it.
+- Can I reuse this approach in the next task? Afraid to touch it.
 
-Teach Me helps you organize what is actually worth keeping at phase boundaries, so you can review it, transfer it, and independently change the code later.
+Teach Me helps you organize what is actually worth keeping at phase boundaries, so you can review it, transfer it, and independently do the work later.
 
 ### How it works
 
 Teach Me uses hooks to observe what you actually did this turn, not just what you typed:
 
-1. **Prompt hook** detects dev/debug/refactor/test scenarios, or explicit learning intent like “teach me”, “review”, or “why”.
-2. **Tool hooks** record evidence: file edits, test runs, builds, type checks, errors, verification results.
+1. **Prompt hook** detects work/learn scenarios, or explicit learning intent like “teach me”, “review”, or “why”.
+2. **Tool hooks** record evidence: file edits, test runs, builds, type checks, errors, verification results, configuration changes, data processing, media operations, and browsing/search.
 3. **Stop hook** scores the evidence at the end of a phase. If the signal is weak, it stays quiet; if strong, it asks for one short review.
-4. **Skill rubric** decides what to keep: by default only 1-3 high-value items—transferable concepts, hidden mechanisms, design tradeoffs, algorithmic ideas, project maps, and future bug risks.
-5. **Local runtime** writes everything into an Obsidian vault and updates the knowledge tree, mastery, and review schedule.
+4. **Skill rubric** decides what to keep: by default only 1-3 high-value items—transferable concepts, hidden mechanisms, decision rationales, reusable reasoning, workflow maps, and future risks.
+5. **Local runtime** writes everything into an Obsidian vault and updates your knowledge tree, mastery, learner portrait, and review schedule.
 
 ### What you get
 
@@ -237,15 +307,81 @@ vault/
     └── events.jsonl
 ```
 
-Readable notes are plain Markdown. Machine state lives under `.teach-me/`. Local by default; nothing is pushed remotely unless you enable Git sync.
+Readable notes are plain Markdown. Machine state lives under `.teach-me/`, including your learner portrait (knowledge tree, mastery, style preferences). Local by default; nothing is pushed remotely unless you enable Git sync.
 
 ### The three skills
 
 | Skill | Purpose | Typical prompt |
 | --- | --- | --- |
-| **Teach Me** | Collects evidence while you develop, triggers reviews at phase boundaries, writes notes | “Review the debugging we just did” |
-| **Teach Me Check** | Checks installation status, vault contents, recent activity | “Check my Teach Me status” |
+| **Teach Me** | Collects evidence while you work, triggers reviews at phase boundaries, writes notes | “Review the debugging we just did” |
+| **Teach Me Check** | Checks installation status, vault contents, learner portrait, users, and style | “Check my Teach Me status” |
 | **Teach Me Recap** | Reviews captured knowledge with spaced repetition and active recall | “Help me review” |
+
+### Shape the AI's teaching personality
+
+You can tell Teach Me how you like to be taught:
+
+```bash
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py style \
+  --speaking-style "friendly coach" \
+  --teach-me-persona "a curious peer who explains simply and asks one short question"
+```
+
+Or use the Check skill:
+
+```bash
+python3 ~/.codex/skills/check/scripts/check_me.py style \
+  --set speaking_style "concise mentor"
+```
+
+After that, Teach Me explains, asks, and responds in that style instead of using a default template.
+
+### It draws your learner portrait
+
+As you work and review, Teach Me records:
+
+- Which concepts you have encountered and how well you know them
+- Which prerequisites are still fuzzy
+- Whether you prefer analogies, concrete examples, or first-principles explanations
+- Which items should be reviewed and when
+
+This portrait is stored entirely in your local vault and is used to make teaching and review increasingly personal.
+
+### Multiple users
+
+Teach Me supports separate vaults per user, useful for shared machines or anyone who wants to keep their learning content isolated.
+
+```bash
+# Add a user
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
+  --add-user alice --name Alice --github alice
+
+# Switch active user
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py switch-user alice
+
+# Or use the Check skill
+python3 ~/.codex/skills/check/scripts/check_me.py profile --add alice --name Alice
+python3 ~/.codex/skills/check/scripts/check_me.py profile --switch alice
+```
+
+User resolution order: `user_id` from the hook payload → `TEACH_ME_USER` environment variable → an existing GitHub user matching git config → `config.current_user`.
+
+### Conversation style
+
+Customize how Teach Me speaks and what persona it adopts:
+
+```bash
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py style \
+  --speaking-style "friendly coach" \
+  --teach-me-persona "a curious peer who explains simply and asks one short question"
+```
+
+Or use the Check skill:
+
+```bash
+python3 ~/.codex/skills/check/scripts/check_me.py style \
+  --set speaking_style "concise mentor"
+```
 
 ### Who it is for
 

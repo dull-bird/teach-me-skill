@@ -14,6 +14,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 CHECK_SCRIPT = REPO_ROOT / "skills" / "check" / "scripts" / "check_me.py"
+TEACH_ME_SCRIPT = REPO_ROOT / "skills" / "teach-me" / "scripts" / "teach_me.py"
 
 
 class CheckSkillTests(unittest.TestCase):
@@ -107,7 +108,7 @@ class CheckSkillTests(unittest.TestCase):
             result = self.run_check(env, "report", "--json")
             self.assertEqual(result.returncode, 0, result.stderr)
             data = json.loads(result.stdout)
-            self.assertEqual(data["config"]["language"], "en")
+            self.assertEqual(data["config"]["raw_language"], "en")
             self.assertEqual(data["config"]["max_notes_per_phase"], 5)
             self.assertTrue(data["git_sync"]["enabled"])
             self.assertTrue(data["git_sync"]["auto_sync"])
@@ -147,6 +148,77 @@ class CheckSkillTests(unittest.TestCase):
         result = self.run_check(env, "manual")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("操作手册", result.stdout)
+
+    def test_profile_add_and_switch_user(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "teach_me_home"
+            home.mkdir()
+            config = {
+                "version": 2,
+                "current_user": "default",
+                "users": {
+                    "default": {
+                        "name": "Default User",
+                        "github": None,
+                        "vault_path": str(home / "vault"),
+                        "language": "auto",
+                        "max_notes_per_phase": 3,
+                        "git_sync": {"enabled": False, "remote": "", "branch": "main", "auto_sync": False},
+                        "initialized": True,
+                    }
+                },
+            }
+            (home / "config.json").write_text(json.dumps(config))
+            env = os.environ.copy()
+            env["TEACH_ME_HOME"] = str(home)
+
+            add = self.run_check(env, "profile", "--add", "alice", "--name", "Alice", "--github", "alice")
+            self.assertEqual(add.returncode, 0, add.stderr)
+            self.assertIn("Added user 'alice'", add.stdout)
+
+            switch = self.run_check(env, "profile", "--switch", "alice")
+            self.assertEqual(switch.returncode, 0, switch.stderr)
+            self.assertIn("Switched to user 'alice'", switch.stdout)
+
+            report = self.run_check(env, "report", "--json")
+            data = json.loads(report.stdout)
+            self.assertEqual(data["user"]["id"], "alice")
+            self.assertEqual(data["user"]["name"], "Alice")
+            self.assertEqual(data["user"]["github"], "alice")
+
+    def test_style_show_and_set(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "teach_me_home"
+            home.mkdir()
+            vault = home / "vault"
+            vault.mkdir()
+            (vault / ".teach-me").mkdir()
+            config = {
+                "version": 2,
+                "current_user": "default",
+                "users": {
+                    "default": {
+                        "name": "Default User",
+                        "github": None,
+                        "vault_path": str(vault),
+                        "language": "auto",
+                        "max_notes_per_phase": 3,
+                        "git_sync": {"enabled": False, "remote": "", "branch": "main", "auto_sync": False},
+                        "initialized": True,
+                    }
+                },
+            }
+            (home / "config.json").write_text(json.dumps(config))
+            env = os.environ.copy()
+            env["TEACH_ME_HOME"] = str(home)
+
+            set_result = self.run_check(env, "style", "--set", "speaking_style", "friendly coach")
+            self.assertEqual(set_result.returncode, 0, set_result.stderr)
+            self.assertIn("Updated speaking_style", set_result.stdout)
+
+            show = self.run_check(env, "style")
+            self.assertEqual(show.returncode, 0, show.stderr)
+            self.assertIn("friendly coach", show.stdout)
 
 
 if __name__ == "__main__":

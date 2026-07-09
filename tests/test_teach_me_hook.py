@@ -71,7 +71,7 @@ def load_module(path: Path):
 
 
 class TeachMeHookTests(unittest.TestCase):
-    def test_manual_prompt_injects_context(self) -> None:
+    def test_manual_prompt_blocks_to_teach(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_hook(
                 {
@@ -79,15 +79,17 @@ class TeachMeHookTests(unittest.TestCase):
                     "prompt": "教我这个 hook 是怎么工作的",
                     "session_id": "s1",
                     "turn_id": "t1",
+                    "transcript_path": "/tmp/fake_transcript.jsonl",
                 },
                 Path(tmp),
             )
 
         self.assertEqual(result.returncode, 0, result.stderr)
         data = parse_stdout(result)
-        context = data["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("Teach Me learning context", context)
-        self.assertIn("manual teaching trigger detected", context.lower())
+        self.assertEqual(data.get("decision"), "block")
+        reason = data.get("reason", "")
+        self.assertIn("look up", reason.lower())
+        self.assertIn("knowledge tree", reason.lower())
 
     def test_non_learning_prompt_stays_silent_without_tool_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -137,7 +139,7 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertGreaterEqual(len(events), 2)
         self.assertTrue(any(event.get("phase") == "pre" for event in events))
         self.assertTrue(any(event.get("phase") == "post" for event in events))
-        self.assertTrue(any("test" in event.get("signal_tags", []) for event in events))
+        self.assertTrue(any("verification" in event.get("signal_tags", []) for event in events))
 
     def test_stop_blocks_after_learning_worthy_tool_work_without_prompt_keywords(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
