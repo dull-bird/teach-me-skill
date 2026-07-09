@@ -191,6 +191,8 @@ h1{
   max-width:100%;
 }
 .visual img{display:block;width:100%;height:auto}
+.visual .mermaid{padding:18px}
+.visual .mermaid svg{max-width:100%;height:auto}
 .note-card{
   margin:0;
   border:1px solid var(--line);
@@ -409,6 +411,8 @@ pre{
   *,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#e9f5ec', primaryTextColor: '#1b1a18', primaryBorderColor: '#2d6a4f', lineColor: '#756f66', secondaryColor: '#f2f0ea', tertiaryColor: '#fff', background: '#fbfaf7', fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' } });</script>
 </head>
 <body data-accent="green">
 <a class="skip" href="#main">跳到正文</a>
@@ -439,22 +443,20 @@ pre{
       <p class="note">支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。数据默认写在本地 <code>~/.teach_me_skill/vault</code>，Git 同步完全可选。</p>
     </div>
     <div>
-      <figure class="visual note-card" aria-label="Teach Me 自动沉淀的笔记示例">
-        <div class="note-head">02_Concepts/PDF4QT-page-tree-mutation.md</div>
-<pre><code>## PDF4QT page tree mutation
-
-**类型**：concept · **项目**：inkwell
-
-**核心思想**
-删除、重排、裁剪这类页面级编辑，如果只在
-PyMuPDF 后端写新文件，Qt 主视图无法自然拥
-有 undo/apply/save 状态。
-
-**为什么重要**
-直接写出新 PDF 会让用户看到文件跳转；返回
-intent 则可先原位预览，再由用户 Apply 保存。
-
-**掌握度**：seen · **下次复习**：2026-07-11</code></pre>
+      <figure class="visual" aria-label="Teach Me 工作流程">
+<pre class="mermaid">flowchart LR
+    A([你使用工具<br/>代码/数据/文档/配置]) --> B{Hooks 收集证据}
+    B --> C{信号够强?}
+    C -->|弱| D[安静继续]
+    C -->|强| E[AI 教你一点东西]
+    E --> F[写入本地 vault]
+    F --> G[学习画像]
+    G --> H[Teach Me Recap<br/>间隔重复复习]
+    style A fill:#e9f5ec,stroke:#2d6a4f,stroke-width:2px
+    style E fill:#fff4e6,stroke:#b08900,stroke-width:2px
+    style F fill:#e7f3ff,stroke:#1565c0,stroke-width:2px
+    style G fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+</pre>
       </figure>
     </div>
   </section>
