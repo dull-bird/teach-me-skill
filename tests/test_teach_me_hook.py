@@ -646,6 +646,46 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(parse_stdout(second)["hookSpecificOutput"]["permissionDecision"], "deny")
 
+    def test_kimi_style_stop_stays_silent_without_new_work_after_block(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "pytest"},
+                    "tool_response": {"stdout": "1 passed", "stderr": ""},
+                    "session_id": "s-kimi",
+                    "turn_id": "t-kimi",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            first = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s-kimi",
+                    "turn_id": "t-kimi",
+                    "cwd": "/repo",
+                    "last_assistant_message": "测试通过。",
+                },
+                home,
+            )
+            second = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s-kimi",
+                    "turn_id": "t-kimi",
+                    "cwd": "/repo",
+                    "last_assistant_message": "复盘完成。",
+                },
+                home,
+            )
+
+        self.assertEqual(parse_stdout(first)["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertEqual(second.stdout, "")
+
     def test_stop_ignores_other_turn_evidence_when_turn_id_is_present(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)

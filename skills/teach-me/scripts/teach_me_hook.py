@@ -527,6 +527,30 @@ def same_scope(event: dict[str, Any], payload: dict[str, Any]) -> bool:
     return not (current_turn or current_session or current_cwd)
 
 
+def has_new_scored_work_since_last_block(events: list[dict[str, Any]], payload: dict[str, Any]) -> bool:
+    """Allow another review only after meaningful new work in the same scope.
+
+    Some clients do not expose a Stop re-entrancy flag. This event-based
+    fallback prevents repeated blocks after a review while allowing a later
+    phase to request a new review when the user resumed work.
+    """
+    scoped = [event for event in events if same_scope(event, payload)]
+    last_block_index = max(
+        (
+            index
+            for index, event in enumerate(scoped)
+            if event.get("type") == "stop_decision" and event.get("decision") == "block"
+        ),
+        default=None,
+    )
+    if last_block_index is None:
+        return True
+    return any(
+        event.get("type") == "tool" and int(event.get("score") or 0) > 0
+        for event in scoped[last_block_index + 1 :]
+    )
+
+
 def modified_files(events: list[dict[str, Any]], payload: dict[str, Any]) -> list[str]:
     """Collect file paths that were written or edited in the current scope."""
     scoped = [event for event in events if same_scope(event, payload)]
@@ -663,6 +687,8 @@ def handle_stop(payload: dict[str, Any]) -> int:
 
     user_cfg = ensure_user(payload)
     events = load_events(user_cfg)
+    if not has_new_scored_work_since_last_block(events, payload):
+        return 0
     assessment = score_stop(payload, events)
     decision = "block" if assessment["should_block"] else "allow"
     review_prompt = build_stop_review_prompt(user_cfg, assessment) if assessment["should_block"] else ""
