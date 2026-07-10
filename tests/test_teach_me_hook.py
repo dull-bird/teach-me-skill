@@ -260,13 +260,10 @@ class TeachMeHookTests(unittest.TestCase):
             hso = data["hookSpecificOutput"]
             self.assertEqual(hso["permissionDecision"], "deny")
             reason = hso["permissionDecisionReason"]
-            self.assertIn("🌱", reason)
-            self.assertNotIn("🌱 Teach Me:", reason)
-            self.assertNotIn("Detection evidence", reason)
-            self.assertIn("Teach Me", reason)
-            self.assertIn("first-use confirmation", reason)
-            self.assertIn("SKILL.md", reason)
-            self.assertLess(len(reason), 700)
+            self.assertEqual(
+                reason,
+                f"🌱 Teach Me review requires setup. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+            )
             events = read_events(home)
             stop_decision = events[-1]
             self.assertEqual(stop_decision["type"], "stop_decision")
@@ -309,13 +306,10 @@ class TeachMeHookTests(unittest.TestCase):
             hso = data["hookSpecificOutput"]
             self.assertEqual(hso["permissionDecision"], "deny")
             reason = hso["permissionDecisionReason"]
-            self.assertIn("🌱", reason)
-            self.assertNotIn("🌱 Teach Me:", reason)
-            self.assertNotIn("Detection evidence", reason)
-            self.assertIn("Teach Me review", reason)
-            self.assertIn("one core mechanism", reason)
-            self.assertIn("context --full", reason)
-            self.assertLess(len(reason), 600)
+            self.assertEqual(
+                reason,
+                f"🌱 Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+            )
             events = read_events(home)
             stop_decision = events[-1]
             self.assertEqual(stop_decision["type"], "stop_decision")
@@ -361,7 +355,7 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(data["decision"], "block")
         self.assertIn("🌱", data["reason"])
         self.assertIn("Teach Me", data["reason"])
-        self.assertIn("first-use confirmation", data["reason"])
+        self.assertIn("requires setup", data["reason"])
         self.assertNotIn("hookSpecificOutput", data)
 
     def test_codex_stop_with_weak_evidence_stays_silent(self) -> None:
@@ -913,13 +907,11 @@ class TeachMeHookTests(unittest.TestCase):
                 if task["should_block"]:
                     data = parse_stdout(result)
                     reason = data["hookSpecificOutput"]["permissionDecisionReason"]
-                    self.assertIn("🌱", reason, task["name"])
-                    self.assertIn("Teach Me review", reason, task["name"])
-                    self.assertIn("SKILL.md", reason, task["name"])
-                    self.assertIn("context --full", reason, task["name"])
-                    self.assertNotIn("Detection evidence", reason, task["name"])
-                    self.assertNotIn("Files created or edited", reason, task["name"])
-                    self.assertLess(len(reason), 600, f"{task['name']} reason too long")
+                    self.assertEqual(
+                        reason,
+                        f"🌱 Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+                        task["name"],
+                    )
 
                     # Full audit trail lives in the event log
                     self.assertIn("Detection evidence", decision["review_prompt"], task["name"])
@@ -1055,11 +1047,10 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             data = parse_stdout(result)
             reason = data["hookSpecificOutput"]["permissionDecisionReason"]
-            self.assertIn("🌱", reason)
-            self.assertIn("Teach Me review", reason)
-            self.assertNotIn("Detection evidence", reason)
-            self.assertNotIn("Files created or edited", reason)
-            self.assertLess(len(reason), 600)
+            self.assertEqual(
+                reason,
+                f"🌱 Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+            )
             events = read_events(home)
             stop_decision = [e for e in events if e.get("type") == "stop_decision"][-1]
             self.assertIn("Files created or edited", stop_decision["review_prompt"])
@@ -1119,12 +1110,7 @@ class InstallerTests(unittest.TestCase):
             )
 
         reason = parse_stdout(result)["hookSpecificOutput"]["permissionDecisionReason"]
-        self.assertIn("Teach Me review at this phase boundary", reason)
-        self.assertIn("SKILL.md", reason)
-        self.assertIn("context --full", reason)
-        self.assertIn("one core mechanism", reason)
-        self.assertNotIn("Detection evidence", reason)
-        self.assertNotIn("Files created or edited", reason)
-        self.assertNotIn("Before finishing, do a short Teach Me review", reason)
-        self.assertNotIn("1. First, run", reason)
-        self.assertLess(len(reason), 600)
+        self.assertEqual(
+            reason,
+            f"🌱 Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+        )

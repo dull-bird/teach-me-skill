@@ -657,18 +657,13 @@ Detection evidence:
 def build_stop_reason(config: dict[str, Any], assessment: dict[str, Any]) -> str:
     """Compact pointer returned to the agent as the blocking reason.
 
-    Keeps only the instructions the model needs to act; the full audit trail
-    (detection evidence, modified files, detailed rubric) lives in the event log.
+    The full workflow and audit trail live in SKILL.md and the event log.
     """
     skill_dir = Path(__file__).resolve().parent.parent
-    user_id = config.get("_user_id", "default")
-    user_flag = f" --user {user_id}" if user_id != "default" else ""
     if not config.get("initialized"):
-        return f"""🌱 Teach Me needs first-use confirmation before reviewing.
-Follow `{skill_dir}/SKILL.md`. STOP: do not run `configure`, `capture`, or write any note. Present one concise setup choice and wait for an explicit reply: (1) default balanced tutor, (2) implementation coach, (3) general-principles mentor, (4) Socratic tutor, or (5) custom style. Mention default vault/language and optional Git sync. Only run `python3 {skill_dir}/scripts/teach_me.py configure ...{user_flag}` after the user explicitly chooses settings."""
+        return f"🌱 Teach Me review requires setup. Read and follow `{skill_dir}/SKILL.md`."
 
-    return f"""🌱 Teach Me review at this phase boundary.
-Follow `{skill_dir}/SKILL.md` and first run `python3 {skill_dir}/scripts/teach_me.py context --full{user_flag}`. Teach exactly one core mechanism from the learner's first weak prerequisite in 1-2 plain sentences; ask zero or one optional single-part follow-up; capture only after teaching when warranted. Begin your entire user-facing response with the 🌱 seedling emoji."""
+    return f"🌱 Teach Me review required. Read and follow `{skill_dir}/SKILL.md`."
 
 
 def handle_stop(payload: dict[str, Any]) -> int:
