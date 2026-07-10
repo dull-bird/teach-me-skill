@@ -280,8 +280,71 @@ def default_style(language: str = "auto") -> dict[str, Any]:
         "probe_required": False,
         "speaking_style": "friendly and direct",
         "teach_me_persona": "a patient tutor who explains simply and asks one short question",
+        "teacher_profile": "default",
+        "knowledge_focus": "balanced",
         "last_feedback_at": None,
     }
+
+
+TEACHER_PROFILES: dict[str, dict[str, str]] = {
+    "default": {
+        "speaking_style": "friendly and direct",
+        "teach_me_persona": "a patient tutor who explains simply and asks at most one short optional question",
+        "knowledge_focus": "balanced",
+        "socratic_level": "gentle",
+        "code_example_level": "high",
+        "first_principles_level": "high",
+        "verbosity": "compact",
+    },
+    "coach": {
+        "speaking_style": "concise, pragmatic, and example-driven",
+        "teach_me_persona": "a hands-on engineering coach who prioritizes implementation details and concrete tradeoffs",
+        "knowledge_focus": "implementation",
+        "socratic_level": "gentle",
+        "code_example_level": "high",
+        "first_principles_level": "medium",
+        "verbosity": "compact",
+    },
+    "theorist": {
+        "speaking_style": "clear, structured, and first-principles oriented",
+        "teach_me_persona": "a conceptual mentor who connects the task to general mechanisms and transferable models",
+        "knowledge_focus": "general",
+        "socratic_level": "gentle",
+        "code_example_level": "medium",
+        "first_principles_level": "high",
+        "verbosity": "compact",
+    },
+    "socratic": {
+        "speaking_style": "curious, patient, and question-led",
+        "teach_me_persona": "a Socratic tutor who gives a small hint, asks one focused question, and never interrogates",
+        "knowledge_focus": "balanced",
+        "socratic_level": "active",
+        "code_example_level": "medium",
+        "first_principles_level": "high",
+        "verbosity": "compact",
+    },
+}
+
+
+def apply_teacher_preferences(
+    style: dict[str, Any],
+    teacher_profile: str | None = None,
+    knowledge_focus: str | None = None,
+    custom_teacher_style: str | None = None,
+) -> dict[str, Any]:
+    updated = dict(style)
+    if teacher_profile and teacher_profile != "custom":
+        updated.update(TEACHER_PROFILES[teacher_profile])
+        updated["teacher_profile"] = teacher_profile
+    if custom_teacher_style:
+        updated["teacher_profile"] = "custom"
+        updated["speaking_style"] = custom_teacher_style
+        updated["teach_me_persona"] = custom_teacher_style
+    elif teacher_profile == "custom":
+        updated["teacher_profile"] = "custom"
+    if knowledge_focus:
+        updated["knowledge_focus"] = knowledge_focus
+    return updated
 
 
 def state_path(config: dict[str, Any]) -> Path:
@@ -1499,7 +1562,13 @@ def cmd_configure(args: argparse.Namespace) -> int:
     if sync.get("enabled"):
         ensure_git_repo(user_cfg)
 
-    style = read_style(user_cfg)
+    teacher_profile = args.teacher_style or ("default" if not user_cfg.get("initialized") else None)
+    style = apply_teacher_preferences(
+        read_style(user_cfg),
+        teacher_profile,
+        args.knowledge_focus,
+        args.custom_teacher_style,
+    )
     style["language"] = user_cfg.get("language", "auto")
     write_json(style_path(user_cfg), style)
     rewrite_knowledge_tree(user_cfg, read_state(user_cfg))
@@ -1543,6 +1612,8 @@ def format_context(config: dict[str, Any], brief: bool = True) -> str:
             [
                 "- first-use rule: before writing learning notes, ask the user to confirm the vault path, note language, and whether to enable Git sync.",
                 "- default choices: vault ~/.teach_me_skill/vault, language auto based on conversation, Git sync off unless the user provides a remote.",
+                "- teacher choices: default balanced tutor; coach for implementation details; theorist for general principles; socratic for one focused question; or a free-text custom style.",
+                "- knowledge focus choices: balanced, implementation, or general. Choosing defaults still completes initialization.",
                 "- Git sync question: ask whether the user has a remote repository for cross-device vault sync; if yes, run configure with --git-remote <url> --auto-sync.",
             ]
         )
@@ -1577,6 +1648,8 @@ def format_context(config: dict[str, Any], brief: bool = True) -> str:
             ),
             f"- speaking style: {style.get('speaking_style', 'friendly and direct')}",
             f"- teach me persona: {style.get('teach_me_persona', 'a patient tutor')}",
+            f"- teacher profile: {style.get('teacher_profile', 'default')}",
+            f"- knowledge focus: {style.get('knowledge_focus', 'balanced')}",
             "- feedback probes: format={fmt}, required={required}; ask mostly multiple-choice or true/false checks, occasional short-answer, and continue if the user skips.".format(
                 fmt=style.get("probe_format", "mostly_choice"),
                 required=str(bool(style.get("probe_required", False))).lower(),
@@ -1733,7 +1806,12 @@ def cmd_style(args: argparse.Namespace) -> int:
     user_cfg = resolve_user_config(top_config, args.user)
     if not user_cfg.get("initialized"):
         ensure_vault(user_cfg)
-    style = read_style(user_cfg)
+    style = apply_teacher_preferences(
+        read_style(user_cfg),
+        args.teacher_style,
+        args.knowledge_focus,
+        args.custom_teacher_style,
+    )
     updates = {
         "analogy_level": args.analogy,
         "socratic_level": args.socratic,
@@ -1744,6 +1822,7 @@ def cmd_style(args: argparse.Namespace) -> int:
         "probe_format": args.probe_format,
         "speaking_style": args.speaking_style,
         "teach_me_persona": args.teach_me_persona,
+        "knowledge_focus": args.knowledge_focus,
     }
     for key, value in updates.items():
         if value:
@@ -2306,6 +2385,9 @@ def build_parser() -> argparse.ArgumentParser:
     configure.add_argument("--name", help="Display name for the user")
     configure.add_argument("--github", help="GitHub username for the user")
     configure.add_argument("--switch", action="store_true", help="Switch to the configured user after setup")
+    configure.add_argument("--teacher-style", choices=["default", "coach", "theorist", "socratic", "custom"])
+    configure.add_argument("--knowledge-focus", choices=["balanced", "implementation", "general"])
+    configure.add_argument("--custom-teacher-style", help="Free-text teacher voice and behavior")
     configure.set_defaults(func=cmd_configure)
 
     switch_user = sub.add_parser("switch-user", help="Switch the active user")
@@ -2337,6 +2419,9 @@ def build_parser() -> argparse.ArgumentParser:
     style.add_argument("--language")
     style.add_argument("--speaking-style", help="Free-text speaking style, e.g. 'friendly coach'")
     style.add_argument("--teach-me-persona", help="Persona description, e.g. 'a patient tutor'")
+    style.add_argument("--teacher-style", choices=["default", "coach", "theorist", "socratic", "custom"])
+    style.add_argument("--knowledge-focus", choices=["balanced", "implementation", "general"])
+    style.add_argument("--custom-teacher-style", help="Free-text teacher voice and behavior")
     style.set_defaults(func=cmd_style)
 
     log_event = sub.add_parser("log-event", help="Append a JSON event from stdin")

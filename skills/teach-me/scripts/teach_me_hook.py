@@ -50,6 +50,22 @@ MANUAL_TRIGGERS = [
     "苏格拉底",
 ]
 
+OPT_OUT_TRIGGERS = [
+    "don't teach", "do not teach", "no teaching", "skip teaching",
+    "don't explain", "do not explain", "no explanation",
+    "don't ask", "do not ask", "no questions",
+    "不要教学", "不用教学", "不需要教学", "跳过教学",
+    "不要解释", "不用解释", "不需要解释",
+    "不要总结知识", "不用总结知识", "不需要总结知识",
+    "不要问我", "不用问我", "不需要问我",
+]
+
+SETUP_CONFIRMATION_TRIGGERS = [
+    "i choose", "use defaults", "default setup", "teacher style", "knowledge focus",
+    "我选择", "我选", "使用默认", "默认设置", "教师风格", "知识重点",
+    "实战教练", "原理导师", "苏格拉底导师",
+]
+
 WORK_SIGNALS = [
     # coding / software
     "code", "coding", "debug", "bug", "frontend", "backend", "refactor", "review",
@@ -123,6 +139,14 @@ def get_prompt(payload: dict[str, Any]) -> str:
         value = payload.get(key)
         if isinstance(value, str):
             return value
+        if isinstance(value, list):
+            parts = [
+                str(item.get("text") or item.get("content") or "")
+                for item in value
+                if isinstance(item, dict) and (item.get("text") or item.get("content"))
+            ]
+            if parts:
+                return "\n".join(parts)
     messages = payload.get("messages")
     if isinstance(messages, list) and messages:
         last = messages[-1]
@@ -140,6 +164,14 @@ def includes_any(text: str, needles: list[str]) -> bool:
 
 def is_manual(prompt: str) -> bool:
     return includes_any(prompt, MANUAL_TRIGGERS)
+
+
+def is_opt_out(prompt: str) -> bool:
+    return includes_any(prompt, OPT_OUT_TRIGGERS)
+
+
+def is_setup_confirmation(prompt: str) -> bool:
+    return includes_any(prompt, SETUP_CONFIRMATION_TRIGGERS)
 
 
 def is_work_like(prompt: str) -> bool:
@@ -409,7 +441,9 @@ def append_event(config: dict[str, Any], data: dict[str, Any]) -> None:
     append_jsonl(events_path(config), {"timestamp": now_iso(), **data})
 
 
-def maybe_log_prompt_event(payload: dict[str, Any], prompt: str, manual: bool, work_like: bool) -> None:
+def maybe_log_prompt_event(
+    payload: dict[str, Any], prompt: str, manual: bool, work_like: bool, opt_out: bool = False
+) -> None:
     user_cfg = ensure_user(payload)
     append_event(
         user_cfg,
@@ -418,10 +452,11 @@ def maybe_log_prompt_event(payload: dict[str, Any], prompt: str, manual: bool, w
             **event_context(payload),
             "manual": manual,
             "work_like": work_like,
+            "opt_out": opt_out,
             "user_id": user_cfg.get("_user_id", "default"),
             "prompt": prompt[:500],
-            "score": 4 if manual else (2 if work_like else 0),
-            "signal_tags": ["manual"] if manual else (["work_like"] if work_like else []),
+            "score": 0 if opt_out else (4 if manual else (2 if work_like else 0)),
+            "signal_tags": ["opt_out"] if opt_out else (["manual"] if manual else (["work_like"] if work_like else [])),
         },
     )
 
@@ -436,6 +471,9 @@ def maybe_log_tool_event(payload: dict[str, Any]) -> None:
     file_path = extract_file_path(input_value)
     response_text = compact_json(response_value)
     score, tags = classify_tool(tool, command, file_path, response_text)
+    activity = f"{command}\n{file_path}".replace("\\", "/").lower()
+    if "/skills/teach-me/skill.md" in activity or "/skills/teach-me/scripts/teach_me.py" in activity:
+        score, tags = 0, []
     phase = {
         "PreToolUse": "pre",
         "PostToolUse": "post",
@@ -519,11 +557,14 @@ def modified_files(events: list[dict[str, Any]], payload: dict[str, Any]) -> lis
 
 def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
     scoped = [event for event in events if same_scope(event, payload)]
+    opted_out = any(event.get("type") == "prompt" and event.get("opt_out") for event in scoped)
     tags: set[str] = set()
     reasons: list[str] = []
     score = 0
 
     for event in scoped:
+        if event.get("type") == "tool" and event.get("phase") == "pre":
+            continue
         event_score = int(event.get("score") or 0)
         score += event_score
         for tag in event.get("signal_tags", []) or []:
@@ -549,7 +590,7 @@ def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[st
     elif {"modification", "verification"} <= tags or {"modification", "build"} <= tags:
         threshold = 6
     else:
-        threshold = 6
+        threshold = 7
 
     return {
         "score": score,
@@ -557,27 +598,32 @@ def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[st
         "tags": sorted(tags),
         "reasons": reasons[-6:],
         "modified_files": modified_files(events, payload),
-        "should_block": score >= threshold and bool(tags),
+        "should_block": not opted_out and score >= threshold and bool(tags),
     }
 
 
 def build_additional_context(prompt: str, manual: bool, user_cfg: dict[str, Any]) -> str:
-    context = format_context(user_cfg, brief=True)
     skill_dir = Path(__file__).resolve().parent.parent
+    user_id = user_cfg.get("_user_id", "default")
+    user_flag = f" --user {user_id}" if user_id != "default" else ""
     lines = [
-        context,
-        f"- installed skill dir: {skill_dir}",
-        "- use skill for any tool-based work: coding, writing, design, data analysis, configuration, research, etc.",
-        "- valuable captures include concepts, algorithmic ideas, workflows, hidden mechanisms, project maps; not just tool names.",
-        "- when teaching a new domain, first map prerequisite concepts and probe the user's baseline before explaining mid-level mechanisms.",
-        f"- run `python3 {skill_dir}/scripts/teach_me.py context --full` when you need the detailed learner portrait (weak concepts, knowledge-tree nodes, recent captures).",
-        "- after teaching, ask one small optional feedback probe; prefer multiple-choice or true/false, and continue if user skips.",
-        "- update knowledge tree with `teach_me.py assess --user <id>` when you learn what the user does or does not understand.",
-        "- final response should teach something: explain the idea, ask a follow-up, then mention captured notes.",
+        "Teach Me is active for this tool-based task; do not interrupt implementation.",
+        f"At a meaningful phase boundary, use `$teach-me` and follow `{skill_dir}/SKILL.md`.",
+        f"Load dynamic learner context only then: `python3 {skill_dir}/scripts/teach_me.py context --full{user_flag}`.",
     ]
+    if not user_cfg.get("initialized"):
+        if is_setup_confirmation(prompt):
+            lines.append("The user explicitly chose first-use settings in this message; run the matching `teach_me.py configure` command now, then treat setup as complete.")
+        else:
+            lines.append("Teach Me is not initialized. Complete the user's task, but do not run `configure`, `capture`, or choose defaults for them; at the phase boundary only present the First Use options and wait for an explicit reply.")
     if manual:
-        lines.append(
-            "- manual teaching trigger detected: teach now, start with a quick baseline scan; run context --full to see weak prerequisites before teaching."
+        lines.append("The user explicitly requested teaching, so run the workflow now.")
+    if os.environ.get("TEACH_ME_CONTEXT_MODE", "short").lower() == "expanded":
+        lines.extend(
+            [
+                "Expanded A/B workflow: inspect the learner portrait and prerequisite map before teaching; teach one core mechanism by default; avoid tool trivia; ask zero or one single-part optional question; capture only after teaching.",
+                format_context(user_cfg, brief=False),
+            ]
         )
     return "\n".join(lines)
 
@@ -600,18 +646,11 @@ def build_stop_review_prompt(config: dict[str, Any], assessment: dict[str, Any])
     user_id = config.get("_user_id", "default")
     user_flag = f" --user {user_id}" if user_id != "default" else ""
     if not config.get("initialized"):
-        return f"""Teach Me detected a learning-worthy phase at turn end.
+        return f"""Teach Me review requires first-use confirmation.
+Follow `{skill_dir}/SKILL.md`. STOP: defaults are not consent. In this turn, do not run `configure`, `capture`, or write any note. Your entire user-facing response must only present one concise setup choice and wait for an explicit reply: (1) default balanced tutor, (2) implementation coach, (3) general-principles mentor, (4) Socratic tutor with one focused question, or (5) a free-text custom style. Also mention default vault/language and optional Git sync. Only after the user's next message explicitly chooses settings may you run `python3 {skill_dir}/scripts/teach_me.py configure ...{user_flag}` and treat setup as complete.
 
-Before writing any learning notes, ask the user to confirm:
-- vault path, default `~/.teach_me_skill/vault`
-- note language, default `auto`
-- whether to enable Git sync; default off unless the user provides a remote
-
-Do not write notes yet. Keep the confirmation concise. Prefix the user-visible
-message with `🌱`. Detection evidence:
+Detection evidence:
 {evidence}
-
-Teach Me skill dir: {skill_dir}
 """
 
     modified = assessment.get("modified_files", [])
@@ -620,23 +659,15 @@ Teach Me skill dir: {skill_dir}
         modified_hint = "\nFiles created or edited in this phase:\n" + "\n".join(f"- {p}" for p in modified)
         modified_hint += "\nRead these files (or the conversation transcript) to understand the substance before teaching."
 
-    return f"""Teach Me detected a learning-worthy phase at turn end.
-
-Before finishing, do a short Teach Me review that actually teaches the user something:
-1. First, run `python3 {skill_dir}/scripts/teach_me.py context --full{user_flag}` to load the user's learning portrait: weak concepts, knowledge-tree weak nodes, style preferences, and recent captures. Use this to avoid repeating what they already know and to start from their first weak prerequisite.
-2. Then, look at the actual content the user produced or discussed in this phase (the note, code, design, analysis, writing, etc.). Read any modified files or the transcript if needed.
-3. Identify 1-3 valuable ideas, concepts, or insights from that substance, calibrated to what the user still needs to learn.
-4. Only if the phase had no substantive content, reflect on a brief process or tool lesson. If the tool lesson is trivial (e.g. "a CLI was not installed"), skip it entirely.
-5. In 1-2 plain sentences, explain the core idea to the user as if teaching a beginner. Connect it to something they already know if possible.
-6. Ask one short, concrete follow-up: a Socratic question, a true/false check, or "要不要我展开讲讲？". Do not just announce that you wrote a note.
-7. If the user wants to go deeper, explain missing prerequisites first (e.g. "什么是 Canvas", "什么是状态驱动动画"). Never make the user dig through the vault to learn.
-8. Only after teaching, if a durable note is warranted, run `python3 {skill_dir}/scripts/teach_me.py capture{user_flag}` or `assess{user_flag}`.
-9. If nothing is worth capturing after reflection, say so briefly and finish normally.
-10. Prefix the user-visible teaching message with `🌱`.
+    prompt = f"""Teach Me review required at this phase boundary.
+Follow `{skill_dir}/SKILL.md` and first run `python3 {skill_dir}/scripts/teach_me.py context --full{user_flag}`. Review the actual work and teach exactly one core mechanism by default from the learner's first weak prerequisite in 1-2 plain sentences; add a second only when essential. Never present tool steps as knowledge. Ask zero or one optional, single-part follow-up; skip it when the user requested brevity. Capture or assess only after teaching when warranted.
 
 Detection evidence:
 {evidence}{modified_hint}
 """
+    if os.environ.get("TEACH_ME_CONTEXT_MODE", "short").lower() == "expanded":
+        prompt += "\nExpanded A/B instructions: distinguish mechanisms from commands; map prerequisites; connect to prior knowledge; honor teacher profile and knowledge focus; teach before capture; skip purely mechanical work; never ask a multi-part question.\n"
+    return prompt
 
 
 def build_stop_reason(config: dict[str, Any], assessment: dict[str, Any]) -> str:
@@ -693,46 +724,21 @@ def handle_stop(payload: dict[str, Any]) -> int:
 
 def handle_prompt(payload: dict[str, Any]) -> int:
     prompt = get_prompt(payload)
-    manual = is_manual(prompt)
+    opt_out = is_opt_out(prompt)
+    manual = not opt_out and is_manual(prompt)
     work_like = is_work_like(prompt)
     user_cfg = ensure_user(payload)
-    maybe_log_prompt_event(payload, prompt, manual, work_like)
-    if not manual and not work_like:
+    setup_confirmation = not user_cfg.get("initialized") and is_setup_confirmation(prompt)
+    maybe_log_prompt_event(payload, prompt, manual, work_like, opt_out)
+    if opt_out:
+        return 0
+    if not manual and not work_like and not setup_confirmation:
         return 0
 
     context = build_additional_context(prompt, manual, user_cfg)
-    user_id = user_cfg.get("_user_id", "default")
-    is_codex = bool(payload.get("transcript_path") is not None or "codex" in cwd(payload).lower())
 
-    if manual:
-        # Direct teaching trigger: block the turn and ask the agent to teach now.
-        skill_dir = Path(__file__).resolve().parent.parent
-        user_flag = f" --user {user_id}" if user_id != "default" else ""
-        reason = f"""🌱 User explicitly asked for teaching/review.
-
-{context}
-
-Do a short Teach Me session right now:
-1. First, run `python3 {skill_dir}/scripts/teach_me.py context --full{user_flag}` to load the user's learning portrait: weak concepts, knowledge-tree weak nodes, style preferences, and recent captures.
-2. Use that portrait to decide what to teach: avoid repeating mastered concepts, start from weak prerequisites, and match the user's speaking style.
-3. Briefly explain the core idea in plain language.
-4. Ask one short follow-up question (Socratic, true/false, or "要不要我展开讲讲？").
-5. If the user wants deeper explanation, cover missing prerequisites first.
-6. Capture or assess only if the conversation reveals new understanding worth saving.
-"""
-        if is_codex:
-            output = {"decision": "block", "reason": reason, "systemMessage": "🌱"}
-        else:
-            output = {
-                "hookSpecificOutput": {
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": reason,
-                }
-            }
-        print(json.dumps(output, ensure_ascii=False))
-        return 0
-
-    # Work-like prompt: just inject context for later Stop-hook review.
+    # Prompt hooks only inject context. Blocking here aborts the user's task in
+    # Codex and Kimi instead of giving the agent a chance to teach.
     output = {
         "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
@@ -745,6 +751,12 @@ Do a short Teach Me session right now:
 
 def main() -> int:
     payload = load_payload()
+    debug_payload_path = os.environ.get("TEACH_ME_DEBUG_PAYLOAD_PATH")
+    if debug_payload_path:
+        debug_path = Path(debug_payload_path).expanduser()
+        debug_path.parent.mkdir(parents=True, exist_ok=True)
+        with debug_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
     event = event_name(payload)
 
     if event in TOOL_EVENTS or tool_name(payload):

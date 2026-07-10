@@ -105,6 +105,17 @@ class CodexE2EHookTests(unittest.TestCase):
             before_block_count,
             "Stop hook 没有输出 block 决策",
         )
+        new_stop_events = [
+            e
+            for e in after_events
+            if e not in before_events and e.get("type") == "stop_decision" and e.get("decision") == "block"
+        ]
+        self.assertTrue(new_stop_events, "没有新增 block 型 Stop 事件")
+        review_prompt = new_stop_events[-1].get("review_prompt", "")
+        self.assertIn("SKILL.md", review_prompt)
+        self.assertIn("context --full", review_prompt)
+        self.assertNotIn("Before finishing, do a short Teach Me review", review_prompt)
+        self.assertLess(len(review_prompt), 1600)
 
         # 验证新增事件包含 PreToolUse、PostToolUse、test 标签
         new_tool_events = [

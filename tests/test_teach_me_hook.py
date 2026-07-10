@@ -71,7 +71,7 @@ def load_module(path: Path):
 
 
 class TeachMeHookTests(unittest.TestCase):
-    def test_manual_prompt_blocks_to_teach(self) -> None:
+    def test_manual_prompt_injects_context_without_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_hook(
                 {
@@ -86,10 +86,12 @@ class TeachMeHookTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         data = parse_stdout(result)
-        self.assertEqual(data.get("decision"), "block")
-        reason = data.get("reason", "")
-        self.assertIn("context", reason.lower())
-        self.assertIn("knowledge tree", reason.lower())
+        self.assertNotIn("decision", data)
+        context = data["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("context", context.lower())
+        self.assertIn("SKILL.md", context)
+        self.assertIn("requested teaching", context)
+        self.assertLess(len(context), 700)
 
     def test_non_learning_prompt_stays_silent_without_tool_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -105,6 +107,38 @@ class TeachMeHookTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "")
+
+    def test_uninitialized_work_prompt_forbids_automatic_setup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_hook(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "prompt": "请修复这个 Python 测试。",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                Path(tmp),
+            )
+        context = parse_stdout(result)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("do not run `configure`", context)
+        self.assertIn("wait for an explicit reply", context)
+
+    def test_uninitialized_explicit_setup_choice_allows_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_hook(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "prompt": "我选择 2：实战教练，知识重点 implementation。",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                Path(tmp),
+            )
+        context = parse_stdout(result)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("explicitly chose first-use settings", context)
+        self.assertIn("run the matching", context)
 
     def test_pre_and_post_tool_events_are_logged_even_before_initialization(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -189,6 +223,10 @@ class TeachMeHookTests(unittest.TestCase):
             self.assertIn("Detection evidence", reason)
             self.assertIn("confirm", reason.lower())
             self.assertIn("vault", reason.lower())
+            self.assertIn("default balanced tutor", reason)
+            self.assertIn("implementation coach", reason)
+            self.assertIn("SKILL.md", reason)
+            self.assertLess(len(reason), 1200)
             events = read_events(home)
             stop_decision = events[-1]
             self.assertEqual(stop_decision["type"], "stop_decision")
@@ -234,16 +272,16 @@ class TeachMeHookTests(unittest.TestCase):
             self.assertNotIn("🌱 Teach Me:", reason)
             self.assertIn("Detection evidence", reason)
             self.assertIn("capture", reason.lower())
-            self.assertIn("1-3", reason)
+            self.assertIn("one core mechanism", reason)
             events = read_events(home)
             stop_decision = events[-1]
             self.assertEqual(stop_decision["type"], "stop_decision")
             self.assertEqual(stop_decision["decision"], "block")
             self.assertIn("capture", stop_decision["review_prompt"].lower())
-            self.assertIn("1-3", stop_decision["review_prompt"])
-            self.assertIn("explain", stop_decision["review_prompt"].lower())
+            self.assertIn("one core mechanism", stop_decision["review_prompt"])
+            self.assertIn("teach", stop_decision["review_prompt"].lower())
             self.assertIn("follow-up", stop_decision["review_prompt"].lower())
-            self.assertIn("prerequisites", stop_decision["review_prompt"].lower())
+            self.assertIn("prerequisite", stop_decision["review_prompt"].lower())
 
     def test_codex_stop_uses_decision_block_format(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -278,7 +316,7 @@ class TeachMeHookTests(unittest.TestCase):
         data = parse_stdout(result)
         self.assertEqual(data["decision"], "block")
         self.assertIn("🌱", data["reason"])
-        self.assertIn("Teach Me detected", data["reason"])
+        self.assertIn("Teach Me review", data["reason"])
         self.assertNotIn("hookSpecificOutput", data)
 
     def test_claude_code_stop_uses_decision_block_format(self) -> None:
@@ -323,8 +361,7 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertIn("🌱", data["reason"])
         self.assertNotIn("hookSpecificOutput", data)
 
-    def test_claude_code_manual_prompt_uses_decision_block_format(self) -> None:
-        """Same as above but for the UserPromptSubmit manual-teach branch."""
+    def test_claude_code_manual_prompt_injects_context_without_blocking(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_hook(
                 {
@@ -341,8 +378,91 @@ class TeachMeHookTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         data = parse_stdout(result)
-        self.assertEqual(data.get("decision"), "block")
-        self.assertNotIn("hookSpecificOutput", data)
+        self.assertNotIn("decision", data)
+        self.assertIn("requested teaching", data["hookSpecificOutput"]["additionalContext"])
+
+    def test_explicit_opt_out_stays_silent_and_suppresses_stop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            write_initialized_config(home)
+            prompt_result = run_hook(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "prompt": [
+                        {"type": "text", "text": "修改 VERSION。不要教学，不要问我问题。"}
+                    ],
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "WriteFile",
+                    "tool_input": {"file_path": "/repo/VERSION", "content": "1.0.1"},
+                    "tool_response": {"ok": True},
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            stop_result = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "修改完成。",
+                },
+                home,
+            )
+
+        self.assertEqual(prompt_result.stdout, "")
+        self.assertEqual(stop_result.stdout, "")
+
+    def test_internal_teach_me_reads_do_not_trigger_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            write_initialized_config(home)
+            run_hook(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "prompt": "Run a command and report whether it exists.",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "sed -n '1,200p' /home/me/.codex/skills/teach-me/SKILL.md"},
+                    "tool_response": {"stdout": "skill text", "stderr": ""},
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            result = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "Command unavailable.",
+                },
+                home,
+            )
+
+        self.assertEqual(result.stdout, "")
 
     def test_stop_stays_silent_without_meaningful_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -663,6 +783,66 @@ class InstallerTests(unittest.TestCase):
             self.assertIn("Files created or edited", reason)
             self.assertIn("/repo/essay.md", reason)
             self.assertIn("Read these files", reason)
+
+    def test_work_prompt_injects_compact_progressive_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            write_initialized_config(home)
+            result = run_hook(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "prompt": "Please debug this Python service and update its tests.",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        context = parse_stdout(result)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("$teach-me", context)
+        self.assertIn("SKILL.md", context)
+        self.assertIn("context --full", context)
+        self.assertNotIn("Recent captures", context)
+        self.assertNotIn("knowledge-tree weak nodes", context)
+        self.assertLess(len(context), 700)
+
+    def test_initialized_stop_prompt_is_compact_pointer(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            write_initialized_config(home)
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "WriteFile",
+                    "tool_input": {"file_path": "/repo/demo.py", "content": "print('ok')"},
+                    "tool_response": {"ok": True},
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            result = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "Done.",
+                },
+                home,
+            )
+
+        reason = parse_stdout(result)["hookSpecificOutput"]["permissionDecisionReason"]
+        self.assertIn("Teach Me review required", reason)
+        self.assertIn("SKILL.md", reason)
+        self.assertIn("context --full", reason)
+        self.assertNotIn("Before finishing, do a short Teach Me review", reason)
+        self.assertNotIn("1. First, run", reason)
+        self.assertLess(len(reason), 1200)
 
 
 if __name__ == "__main__":

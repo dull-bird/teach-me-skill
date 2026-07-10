@@ -12,6 +12,11 @@ Do not turn every action into a lesson. Work normally during implementation, the
 at a natural phase boundary decide whether the work produced knowledge worth
 capturing.
 
+Hook messages use progressive disclosure: inject only a compact pointer to this
+file, then load the learner's dynamic portrait with `teach_me.py context --full`
+when a Teach Me workflow actually runs. Do not duplicate this workflow in hook
+output.
+
 Teach Me must behave like a tutor with a growing learner model, not only a
 recap writer. It should draw a learner portrait over time: what the user knows,
 where they are fuzzy, how they like to be taught, and what they have struggled
@@ -27,9 +32,10 @@ If no style is set, infer a reasonable default from the conversation tone.
 Use the local runtime in `scripts/teach_me.py` for configuration, Obsidian note
 creation, mastery state updates, and event logging. Hooks may inject a compact
 Teach Me context and may request one short Stop-hook review after
-learning-worthy tool work. The Stop-hook review must teach the user something:
-explain the core idea in 1-2 sentences, ask a short follow-up, and only then
-capture notes. If hooks are not installed and the task involves real tool work,
+learning-worthy tool work. The Stop-hook review must teach exactly one core
+mechanism by default in 1-2 sentences, ask zero or one single-part optional
+question, and only then capture notes. Never turn tool steps into a lesson. If
+hooks are not installed and the task involves real tool work,
 run:
 
 ```bash
@@ -43,17 +49,33 @@ shown in hook context instead.
 
 If Teach Me is not initialized, ask the user once before writing learning notes:
 
+Defaults are not consent. Never choose a profile, run `configure`, call
+`capture`, or write a note in the same turn that first presents these options.
+Wait for an explicit user reply. A reply such as “use defaults” is explicit
+consent and should then complete setup.
+
 - Confirm the default vault path: `~/.teach_me_skill/vault`
 - Confirm note language: `auto` means infer from the conversation language and
   keep technical terms in their common English form
 - Ask whether they want Git sync for cross-device learning state. Default is
   off. If they already have a remote repository, ask for the URL and enable
   auto-sync. If they do not have one or are busy, skip it and continue.
+- Ask them to choose one teacher style, with concrete examples:
+  - `default`: balanced, friendly, concise, one optional question
+  - `coach`: implementation details, code examples, concrete tradeoffs
+  - `theorist`: general principles, mechanisms, transferable mental models
+  - `socratic`: one focused question at a time, never an interrogation
+  - `custom`: the user's own free-text teacher description
+- Ask whether the knowledge focus should be `balanced`, `implementation`, or
+  `general`. Choosing the defaults is valid and completes setup.
 
 After the user confirms, run:
 
 ```bash
-python3 <teach-me-skill-dir>/scripts/teach_me.py configure --language auto
+python3 <teach-me-skill-dir>/scripts/teach_me.py configure \
+  --language auto \
+  --teacher-style default \
+  --knowledge-focus balanced
 ```
 
 Use `--vault <path>` if the user chooses a different vault path. Users can also say these naturally:
@@ -259,8 +281,9 @@ Default style:
 - Tie the idea to the current project or task.
 - Use a few concrete examples when useful.
 - Use analogies at a medium level, then adapt based on feedback.
-- Ask 1-2 gentle, optional probes after important captures, mostly as
-  multiple-choice or true/false questions.
+- Ask at most one gentle, optional, single-part probe after an important
+  capture, mostly as multiple-choice or true/false. Skip it when the answer is
+  already clear or the user requested brevity.
 
 Users can shape the AI's teaching personality by setting a free-text speaking
 style and teaching persona:
@@ -269,6 +292,17 @@ style and teaching persona:
 python3 <teach-me-skill-dir>/scripts/teach_me.py style \
   --speaking-style "friendly coach" \
   --teach-me-persona "a curious peer who explains simply and asks one short question"
+```
+
+They can also switch profiles or knowledge depth directly:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py style \
+  --teacher-style coach \
+  --knowledge-focus implementation
+python3 <teach-me-skill-dir>/scripts/teach_me.py style \
+  --teacher-style custom \
+  --custom-teacher-style "像严谨但不啰嗦的资深工程师，先给结论再讲原因"
 ```
 
 Use these to shape how you talk to the user: formal or casual, concise or
