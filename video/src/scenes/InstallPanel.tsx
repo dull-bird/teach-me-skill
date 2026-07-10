@@ -2,7 +2,6 @@ import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { theme } from "../theme";
 import { Sparkle, SoftBlobBackground } from "../components/Decor";
-import { CaptionBar } from "../components/CaptionBar";
 
 const LINES = [
   "git clone https://github.com/dull-bird/teach-me-skill.git",
@@ -76,7 +75,6 @@ export const InstallPanel: React.FC<{ text: string }> = ({ text }) => {
         </div>
       </AbsoluteFill>
 
-      <CaptionBar text={text} />
     </AbsoluteFill>
   );
 };

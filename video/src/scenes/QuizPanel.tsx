@@ -2,7 +2,6 @@ import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { theme } from "../theme";
 import { Sparkle, SoftBlobBackground } from "../components/Decor";
-import { CaptionBar } from "../components/CaptionBar";
 
 const OPTIONS = [
   "rebase 会创建一个新的合并提交，merge 不会",
@@ -116,7 +115,6 @@ export const QuizPanel: React.FC<{ text: string }> = ({ text }) => {
         </div>
       </AbsoluteFill>
 
-      <CaptionBar text={text} />
     </AbsoluteFill>
   );
 };

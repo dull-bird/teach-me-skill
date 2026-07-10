@@ -1,19 +1,33 @@
 #!/bin/bash
-set -e
-cd "$(dirname "$0")"
-VOICE="Tingting"
-RATE=172
-node -e '
-const fs = require("fs");
-const segs = JSON.parse(fs.readFileSync("segments.json", "utf8"));
-segs.forEach((s,i) => console.log(i + "\t" + s.id));
-' > /tmp/seg_index.tsv
+set -euo pipefail
 
-while IFS=$'\t' read -r idx id; do
-  text=$(node -e "const s=require('./segments.json'); process.stdout.write(s[$idx].text)")
-  say -v "$VOICE" -r "$RATE" -o "segments/${id}.aiff" "$text"
-  afconvert -f WAVE -d LEI16 "segments/${id}.aiff" "segments/${id}.wav"
-  rm "segments/${id}.aiff"
-  dur=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "segments/${id}.wav")
-  echo "$id $dur"
-done < /tmp/seg_index.tsv
+cd "$(dirname "$0")"
+
+ENV_FILE="${HOME}/Documents/work/repos/diamond-sutra-skill/promo-video/.env"
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  source "$ENV_FILE"
+  set +a
+fi
+
+for variable in ALIYUN_AK_ID ALIYUN_AK_SECRET ALIYUN_APPKEY; do
+  if [[ -z "${!variable:-}" ]]; then
+    echo "ERROR: $variable is not set. Source Aliyun credentials first." >&2
+    exit 1
+  fi
+done
+
+voice="stanley"
+speech_rate="-60"
+scripts_dir="$(pwd)/scripts"
+
+rm -f segments/*.mp3
+
+while IFS=$'\t' read -r index id; do
+  text=$(node -e "const segments = require('./segments.json'); process.stdout.write(segments[$index].text)")
+  output="segments/${id}.mp3"
+  echo "[$id] $text"
+  python3 "${scripts_dir}/aliyun_tts.py" "$voice" "$text" "$output" "$speech_rate"
+done < <(node -e "const segments = require('./segments.json'); segments.forEach((segment, index) => console.log(index + '\\t' + segment.id))")
+
+node build_manifest.mjs

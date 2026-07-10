@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig, Video } from "remotion";
 import { theme } from "../theme";
 import { Cloud, Flower, Sparkle, SoftBlobBackground } from "../components/Decor";
 
@@ -33,7 +33,7 @@ export const Intro: React.FC = () => {
 
       <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         <div style={{ transform: `scale(${logoScale}) rotate(${logoRotate}deg)`, marginBottom: 18 }}>
-          <Img src={staticFile("seedling.webp")} style={{ width: 150, height: 150 }} />
+          <Video src={staticFile("seedling.webm")} style={{ width: 150, height: 150 }} />
         </div>
 
         <div

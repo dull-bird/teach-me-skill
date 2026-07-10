@@ -1,62 +1,57 @@
 [
-  {
-    "id": "hook",
-    "scene": "hook",
-    "text": "你有没有过这种感觉——功能是跟着 AI 撸完的，可三天之后，连自己当时为什么这么改都想不起来了。"
-  },
-  {
-    "id": "intro",
-    "scene": "intro",
-    "text": "这是 Teach Me，一套给 Claude Code、Codex、Kimi Code CLI、OpenClaw 用的 Agent Skill。它的目标很简单：做事，顺便学明白。"
-  },
-  {
-    "id": "why",
-    "scene": "why",
-    "text": "AI 帮你执行得越来越快，但真正值得留下的东西，往往没有人帮你整理过。这个 bug 为什么出现，这个设计为什么这样做，过几天就忘了。"
-  },
-  {
-    "id": "steps12",
-    "scene": "story",
-    "text": "Teach Me 会安安静静观察你这一轮到底做了什么——写代码、调配置、查资料，或者你直接说一句教我。你改了什么、测了什么、报了什么错，它都记在心里，但不会打扰你。"
-  },
-  {
-    "id": "steps34",
-    "scene": "workflow-steps",
-    "text": "等这段工作告一段落，它才会判断，这里面有没有真正值得留下的东西。信号弱就安静过去，信号强，才会停下来，用一两句话帮你把关键点讲清楚，写成笔记，更新知识树，安排下一次复习。"
-  },
-  {
-    "id": "skills",
-    "scene": "workflow-skills",
-    "text": "围绕这个循环，一共有四个小技能。Teach Me 负责核心的收集和复盘，Teach Me Check 帮你检查安装状态和学习画像，Teach Me Recap 用间隔重复帮你复习，Teach Me Exam 会直接从你的学习画像出题，考考你到底学扎实了没有。"
-  },
-  {
-    "id": "try",
-    "scene": "quiz",
-    "text": "它出的题长什么样？比如这道：你刚用 git rebase 压缩了几个提交，rebase 和 merge 的本质区别是什么？网页上可以直接点进去试一试，选完马上告诉你对不对，为什么。"
-  },
-  {
-    "id": "vault",
-    "scene": "vault",
-    "text": "所有笔记都是普通的 Markdown 文件，存在你自己电脑上的一个 vault 里。默认完全本地，不连任何云端，要不要开 Git 同步，由你自己决定。"
-  },
-  {
-    "id": "import",
-    "scene": "import",
-    "text": "如果你手头已经有笔记呢？一本 PDF、一篇网页，甚至一整个 Obsidian vault，都可以直接喂给它。Teach Me 会先读一遍，问你熟不熟，再决定是简单归档，还是直接考你。"
-  },
-  {
-    "id": "install",
-    "scene": "install",
-    "text": "安装很快。克隆仓库，跑一下 install 点 sh，再按你用的 agent 装上对应的 hook，几分钟就能跑起来。"
-  },
-  {
-    "id": "quote",
-    "scene": "quote",
-    "text": "《专注的真相》里有句话，我很喜欢：把持续建设自己的大脑，当作此生唯一重要的任务。"
-  },
-  {
-    "id": "outro",
-    "scene": "outro",
-    "text": "Teach Me，做事，顺便学明白。去 GitHub 搜索 teach-me-skill，免费开源，现在就试试看。"
-  }
+  {"id":"hook-ai","scene":"hook","text":"AI 可以很快把事情做完。","pauseAfterSec":0.58},
+  {"id":"hook-work","scene":"hook","text":"写代码，查资料，改配置。","pauseAfterSec":0.72},
+  {"id":"hook-question","scene":"hook","text":"但功能交付以后，你还能说清楚，自己为什么这样做吗？","pauseAfterSec":0.9},
+
+  {"id":"intro-reason","scene":"intro","text":"这就是我做 Teach Me 的原因。","pauseAfterSec":0.7},
+  {"id":"intro-aim","scene":"intro","text":"我不想让 AI 只替我干活。","pauseAfterSec":0.55},
+  {"id":"intro-learn","scene":"intro","text":"我希望它在工作发生的时候，也帮我看见值得学会的东西。","pauseAfterSec":0.9},
+
+  {"id":"why-black-box","scene":"why","text":"如果每一步都只剩一个黑箱子，我们也许交付了功能，却没有留下自己的判断。","pauseAfterSec":0.8},
+  {"id":"why-forget","scene":"why","text":"过几天，这个设计为什么成立，这个 bug 怎样定位，我们又说不清了。","pauseAfterSec":0.82},
+  {"id":"why-explore","scene":"why","text":"AI 当然可以帮我们走过陌生的路。","pauseAfterSec":0.5},
+  {"id":"why-blindspots","scene":"why","text":"我们有无知，也有盲点。它可以探索，解释，补位。","pauseAfterSec":0.72},
+  {"id":"why-identity","scene":"why","text":"问题不在于使用 AI。","pauseAfterSec":0.52},
+  {"id":"why-identity-2","scene":"why","text":"问题是，我们会不会把思考和创造的身份，也一起交了出去。","pauseAfterSec":0.95},
+  {"id":"why-practical","scene":"why","text":"尤其对刚上大学，或刚开始工作的人，亲手摸索的机会本来就更少。","pauseAfterSec":0.72},
+  {"id":"why-future","scene":"why","text":"换一个任务，换一份工作，甚至面对面试，只有会让 AI 做，仍然不够。","pauseAfterSec":0.72},
+  {"id":"why-need","scene":"why","text":"你还需要判断，表达，和复盘。","pauseAfterSec":0.9},
+
+  {"id":"story-not-recorder","scene":"story","text":"Teach Me 不是一个事无巨细的记录器。","pauseAfterSec":0.58},
+  {"id":"story-observe","scene":"story","text":"它会安静观察这一轮工作。写代码，调配置，查资料，或者你直接说一句教我。","pauseAfterSec":0.72},
+  {"id":"story-evidence","scene":"story","text":"你改了什么，测了什么，报了什么错，它会收集这些线索。","pauseAfterSec":0.65},
+  {"id":"story-no-interrupt","scene":"story","text":"但它不会打断你。","pauseAfterSec":0.92},
+
+  {"id":"workflow-boundary","scene":"workflow-steps","text":"等一段工作真正告一段落，它才回头看。","pauseAfterSec":0.55},
+  {"id":"workflow-signal","scene":"workflow-steps","text":"不是每一条痕迹，都值得变成笔记。","pauseAfterSec":0.58},
+  {"id":"workflow-judge","scene":"workflow-steps","text":"它要判断的是：这里有没有一个概念，值得你真正掌握。","pauseAfterSec":0.72},
+  {"id":"workflow-structure","scene":"workflow-steps","text":"如果有，它就用一两句话讲清关键点，把知识接进你的体系，而不是杂乱地堆在一起。","pauseAfterSec":0.8},
+  {"id":"workflow-review","scene":"workflow-steps","text":"然后更新知识树，安排复习，也补上技能拼图里真正缺的一块。","pauseAfterSec":0.9},
+
+  {"id":"skills-cycle","scene":"workflow-skills","text":"这个循环有四个小技能，一起把学习做成闭环。","pauseAfterSec":0.52},
+  {"id":"skills-core","scene":"workflow-skills","text":"Teach Me 收集证据，讲清关键点，完成复盘。","pauseAfterSec":0.48},
+  {"id":"skills-check","scene":"workflow-skills","text":"Teach Me Check 检查安装状态和学习画像。","pauseAfterSec":0.48},
+  {"id":"skills-recap","scene":"workflow-skills","text":"Teach Me Recap 用间隔重复，帮你把学过的东西留住。","pauseAfterSec":0.48},
+  {"id":"skills-exam","scene":"workflow-skills","text":"Teach Me Exam 从学习画像出题，看看你是否真的掌握。","pauseAfterSec":0.8},
+
+  {"id":"quiz-retrieve","scene":"quiz","text":"知识不是被记下来，就属于你。","pauseAfterSec":0.55},
+  {"id":"quiz-example","scene":"quiz","text":"能在需要的时候说出来，用出来，才算真的学会。","pauseAfterSec":0.62},
+  {"id":"quiz-try","scene":"quiz","text":"所以网页上可以直接试题。选完以后，马上知道答案，也知道为什么。","pauseAfterSec":0.82},
+
+  {"id":"vault-local","scene":"vault","text":"所有笔记都是普通的 Markdown 文件，放在你自己的 vault 里。","pauseAfterSec":0.52},
+  {"id":"vault-choice","scene":"vault","text":"默认完全本地。要不要用 Git 同步，由你自己决定。","pauseAfterSec":0.78},
+
+  {"id":"import-existing","scene":"import","text":"你也不必从零开始。","pauseAfterSec":0.45},
+  {"id":"import-sources","scene":"import","text":"一本 PDF，一篇网页，甚至整个 Obsidian vault，都可以带进来。","pauseAfterSec":0.52},
+  {"id":"import-baseline","scene":"import","text":"Teach Me 会先了解你的基础，再决定归档，解释，还是直接考你。","pauseAfterSec":0.82},
+
+  {"id":"install-fast","scene":"install","text":"开始也很快。克隆仓库，运行 install.sh，再给你正在使用的 agent 装上对应 hook。","pauseAfterSec":0.62},
+  {"id":"install-start","scene":"install","text":"几分钟，就能让每一次工作多留下一个成长的机会。","pauseAfterSec":0.85},
+
+  {"id":"quote-build","scene":"quote","text":"我很喜欢一句话：持续建设自己的大脑。","pauseAfterSec":0.58},
+  {"id":"quote-not-reject","scene":"quote","text":"这不是拒绝 AI。","pauseAfterSec":0.48},
+  {"id":"quote-use-ai","scene":"quote","text":"而是让 AI 解放我们的时候，我们也没有放弃成为一个会思考的人。","pauseAfterSec":0.92},
+
+  {"id":"outro-line","scene":"outro","text":"Teach Me。做事，顺便学明白。","pauseAfterSec":0.58},
+  {"id":"outro-github","scene":"outro","text":"去 GitHub 搜索 teach-me-skill。免费开源，现在就试试看。","pauseAfterSec":0}
 ]
