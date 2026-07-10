@@ -363,6 +363,36 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertIn("first-use confirmation", data["reason"])
         self.assertNotIn("hookSpecificOutput", data)
 
+    def test_codex_stop_with_weak_evidence_stays_silent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            run_hook(
+                {
+                    "hook_event_name": "PreToolUse",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "pwd"},
+                    "session_id": "s-codex-weak",
+                    "turn_id": "t-codex-weak",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            result = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s-codex-weak",
+                    "turn_id": "t-codex-weak",
+                    "cwd": "/repo",
+                    "transcript_path": "/tmp/codex-transcript.jsonl",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "当前目录是 /repo。",
+                },
+                home,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+
     def test_claude_code_stop_uses_decision_block_format(self) -> None:
         """Claude Code's Stop payload also carries transcript_path (it's a common
         field on every event, not Codex-specific), so it must hit the same

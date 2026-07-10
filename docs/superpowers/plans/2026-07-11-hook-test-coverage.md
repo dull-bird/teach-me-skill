@@ -96,7 +96,7 @@ def test_failed_tool_event_records_error_signal_for_scalar_payloads(self) -> Non
     self.assertEqual(len(events), 1)
     self.assertEqual(events[0]["phase"], "failure")
     self.assertIn("error_signal", events[0]["signal_tags"])
-    self.assertEqual(events[0]["command"], "")
+    self.assertEqual(events[0]["command"], "pytest tests/test_parser.py")
 ```
 
 - [ ] **Step 2: Run the focused module**
