@@ -93,6 +93,23 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertIn("requested teaching", context)
         self.assertLess(len(context), 700)
 
+    def test_messages_prompt_with_manual_trigger_injects_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_hook(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "messages": [{"content": "请解释 Hook 的事件边界。"}],
+                    "session_id": "s-messages",
+                    "turn_id": "t-messages",
+                },
+                Path(tmp),
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        context = parse_stdout(result)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("requested teaching", context)
+        self.assertIn("SKILL.md", context)
+
     def test_non_learning_prompt_stays_silent_without_tool_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_hook(
