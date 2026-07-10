@@ -48,6 +48,11 @@ ITEM_FOLDERS = {
 }
 PROFILE_FOLDER = "07_Learning_Profile"
 
+# Version of the vault machine-state schema (learning-state.json, generated
+# system notes, folder layout, note frontmatter). Bump this when the runtime
+# changes the shape of state or generated notes in a backwards-incompatible way.
+VAULT_SCHEMA_VERSION = 1
+
 
 def local_now() -> datetime:
     return datetime.now().astimezone()
@@ -253,6 +258,7 @@ def meta_dir(config: dict[str, Any]) -> Path:
 def default_state() -> dict[str, Any]:
     return {
         "version": 1,
+        "vault_schema_version": VAULT_SCHEMA_VERSION,
         "concepts": {},
         "knowledge_tree": {},
         "graph_edges": [],
@@ -288,6 +294,88 @@ def style_path(config: dict[str, Any]) -> Path:
 
 def events_path(config: dict[str, Any]) -> Path:
     return meta_dir(config) / "events.jsonl"
+
+
+class UnsupportedVaultSchemaError(Exception):
+    """Raised when a vault schema version has no registered code migrator."""
+
+    def __init__(self, version: int, message: str | None = None):
+        self.version = version
+        super().__init__(message or f"Vault schema version {version} is not supported by this runtime.")
+
+
+# Registered code migrations: key is the *source* version, value migrates to
+# source+1. Add a new function here whenever the runtime makes a
+# backwards-incompatible change that can be handled deterministically.
+VAULT_MIGRATIONS: dict[int, callable] = {}
+
+
+def current_vault_schema_version(state: dict[str, Any]) -> int:
+    """Return the schema version recorded in state, defaulting to 1."""
+    return int(state.get("vault_schema_version", state.get("version", 1)))
+
+
+def migrate_vault(
+    user_cfg: dict[str, Any],
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """
+    Migrate the user's vault machine-state to the current schema version.
+
+    Returns a dict describing what happened. Raises UnsupportedVaultSchemaError
+    if a required migrator is missing; in that case the caller (AI or user)
+    should follow the adapter prompt in references/vault-migrations.md.
+    """
+    state = read_raw_state(user_cfg)
+    target = VAULT_SCHEMA_VERSION
+    messages: list[str] = []
+
+    stored_version = state.get("vault_schema_version")
+    # If the key is missing entirely, this is a legacy vault whose implied
+    # schema version is 1. We still need to migrate so the key gets written.
+    from_version = int(stored_version) if stored_version is not None else 1
+    needs_key = stored_version is None
+
+    if from_version >= target and not needs_key:
+        return {
+            "vault": str(vault_path(user_cfg)),
+            "from_version": from_version,
+            "to_version": target,
+            "migrated": False,
+            "messages": [f"Vault is already at schema version {from_version}."],
+        }
+
+    for step in range(from_version, target):
+        migrator = VAULT_MIGRATIONS.get(step)
+        if migrator is None:
+            raise UnsupportedVaultSchemaError(
+                step,
+                f"No code migrator from vault schema {step} to {step + 1}. "
+                "Use the AI adapter prompt in references/vault-migrations.md.",
+            )
+        migrator(state, user_cfg)
+        messages.append(f"Migrated from schema {step} to {step + 1}.")
+
+    state["vault_schema_version"] = target
+    if needs_key:
+        messages.append("Added missing vault_schema_version key.")
+
+    if not dry_run:
+        write_json(state_path(user_cfg), state)
+        rewrite_index(user_cfg, state)
+        rewrite_graph(user_cfg, state)
+        rewrite_knowledge_tree(user_cfg, state)
+        messages.append("Rewrote generated system notes.")
+
+    return {
+        "vault": str(vault_path(user_cfg)),
+        "from_version": from_version,
+        "to_version": target,
+        "migrated": True,
+        "dry_run": dry_run,
+        "messages": messages,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -799,12 +887,18 @@ def review_days_for_mastery(mastery: str, requested: int | None = None) -> int:
 def read_state(config: dict[str, Any]) -> dict[str, Any]:
     state = read_json(state_path(config), default_state())
     state.setdefault("version", 1)
+    state.setdefault("vault_schema_version", 1)
     state.setdefault("concepts", {})
     state.setdefault("knowledge_tree", {})
     state.setdefault("graph_edges", [])
     state.setdefault("captures", [])
     state.setdefault("assessments", [])
     return state
+
+
+def read_raw_state(config: dict[str, Any]) -> dict[str, Any]:
+    """Return the stored learning-state without injecting defaults."""
+    return read_json(state_path(config), default_state())
 
 
 def read_style(config: dict[str, Any]) -> dict[str, Any]:
@@ -2128,6 +2222,72 @@ def build_import_prompt(
     )
 
 
+def cmd_migrate(args: argparse.Namespace) -> int:
+    """Migrate the vault machine-state to the current schema version."""
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    if not user_cfg.get("initialized"):
+        print(
+            "Teach Me is not initialized. Ask the user to confirm the vault path "
+            "and language, then run `teach_me.py configure`.",
+            file=sys.stderr,
+        )
+        return 2
+    ensure_vault(user_cfg)
+
+    try:
+        result = migrate_vault(user_cfg, dry_run=args.dry_run)
+    except UnsupportedVaultSchemaError as exc:
+        print(
+            json.dumps(
+                {
+                    "error": str(exc),
+                    "unsupported_version": exc.version,
+                    "hint": "Use the AI adapter prompt in references/vault-migrations.md.",
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
+        return 3
+
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_vault_version(args: argparse.Namespace) -> int:
+    """Report the current vault schema version and detect drift."""
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    vault = vault_path(user_cfg)
+    state: dict[str, Any] = {}
+    version: int | None = None
+    has_key = False
+    state_exists = state_path(user_cfg).exists()
+    if state_exists:
+        state = read_raw_state(user_cfg)
+        has_key = "vault_schema_version" in state
+        version = current_vault_schema_version(state)
+
+    output = {
+        "runtime_target_version": VAULT_SCHEMA_VERSION,
+        "vault_schema_version": version,
+        "has_vault_schema_version_key": has_key,
+        "vault": str(vault),
+        "state_path": str(state_path(user_cfg)),
+        "needs_migration": (
+            state_exists
+            and (
+                (version is not None and version < VAULT_SCHEMA_VERSION)
+                or not has_key
+            )
+        ),
+    }
+    print(json.dumps(output, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Teach Me runtime")
     parser.add_argument("--user", help="Target user ID (defaults to current_user)")
@@ -2200,6 +2360,13 @@ def build_parser() -> argparse.ArgumentParser:
     hooks_cmd.add_argument("--disable", action="store_true", help="Uninstall/disable hooks for all detected agents")
     hooks_cmd.add_argument("--json", action="store_true", help="Output structured JSON")
     hooks_cmd.set_defaults(func=cmd_hooks)
+
+    migrate_cmd = sub.add_parser("migrate", help="Migrate vault machine-state to the current schema version")
+    migrate_cmd.add_argument("--dry-run", action="store_true", help="Show what would change without writing files")
+    migrate_cmd.set_defaults(func=cmd_migrate)
+
+    version_cmd = sub.add_parser("vault-version", help="Report the current vault schema version")
+    version_cmd.set_defaults(func=cmd_vault_version)
     return parser
 
 

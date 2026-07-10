@@ -237,6 +237,16 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py hooks --disable
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py hooks --enable
 ```
 
+### Vault 格式迁移
+
+如果 Teach Me 更新了 vault 内部格式，运行迁移命令对齐旧数据：
+
+```bash
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py vault-version
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py migrate --dry-run
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py migrate
+```
+
 ### 可选 Git sync
 
 想跨设备接着学，给 vault 配一个 Git remote：
@@ -497,6 +507,16 @@ Temporarily disable or re-enable Teach Me hooks across all agents:
 ```bash
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py hooks --disable
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py hooks --enable
+```
+
+### Vault migration
+
+If Teach Me changes its internal vault format, run the migration command to align existing vaults:
+
+```bash
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py vault-version
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py migrate --dry-run
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py migrate
 ```
 
 ### Optional Git sync

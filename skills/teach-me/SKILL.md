@@ -487,6 +487,47 @@ python3 <teach-me-skill-dir>/scripts/teach_me.py hooks --enable
 
 The command tries each installed agent (Claude Code, Codex, Kimi, OpenClaw) and reports which succeeded. Failures are non-fatal.
 
+## Vault schema versioning and migration
+
+Teach Me vaults are versioned so that old vaults stay compatible when the
+runtime changes state shape, generated system notes, folder layout, or note
+frontmatter. The authoritative version is `vault_schema_version` in
+`.teach-me/learning-state.json`.
+
+When you open a vault and suspect format drift, run:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py vault-version
+python3 <teach-me-skill-dir>/scripts/teach_me.py migrate --dry-run
+```
+
+Natural-language triggers:
+
+- “Migrate my vault to the latest schema.”
+- “我的 vault 格式是不是过期了？”
+- “Align my old vault with the new Teach Me version.”
+
+If the runtime can migrate deterministically, it will rewrite state and
+generated system notes automatically. If it reports an unsupported schema
+version, follow the AI adapter prompt in
+`references/vault-migrations.md`:
+
+1. Read `references/vault-migrations.md` for the version history and breaking
+   changes.
+2. Read `.teach-me/learning-state.json`, `00_Index.md`,
+   `01_Knowledge_Graph.md`, and `07_Learning_Profile/Knowledge_Tree.md`.
+3. Read all notes in `02_Concepts/`, `03_Algorithmic_Ideas/`,
+   `04_Project_Maps/`, `05_Socratic_Questions/`, and `06_Reviews/`.
+4. Rewrite notes and state to match the new schema, preserving every concept,
+   mastery score, review date, project association, relationship, import record,
+   capture, and assessment.
+5. Set `vault_schema_version` to the target version.
+6. Rewrite the generated system notes from the updated state.
+7. Run `vault-version` to confirm.
+
+If anything is ambiguous or could cause data loss, stop and ask the user before
+overwriting.
+
 ## Mastery Updates
 
 Use these mastery levels:

@@ -150,6 +150,7 @@ generated `07_Learning_Profile/Knowledge_Tree.md`.
 ```json
 {
   "version": 1,
+  "vault_schema_version": 1,
   "concepts": {
     "dependency graph": {
       "type": "concept",
@@ -232,6 +233,14 @@ Import `status` values:
 - `unreadable` — the source could not be read at all.
 - `self_import` — the Obsidian vault path is inside the current Teach Me vault.
 - `no_content` — the Obsidian vault contained no importable Markdown after filtering.
+
+## Vault schema version
+
+`learning-state.json` carries a `vault_schema_version` field that describes the
+shape of the whole vault machine-state: state files, generated system notes,
+folder layout, and note frontmatter. When the runtime bumps this version, use
+`teach_me.py migrate` or, for complex changes, the AI adapter prompt in
+`references/vault-migrations.md`.
 
 ## Style Profile
 
