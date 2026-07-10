@@ -591,7 +591,7 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "")
 
-    def test_stop_only_blocks_once_per_turn(self) -> None:
+    def test_stop_can_block_again_after_new_work_in_same_turn(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             run_hook(
@@ -617,6 +617,18 @@ class TeachMeHookTests(unittest.TestCase):
                 },
                 home,
             )
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "Edit",
+                    "tool_input": {"file_path": "/repo/video/.gitignore"},
+                    "tool_response": {"ok": True},
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
             second = run_hook(
                 {
                     "hook_event_name": "Stop",
@@ -624,7 +636,7 @@ class TeachMeHookTests(unittest.TestCase):
                     "turn_id": "t1",
                     "cwd": "/repo",
                     "stop_hook_active": False,
-                    "last_assistant_message": "测试通过。",
+                    "last_assistant_message": "已取消跟踪音频文件。",
                 },
                 home,
             )
@@ -632,7 +644,7 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stderr)
         self.assertEqual(parse_stdout(first)["hookSpecificOutput"]["permissionDecision"], "deny")
         self.assertEqual(second.returncode, 0, second.stderr)
-        self.assertEqual(second.stdout, "")
+        self.assertEqual(parse_stdout(second)["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_stop_ignores_other_turn_evidence_when_turn_id_is_present(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

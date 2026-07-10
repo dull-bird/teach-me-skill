@@ -527,15 +527,6 @@ def same_scope(event: dict[str, Any], payload: dict[str, Any]) -> bool:
     return not (current_turn or current_session or current_cwd)
 
 
-def already_blocked(events: list[dict[str, Any]], payload: dict[str, Any]) -> bool:
-    return any(
-        event.get("type") == "stop_decision"
-        and event.get("decision") == "block"
-        and same_scope(event, payload)
-        for event in events
-    )
-
-
 def modified_files(events: list[dict[str, Any]], payload: dict[str, Any]) -> list[str]:
     """Collect file paths that were written or edited in the current scope."""
     scoped = [event for event in events if same_scope(event, payload)]
@@ -672,9 +663,6 @@ def handle_stop(payload: dict[str, Any]) -> int:
 
     user_cfg = ensure_user(payload)
     events = load_events(user_cfg)
-    if already_blocked(events, payload):
-        return 0
-
     assessment = score_stop(payload, events)
     decision = "block" if assessment["should_block"] else "allow"
     review_prompt = build_stop_review_prompt(user_cfg, assessment) if assessment["should_block"] else ""
