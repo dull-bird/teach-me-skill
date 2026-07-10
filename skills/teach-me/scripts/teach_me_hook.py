@@ -25,7 +25,6 @@ from teach_me import (  # noqa: E402
     add_user,
     append_jsonl,
     events_path,
-    format_context,
     load_config,
     now_iso,
     resolve_user_config,
@@ -604,28 +603,10 @@ def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[st
 
 def build_additional_context(prompt: str, manual: bool, user_cfg: dict[str, Any]) -> str:
     skill_dir = Path(__file__).resolve().parent.parent
-    user_id = user_cfg.get("_user_id", "default")
-    user_flag = f" --user {user_id}" if user_id != "default" else ""
-    lines = [
-        "Teach Me is active for this tool-based task; do not interrupt implementation.",
-        f"At a meaningful phase boundary, use `$teach-me` and follow `{skill_dir}/SKILL.md`.",
-        f"Load dynamic learner context only then: `python3 {skill_dir}/scripts/teach_me.py context --full{user_flag}`.",
-    ]
-    if not user_cfg.get("initialized"):
-        if is_setup_confirmation(prompt):
-            lines.append("The user explicitly chose first-use settings in this message; run the matching `teach_me.py configure` command now, then treat setup as complete.")
-        else:
-            lines.append("Teach Me is not initialized. Complete the user's task, but do not run `configure`, `capture`, or choose defaults for them; at the phase boundary only present the First Use options and wait for an explicit reply.")
-    if manual:
-        lines.append("The user explicitly requested teaching, so run the workflow now.")
-    if os.environ.get("TEACH_ME_CONTEXT_MODE", "short").lower() == "expanded":
-        lines.extend(
-            [
-                "Expanded A/B workflow: inspect the learner portrait and prerequisite map before teaching; teach one core mechanism by default; avoid tool trivia; ask zero or one single-part optional question; capture only after teaching.",
-                format_context(user_cfg, brief=False),
-            ]
-        )
-    return "\n".join(lines)
+    return (
+        "Teach Me is active. Do not interrupt implementation. "
+        f"At a meaningful phase boundary, read and follow `{skill_dir}/SKILL.md`."
+    )
 
 
 def evidence_summary(assessment: dict[str, Any]) -> str:

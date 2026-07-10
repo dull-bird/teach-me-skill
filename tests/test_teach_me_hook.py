@@ -88,10 +88,9 @@ class TeachMeHookTests(unittest.TestCase):
         data = parse_stdout(result)
         self.assertNotIn("decision", data)
         context = data["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("context", context.lower())
         self.assertIn("SKILL.md", context)
-        self.assertIn("requested teaching", context)
-        self.assertLess(len(context), 700)
+        self.assertIn("read and follow", context)
+        self.assertLess(len(context), 220)
 
     def test_messages_prompt_with_manual_trigger_injects_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -107,7 +106,7 @@ class TeachMeHookTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         context = parse_stdout(result)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("requested teaching", context)
+        self.assertIn("read and follow", context)
         self.assertIn("SKILL.md", context)
 
     def test_non_learning_prompt_stays_silent_without_tool_evidence(self) -> None:
@@ -125,7 +124,7 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "")
 
-    def test_uninitialized_work_prompt_forbids_automatic_setup(self) -> None:
+    def test_uninitialized_work_prompt_uses_compact_skill_pointer(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_hook(
                 {
@@ -136,12 +135,13 @@ class TeachMeHookTests(unittest.TestCase):
                     "cwd": "/repo",
                 },
                 Path(tmp),
-            )
+        )
         context = parse_stdout(result)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("do not run `configure`", context)
-        self.assertIn("wait for an explicit reply", context)
+        self.assertIn("read and follow", context)
+        self.assertIn("SKILL.md", context)
+        self.assertNotIn("configure", context)
 
-    def test_uninitialized_explicit_setup_choice_allows_configuration(self) -> None:
+    def test_uninitialized_setup_choice_uses_same_compact_skill_pointer(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_hook(
                 {
@@ -152,10 +152,11 @@ class TeachMeHookTests(unittest.TestCase):
                     "cwd": "/repo",
                 },
                 Path(tmp),
-            )
+        )
         context = parse_stdout(result)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("explicitly chose first-use settings", context)
-        self.assertIn("run the matching", context)
+        self.assertIn("read and follow", context)
+        self.assertIn("SKILL.md", context)
+        self.assertNotIn("configure", context)
 
     def test_pre_and_post_tool_events_are_logged_even_before_initialization(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -453,7 +454,7 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         data = parse_stdout(result)
         self.assertNotIn("decision", data)
-        self.assertIn("requested teaching", data["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("read and follow", data["hookSpecificOutput"]["additionalContext"])
 
     def test_explicit_opt_out_stays_silent_and_suppresses_stop(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1082,12 +1083,12 @@ class InstallerTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         context = parse_stdout(result)["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("$teach-me", context)
-        self.assertIn("SKILL.md", context)
-        self.assertIn("context --full", context)
-        self.assertNotIn("Recent captures", context)
-        self.assertNotIn("knowledge-tree weak nodes", context)
-        self.assertLess(len(context), 700)
+        self.assertEqual(
+            context,
+            f"Teach Me is active. Do not interrupt implementation. At a meaningful phase boundary, read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+        )
+        self.assertNotIn("context --full", context)
+        self.assertLess(len(context), 220)
 
     def test_initialized_stop_prompt_is_compact_pointer(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
