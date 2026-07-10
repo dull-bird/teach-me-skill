@@ -220,18 +220,17 @@ class TeachMeHookTests(unittest.TestCase):
             reason = hso["permissionDecisionReason"]
             self.assertIn("🌱", reason)
             self.assertNotIn("🌱 Teach Me:", reason)
-            self.assertIn("Detection evidence", reason)
-            self.assertIn("confirm", reason.lower())
-            self.assertIn("vault", reason.lower())
-            self.assertIn("default balanced tutor", reason)
-            self.assertIn("implementation coach", reason)
+            self.assertNotIn("Detection evidence", reason)
+            self.assertIn("Teach Me", reason)
+            self.assertIn("first-use confirmation", reason)
             self.assertIn("SKILL.md", reason)
-            self.assertLess(len(reason), 1200)
+            self.assertLess(len(reason), 700)
             events = read_events(home)
             stop_decision = events[-1]
             self.assertEqual(stop_decision["type"], "stop_decision")
             self.assertEqual(stop_decision["decision"], "block")
             self.assertIn("review_prompt", stop_decision)
+            self.assertIn("Detection evidence", stop_decision["review_prompt"])
             self.assertIn("confirm", stop_decision["review_prompt"].lower())
             self.assertIn("vault", stop_decision["review_prompt"].lower())
 
@@ -270,9 +269,11 @@ class TeachMeHookTests(unittest.TestCase):
             reason = hso["permissionDecisionReason"]
             self.assertIn("🌱", reason)
             self.assertNotIn("🌱 Teach Me:", reason)
-            self.assertIn("Detection evidence", reason)
-            self.assertIn("capture", reason.lower())
+            self.assertNotIn("Detection evidence", reason)
+            self.assertIn("Teach Me review", reason)
             self.assertIn("one core mechanism", reason)
+            self.assertIn("context --full", reason)
+            self.assertLess(len(reason), 600)
             events = read_events(home)
             stop_decision = events[-1]
             self.assertEqual(stop_decision["type"], "stop_decision")
@@ -282,6 +283,7 @@ class TeachMeHookTests(unittest.TestCase):
             self.assertIn("teach", stop_decision["review_prompt"].lower())
             self.assertIn("follow-up", stop_decision["review_prompt"].lower())
             self.assertIn("prerequisite", stop_decision["review_prompt"].lower())
+            self.assertIn("Detection evidence", stop_decision["review_prompt"])
 
     def test_codex_stop_uses_decision_block_format(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -316,7 +318,8 @@ class TeachMeHookTests(unittest.TestCase):
         data = parse_stdout(result)
         self.assertEqual(data["decision"], "block")
         self.assertIn("🌱", data["reason"])
-        self.assertIn("Teach Me review", data["reason"])
+        self.assertIn("Teach Me", data["reason"])
+        self.assertIn("first-use confirmation", data["reason"])
         self.assertNotIn("hookSpecificOutput", data)
 
     def test_claude_code_stop_uses_decision_block_format(self) -> None:
@@ -663,6 +666,206 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(parse_stdout(second)["hookSpecificOutput"]["permissionDecision"], "deny")
 
 
+    def test_compact_stop_reason_in_long_conversation_with_ten_tasks(self) -> None:
+        """Simulate a full multi-turn conversation covering 10 distinct tasks.
+
+        Each turn is a different scope (turn_id), so Stop can independently
+        decide whether to block. The returned reason must stay compact, while
+        the full audit prompt (detection evidence, modified files, rubric) is
+        preserved in the event log.
+        """
+        tasks = [
+            {
+                "name": "bug_fix",
+                "prompt": "fix parser bug and run tests",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "Edit", "tool_input": {"file_path": "/repo/parser.py", "old_string": "split(',')", "new_string": "split(',', 1)"}, "tool_response": {"ok": True}},
+                    {"event": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "pytest test_parser.py"}, "tool_response": {"stdout": "5 passed", "stderr": ""}},
+                ],
+                "last_message": "Fixed edge case and all tests pass.",
+                "should_block": True,
+            },
+            {
+                "name": "config_change",
+                "prompt": "increase timeout in app.ini",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "Edit", "tool_input": {"file_path": "/repo/app.ini", "old_string": "timeout = 5", "new_string": "timeout = 15"}, "tool_response": {"ok": True}},
+                    {"event": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "pytest test_config.py"}, "tool_response": {"stdout": "2 passed", "stderr": ""}},
+                ],
+                "last_message": "Timeout updated and config tests pass.",
+                "should_block": True,
+            },
+            {
+                "name": "data_analysis",
+                "prompt": "analyze sales.csv",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "Read", "tool_input": {"file_path": "/repo/sales.csv"}, "tool_response": {"content": "month,amount\nJan,100\nFeb,200"}},
+                    {"event": "PostToolUse", "tool_name": "WriteFile", "tool_input": {"file_path": "/repo/findings.md", "content": "Average sales: 150."}, "tool_response": {"ok": True}},
+                ],
+                "last_message": "Wrote findings to findings.md.",
+                "should_block": True,
+            },
+            {
+                "name": "explicit_opt_out",
+                "prompt": "update VERSION to 1.0.1. 不要教学，不要总结知识。",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "WriteFile", "tool_input": {"file_path": "/repo/VERSION", "content": "1.0.1"}, "tool_response": {"ok": True}},
+                    {"event": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "cat VERSION"}, "tool_response": {"stdout": "1.0.1", "stderr": ""}},
+                ],
+                "last_message": "VERSION updated.",
+                "should_block": False,
+            },
+            {
+                "name": "manual_teach_with_work",
+                "prompt": "教我理解 service.py 的依赖注入，先读代码再解释",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "Read", "tool_input": {"file_path": "/repo/service.py"}, "tool_response": {"content": "class Service:\n    def __init__(self, repo):\n        self.repo = repo"}},
+                    {"event": "PostToolUse", "tool_name": "Edit", "tool_input": {"file_path": "/repo/service.py", "old_string": "def __init__(self, repo):", "new_string": "def __init__(self, repo: Repository):"}, "tool_response": {"ok": True}},
+                ],
+                "last_message": "Read service.py and added type hint.",
+                "should_block": True,
+            },
+            {
+                "name": "mechanical_rename_with_error",
+                "prompt": "rename Demo to Sample in README",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "Edit", "tool_input": {"file_path": "/repo/README.md", "old_string": "# Demo", "new_string": "# Sample"}, "tool_response": {"ok": True}},
+                    {"event": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "python3 -c \"raise Exception('Sample failed')\""}, "tool_response": {"stdout": "", "stderr": "Exception: Sample failed"}},
+                ],
+                "last_message": "Renamed but the smoke test failed.",
+                "should_block": True,
+            },
+            {
+                "name": "mutable_default_bug",
+                "prompt": "fix basket.py state leak and run tests",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "Edit", "tool_input": {"file_path": "/repo/basket.py", "old_string": "def __init__(self, items=[]):", "new_string": "def __init__(self, items=None):"}, "tool_response": {"ok": True}},
+                    {"event": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "pytest test_basket.py"}, "tool_response": {"stdout": "8 passed", "stderr": ""}},
+                ],
+                "last_message": "Fixed mutable default and tests pass.",
+                "should_block": True,
+            },
+            {
+                "name": "refactor",
+                "prompt": "refactor pricing.py discount logic",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "Edit", "tool_input": {"file_path": "/repo/pricing.py", "old_string": "if amount > 100:\n    discount = 0.1\nif amount > 200:\n    discount = 0.2", "new_string": "discount = 0.1 if amount > 100 else 0.2 if amount > 200 else 0"}, "tool_response": {"ok": True}},
+                    {"event": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "pytest test_pricing.py"}, "tool_response": {"stdout": "6 passed", "stderr": ""}},
+                ],
+                "last_message": "Refactored discount logic and tests pass.",
+                "should_block": True,
+            },
+            {
+                "name": "state_machine_docs",
+                "prompt": "read state_machine.py and explain transitions in architecture.md",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "Read", "tool_input": {"file_path": "/repo/state_machine.py"}, "tool_response": {"content": "class StateMachine:\n    def transition(self, event):\n        if event in self.allowed:\n            self.state = event"}},
+                    {"event": "PostToolUse", "tool_name": "WriteFile", "tool_input": {"file_path": "/repo/architecture.md", "content": "Transitions are guarded by allowed set."}, "tool_response": {"ok": True}},
+                ],
+                "last_message": "Documented transition constraints.",
+                "should_block": True,
+            },
+            {
+                "name": "build_pipeline",
+                "prompt": "add feature and run full build",
+                "tools": [
+                    {"event": "PostToolUse", "tool_name": "WriteFile", "tool_input": {"file_path": "/repo/feature.py", "content": "def feature(): pass"}, "tool_response": {"ok": True}},
+                    {"event": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "npm run build"}, "tool_response": {"stdout": "build complete", "stderr": ""}},
+                    {"event": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "npm run lint"}, "tool_response": {"stdout": "no lint errors", "stderr": ""}},
+                ],
+                "last_message": "Feature added, build and lint pass.",
+                "should_block": True,
+            },
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            write_initialized_config(home)
+            session_id = "long-conversation-1"
+            cwd = "/repo"
+
+            for index, task in enumerate(tasks, start=1):
+                turn_id = f"t{index}"
+
+                # Prompt hook for this turn
+                run_hook(
+                    {
+                        "hook_event_name": "UserPromptSubmit",
+                        "prompt": task["prompt"],
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "cwd": cwd,
+                    },
+                    home,
+                )
+
+                # Tool hooks for this turn
+                for tool in task["tools"]:
+                    run_hook(
+                        {
+                            "hook_event_name": tool["event"],
+                            "tool_name": tool["tool_name"],
+                            "tool_input": tool["tool_input"],
+                            "tool_response": tool["tool_response"],
+                            "session_id": session_id,
+                            "turn_id": turn_id,
+                            "cwd": cwd,
+                        },
+                        home,
+                    )
+
+                # Stop hook for this turn
+                result = run_hook(
+                    {
+                        "hook_event_name": "Stop",
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "cwd": cwd,
+                        "stop_hook_active": False,
+                        "last_assistant_message": task["last_message"],
+                    },
+                    home,
+                )
+
+                self.assertEqual(result.returncode, 0, f"{task['name']} stop failed: {result.stderr}")
+                events = read_events(home)
+                stop_decisions = [
+                    e for e in events
+                    if e.get("type") == "stop_decision"
+                    and e.get("turn_id") == turn_id
+                ]
+                self.assertEqual(len(stop_decisions), 1, f"{task['name']} should log exactly one stop_decision")
+                decision = stop_decisions[0]
+                self.assertEqual(decision["decision"], "block" if task["should_block"] else "allow", task["name"])
+
+                if task["should_block"]:
+                    data = parse_stdout(result)
+                    reason = data["hookSpecificOutput"]["permissionDecisionReason"]
+                    self.assertIn("🌱", reason, task["name"])
+                    self.assertIn("Teach Me review", reason, task["name"])
+                    self.assertIn("SKILL.md", reason, task["name"])
+                    self.assertIn("context --full", reason, task["name"])
+                    self.assertNotIn("Detection evidence", reason, task["name"])
+                    self.assertNotIn("Files created or edited", reason, task["name"])
+                    self.assertLess(len(reason), 600, f"{task['name']} reason too long")
+
+                    # Full audit trail lives in the event log
+                    self.assertIn("Detection evidence", decision["review_prompt"], task["name"])
+                    self.assertIn("score:", decision["review_prompt"], task["name"])
+                else:
+                    self.assertEqual(result.stdout.strip(), "", f"{task['name']} should not emit stop output")
+                    self.assertEqual(decision.get("review_prompt", ""), "", f"{task['name']} should not store review_prompt")
+
+            # All events are recorded across the conversation
+            all_events = read_events(home)
+            self.assertGreaterEqual(len(all_events), 30)
+            self.assertEqual(
+                len([e for e in all_events if e.get("type") == "stop_decision"]),
+                len(tasks),
+            )
+
+
+
 class InstallerTests(unittest.TestCase):
     def test_codex_installer_registers_stop_and_all_tool_phases(self) -> None:
         module = load_module(ROOT / "codex" / "install_hook.py")
@@ -780,9 +983,16 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             data = parse_stdout(result)
             reason = data["hookSpecificOutput"]["permissionDecisionReason"]
-            self.assertIn("Files created or edited", reason)
-            self.assertIn("/repo/essay.md", reason)
-            self.assertIn("Read these files", reason)
+            self.assertIn("🌱", reason)
+            self.assertIn("Teach Me review", reason)
+            self.assertNotIn("Detection evidence", reason)
+            self.assertNotIn("Files created or edited", reason)
+            self.assertLess(len(reason), 600)
+            events = read_events(home)
+            stop_decision = [e for e in events if e.get("type") == "stop_decision"][-1]
+            self.assertIn("Files created or edited", stop_decision["review_prompt"])
+            self.assertIn("/repo/essay.md", stop_decision["review_prompt"])
+            self.assertIn("Read these files", stop_decision["review_prompt"])
 
     def test_work_prompt_injects_compact_progressive_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -837,13 +1047,12 @@ class InstallerTests(unittest.TestCase):
             )
 
         reason = parse_stdout(result)["hookSpecificOutput"]["permissionDecisionReason"]
-        self.assertIn("Teach Me review required", reason)
+        self.assertIn("Teach Me review at this phase boundary", reason)
         self.assertIn("SKILL.md", reason)
         self.assertIn("context --full", reason)
+        self.assertIn("one core mechanism", reason)
+        self.assertNotIn("Detection evidence", reason)
+        self.assertNotIn("Files created or edited", reason)
         self.assertNotIn("Before finishing, do a short Teach Me review", reason)
         self.assertNotIn("1. First, run", reason)
-        self.assertLess(len(reason), 1200)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        self.assertLess(len(reason), 600)
