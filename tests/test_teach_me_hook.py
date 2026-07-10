@@ -192,6 +192,30 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertTrue(any(event.get("phase") == "post" for event in events))
         self.assertTrue(any("verification" in event.get("signal_tags", []) for event in events))
 
+    def test_failed_tool_event_records_error_signal_for_scalar_payloads(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            result = run_hook(
+                {
+                    "hook_event_name": "PostToolUseFailure",
+                    "tool_name": "Bash",
+                    "tool_input": "pytest tests/test_parser.py",
+                    "tool_response": "Command failed: exit status 1",
+                    "session_id": "s-failure",
+                    "turn_id": "t-failure",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            events = read_events(home)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["phase"], "failure")
+        self.assertIn("error_signal", events[0]["signal_tags"])
+        self.assertEqual(events[0]["command"], "pytest tests/test_parser.py")
+
     def test_stop_blocks_after_learning_worthy_tool_work_without_prompt_keywords(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
