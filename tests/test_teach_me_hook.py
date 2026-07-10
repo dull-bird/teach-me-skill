@@ -262,7 +262,7 @@ class TeachMeHookTests(unittest.TestCase):
             reason = hso["permissionDecisionReason"]
             self.assertEqual(
                 reason,
-                f"🌱 Teach Me review requires setup. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+                f"Teach Me review requires setup. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
             )
             events = read_events(home)
             stop_decision = events[-1]
@@ -308,7 +308,7 @@ class TeachMeHookTests(unittest.TestCase):
             reason = hso["permissionDecisionReason"]
             self.assertEqual(
                 reason,
-                f"🌱 Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+                f"Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
             )
             events = read_events(home)
             stop_decision = events[-1]
@@ -353,10 +353,10 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         data = parse_stdout(result)
         self.assertEqual(data["decision"], "block")
-        self.assertIn("🌱", data["reason"])
         self.assertIn("Teach Me", data["reason"])
         self.assertIn("requires setup", data["reason"])
         self.assertNotIn("hookSpecificOutput", data)
+        self.assertNotIn("systemMessage", data)
 
     def test_codex_stop_with_weak_evidence_stays_silent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -427,7 +427,6 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         data = parse_stdout(result)
         self.assertEqual(data["decision"], "block")
-        self.assertIn("🌱", data["reason"])
         self.assertNotIn("hookSpecificOutput", data)
 
     def test_claude_code_manual_prompt_injects_context_without_blocking(self) -> None:
@@ -909,7 +908,7 @@ class TeachMeHookTests(unittest.TestCase):
                     reason = data["hookSpecificOutput"]["permissionDecisionReason"]
                     self.assertEqual(
                         reason,
-                        f"🌱 Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+                        f"Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
                         task["name"],
                     )
 
@@ -1049,7 +1048,7 @@ class InstallerTests(unittest.TestCase):
             reason = data["hookSpecificOutput"]["permissionDecisionReason"]
             self.assertEqual(
                 reason,
-                f"🌱 Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+                f"Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
             )
             events = read_events(home)
             stop_decision = [e for e in events if e.get("type") == "stop_decision"][-1]
@@ -1112,5 +1111,5 @@ class InstallerTests(unittest.TestCase):
         reason = parse_stdout(result)["hookSpecificOutput"]["permissionDecisionReason"]
         self.assertEqual(
             reason,
-            f"🌱 Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
+            f"Teach Me review required. Read and follow `{ROOT / 'skills' / 'teach-me' / 'SKILL.md'}`.",
         )

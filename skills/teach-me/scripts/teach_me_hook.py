@@ -661,9 +661,9 @@ def build_stop_reason(config: dict[str, Any], assessment: dict[str, Any]) -> str
     """
     skill_dir = Path(__file__).resolve().parent.parent
     if not config.get("initialized"):
-        return f"🌱 Teach Me review requires setup. Read and follow `{skill_dir}/SKILL.md`."
+        return f"Teach Me review requires setup. Read and follow `{skill_dir}/SKILL.md`."
 
-    return f"🌱 Teach Me review required. Read and follow `{skill_dir}/SKILL.md`."
+    return f"Teach Me review required. Read and follow `{skill_dir}/SKILL.md`."
 
 
 def handle_stop(payload: dict[str, Any]) -> int:
@@ -701,7 +701,7 @@ def handle_stop(payload: dict[str, Any]) -> int:
     is_codex = bool(payload.get("transcript_path") is not None or "codex" in cwd(payload).lower())
     if is_codex:
         # Codex Stop 识别 decision=block + reason
-        output = {"decision": "block", "reason": reason, "systemMessage": "🌱"}
+        output = {"decision": "block", "reason": reason}
     else:
         # Kimi Code CLI 识别 hookSpecificOutput.permissionDecision=deny
         output = {

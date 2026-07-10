@@ -34,7 +34,8 @@ creation, mastery state updates, and event logging. Hooks may inject a compact
 Teach Me context and may request one short Stop-hook review after
 learning-worthy tool work. The Stop-hook review must teach exactly one core
 mechanism by default in 1-2 sentences, ask zero or one single-part optional
-question, and only then capture notes. Never turn tool steps into a lesson. If
+question, and only then capture notes. Its final user-facing micro-lesson begins
+with `🌱`; hook feedback itself does not include that marker. Never turn tool steps into a lesson. If
 hooks are not installed and the task involves real tool work,
 run:
 
