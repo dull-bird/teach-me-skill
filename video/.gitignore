@@ -3,4 +3,5 @@ out/
 .remotion/
 narration/segments/
 public/narration.wav
+public/narration.mp3
 public/seedling_frames/
