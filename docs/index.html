@@ -152,29 +152,30 @@ object-fit:contain;
 .hero-diagram{margin-top:18px}
 .stats{
   display:flex;
-  flex-wrap:wrap;
-  gap:32px;
+  flex-wrap:nowrap;
+  gap:24px;
   margin:32px 0 0;
   padding-top:24px;
   border-top:1px solid var(--line);
-  max-width:38rem;
+  max-width:none;
 }
 .stat{
   display:flex;
   align-items:baseline;
-  gap:10px;
+  gap:8px;
+  white-space:nowrap;
 }
 .stat strong{
   display:inline;
   color:var(--ink);
-  font:400 clamp(26px,3vw,34px)/1 var(--serif);
+  font:400 clamp(22px,2.4vw,28px)/1 var(--serif);
   font-variant-numeric:tabular-nums;
 }
 .stat span{
   display:inline;
   margin-top:0;
   color:var(--muted);
-  font-size:13px;
+  font-size:12px;
   letter-spacing:.02em;
 }
 .art-slot{
@@ -641,7 +642,8 @@ pre{
   .hero{padding-left:18px;padding-right:18px}
   .steps{grid-template-columns:1fr}
   .copybox pre{padding-right:18px;padding-top:54px}
-  .stats{gap:22px}
+  .stats{flex-wrap:wrap;gap:18px}
+  .stat{white-space:normal}
 }
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}
