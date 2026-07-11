@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import json
 import os
 import shutil
@@ -306,6 +307,21 @@ def gather_report(user_id: str | None = None) -> dict[str, Any]:
 
     knowledge_tree_path = vault / "07_Learning_Profile" / "Knowledge_Tree.md"
     knowledge_tree_nodes = count_knowledge_tree_nodes(knowledge_tree_path)
+    concepts = learning_state.get("concepts", {})
+    domain_counts: Counter[str] = Counter()
+    project_counts: Counter[str] = Counter()
+    for concept in concepts.values():
+        if not isinstance(concept, dict):
+            continue
+        domain_counts[str(concept.get("knowledge_domain") or "通用")] += 1
+        refs = concept.get("project_refs") or []
+        if isinstance(refs, list) and refs:
+            for ref in refs:
+                if isinstance(ref, dict):
+                    project_counts[str(ref.get("name") or ref.get("id") or "未命名项目")] += 1
+        else:
+            for name in concept.get("projects") or []:
+                project_counts[str(name)] += 1
 
     git_status = check_git_sync(vault, user_cfg)
 
@@ -344,12 +360,17 @@ def gather_report(user_id: str | None = None) -> dict[str, Any]:
             "knowledge_tree_nodes": knowledge_tree_nodes,
             "total_events": total_events,
             "recent_event_counts": event_counts,
-            "concepts": len(learning_state.get("concepts", {})),
+            "concepts": len(concepts),
             "assessed_nodes": len(learning_state.get("knowledge_tree", {})),
+            "knowledge_domains": dict(sorted(domain_counts.items())),
+            "projects": dict(sorted(project_counts.items())),
         },
         "git_sync": git_status,
         "style_profile": {
             "exists": bool(style_profile),
+            "profile_initialized": bool(style_profile.get("profile_initialized", False)),
+            "teacher_profile": style_profile.get("teacher_profile", "default"),
+            "knowledge_focus": style_profile.get("knowledge_focus", "balanced"),
             "language": style_profile.get("language", "auto"),
             "verbosity": style_profile.get("verbosity", "compact"),
             "speaking_style": style_profile.get("speaking_style", "friendly and direct"),
@@ -381,6 +402,14 @@ def _installed_zh(installations: dict[str, bool]) -> str:
     return "、".join(names.get(k, k) for k in installed)
 
 
+def markdown_table(headers: list[str], rows: list[list[str]]) -> list[str]:
+    return [
+        "| " + " | ".join(headers) + " |",
+        "| " + " | ".join("---" for _ in headers) + " |",
+        *["| " + " | ".join(row) + " |" for row in rows],
+    ]
+
+
 def _format_zh(report: dict[str, Any]) -> str:
     lines: list[str] = []
     lines.append("## Teach Me 状态检查")
@@ -404,21 +433,27 @@ def _format_zh(report: dict[str, Any]) -> str:
         lines.append("")
         return "\n".join(lines)
 
-    lines.append(f"✅ 已检测到 hook：{_installed_zh(report['installations'])}")
-    lines.append("")
-
     cfg = report["config"]
     lines.append("### 配置")
-    lines.append(f"- **vault 路径**：`{cfg['vault_path']}`")
-    lines.append(f"- **笔记语言**：{cfg['language']}")
-    lines.append(f"- **每阶段最多笔记数**：{cfg['max_notes_per_phase']}")
-    lines.append(f"- **首次配置完成**：{'是' if cfg['initialized'] else '否'}")
+    lines.extend(markdown_table(["项目", "状态"], [
+        ["已检测 hooks", _installed_zh(report["installations"])],
+        ["Vault 路径", f"`{cfg['vault_path']}`"],
+        ["笔记语言", str(cfg["language"])],
+        ["每阶段最多笔记数", str(cfg["max_notes_per_phase"])],
+        ["Vault 初始化", "是" if cfg["initialized"] else "否"],
+    ]))
     lines.append("")
 
     style = report["style_profile"]
-    lines.append("### 对话风格")
-    lines.append(f"- **说话风格**：{style['speaking_style']}")
-    lines.append(f"- **教学人格**：{style['teach_me_persona']}")
+    lines.append("### 教学风格")
+    lines.extend(markdown_table(["教学风格", "值"], [
+        ["已确认", "是" if style["profile_initialized"] else "否（需用户选择）"],
+        ["教师档案", str(style["teacher_profile"])],
+        ["知识重点", str(style["knowledge_focus"])],
+        ["说话风格", str(style["speaking_style"])],
+        ["教学人格", str(style["teach_me_persona"])],
+        ["详细程度", str(style["verbosity"])],
+    ]))
     lines.append("")
 
     vault = report["vault"]
@@ -426,17 +461,22 @@ def _format_zh(report: dict[str, Any]) -> str:
         lines.append("⚠️ vault 目录还不存在。首次写笔记时会自动创建。")
         lines.append("")
     else:
-        lines.append("### Vault 内容")
+        lines.append("### 学习数据")
         fc = vault["folder_counts"]
-        lines.append(f"- 概念笔记：`{fc['concepts']}` 篇")
-        lines.append(f"- 算法思想：`{fc['algorithmic_ideas']}` 篇")
-        lines.append(f"- 项目地图：`{fc['project_maps']}` 篇")
-        lines.append(f"- 苏格拉底问题：`{fc['socratic_questions']}` 篇")
-        lines.append(f"- 复盘记录：`{fc['reviews']}` 篇")
-        lines.append(f"- 知识树节点：`{vault['knowledge_tree_nodes']}` 个")
-        lines.append(f"- 概念掌握记录：`{vault['concepts']}` 条")
-        lines.append(f"- 已评估节点：`{vault['assessed_nodes']}` 个")
-        lines.append(f"- 事件总数：`{vault['total_events']}` 条")
+        lines.extend(markdown_table(["指标", "数量"], [
+            ["概念笔记", str(fc["concepts"])], ["算法思想", str(fc["algorithmic_ideas"])],
+            ["项目地图", str(fc["project_maps"])], ["苏格拉底问题", str(fc["socratic_questions"])],
+            ["复盘记录", str(fc["reviews"])], ["知识树节点", str(vault["knowledge_tree_nodes"])],
+            ["概念掌握记录", str(vault["concepts"])], ["已评估节点", str(vault["assessed_nodes"])],
+            ["事件总数", str(vault["total_events"])],
+        ]))
+        lines.append("")
+
+        lines.append("### 知识领域")
+        lines.extend(markdown_table(["领域", "概念数"], [[name, str(count)] for name, count in vault["knowledge_domains"].items()] or [["暂无", "0"]]))
+        lines.append("")
+        lines.append("### 项目关联")
+        lines.extend(markdown_table(["项目", "关联概念数"], [[name, str(count)] for name, count in vault["projects"].items()] or [["暂无", "0"]]))
         lines.append("")
 
         recent = vault["recent_event_counts"]
@@ -447,14 +487,11 @@ def _format_zh(report: dict[str, Any]) -> str:
 
     gs = report["git_sync"]
     lines.append("### Git sync")
-    if not gs["enabled"]:
-        lines.append("Git sync 当前**未开启**。")
-    else:
-        lines.append(f"Git sync 已开启，远程：`{gs['remote'] or '未设置'}`，分支：`{gs['branch']}`")
-        lines.append(f"本地仓库：{'已初始化' if gs['repo_present'] else '未初始化'}")
-        lines.append(f"自动同步：{'开启' if gs['auto_sync'] else '关闭'}")
-        if gs["has_local_changes"]:
-            lines.append("vault 里有未提交的改动。")
+    lines.extend(markdown_table(["项目", "状态"], [
+        ["已开启", "是" if gs["enabled"] else "否"], ["远程", f"`{gs['remote'] or '未设置'}`"],
+        ["分支", str(gs["branch"])], ["自动同步", "开启" if gs["auto_sync"] else "关闭"],
+        ["本地未提交改动", "有" if gs["has_local_changes"] else "无"],
+    ]))
     lines.append("")
 
     lines.append("### 你可以这样说")
@@ -511,21 +548,23 @@ def _format_en(report: dict[str, Any]) -> str:
         lines.append("")
         return "\n".join(lines)
 
-    lines.append(f"✅ Hooks detected: {_installed_en(report['installations'])}")
-    lines.append("")
-
     cfg = report["config"]
     lines.append("### Configuration")
-    lines.append(f"- **Vault path**: `{cfg['vault_path']}`")
-    lines.append(f"- **Note language**: {cfg['language']}")
-    lines.append(f"- **Max notes per phase**: {cfg['max_notes_per_phase']}")
-    lines.append(f"- **Initialized**: {'yes' if cfg['initialized'] else 'no'}")
+    lines.extend(markdown_table(["Item", "Status"], [
+        ["Hooks", _installed_en(report["installations"])], ["Vault path", f"`{cfg['vault_path']}`"],
+        ["Note language", str(cfg["language"])], ["Max notes per phase", str(cfg["max_notes_per_phase"])],
+        ["Vault initialized", "yes" if cfg["initialized"] else "no"],
+    ]))
     lines.append("")
 
     style = report["style_profile"]
-    lines.append("### Conversation style")
-    lines.append(f"- **Speaking style**: {style['speaking_style']}")
-    lines.append(f"- **Teaching persona**: {style['teach_me_persona']}")
+    lines.append("### Teaching profile")
+    lines.extend(markdown_table(["Teaching profile", "Value"], [
+        ["Confirmed", "yes" if style["profile_initialized"] else "no — user choice needed"],
+        ["Profile", str(style["teacher_profile"])], ["Knowledge focus", str(style["knowledge_focus"])],
+        ["Speaking style", str(style["speaking_style"])], ["Persona", str(style["teach_me_persona"])],
+        ["Verbosity", str(style["verbosity"])],
+    ]))
     lines.append("")
 
     vault = report["vault"]
@@ -533,17 +572,22 @@ def _format_en(report: dict[str, Any]) -> str:
         lines.append("⚠️ The vault directory does not exist yet. It will be created on the first note.")
         lines.append("")
     else:
-        lines.append("### Vault contents")
+        lines.append("### Learning data")
         fc = vault["folder_counts"]
-        lines.append(f"- Concepts: `{fc['concepts']}`")
-        lines.append(f"- Algorithmic ideas: `{fc['algorithmic_ideas']}`")
-        lines.append(f"- Project maps: `{fc['project_maps']}`")
-        lines.append(f"- Socratic questions: `{fc['socratic_questions']}`")
-        lines.append(f"- Reviews: `{fc['reviews']}`")
-        lines.append(f"- Knowledge-tree nodes: `{vault['knowledge_tree_nodes']}`")
-        lines.append(f"- Concept mastery records: `{vault['concepts']}`")
-        lines.append(f"- Assessed nodes: `{vault['assessed_nodes']}`")
-        lines.append(f"- Total events: `{vault['total_events']}`")
+        lines.extend(markdown_table(["Metric", "Count"], [
+            ["Concept notes", str(fc["concepts"])], ["Algorithmic ideas", str(fc["algorithmic_ideas"])],
+            ["Project maps", str(fc["project_maps"])], ["Socratic questions", str(fc["socratic_questions"])],
+            ["Reviews", str(fc["reviews"])], ["Knowledge-tree nodes", str(vault["knowledge_tree_nodes"])],
+            ["Concept mastery records", str(vault["concepts"])], ["Assessed nodes", str(vault["assessed_nodes"])],
+            ["Total events", str(vault["total_events"])],
+        ]))
+        lines.append("")
+
+        lines.append("### Knowledge domains")
+        lines.extend(markdown_table(["Domain", "Concepts"], [[name, str(count)] for name, count in vault["knowledge_domains"].items()] or [["none", "0"]]))
+        lines.append("")
+        lines.append("### Project links")
+        lines.extend(markdown_table(["Project", "Linked concepts"], [[name, str(count)] for name, count in vault["projects"].items()] or [["none", "0"]]))
         lines.append("")
 
         recent = vault["recent_event_counts"]
@@ -554,14 +598,11 @@ def _format_en(report: dict[str, Any]) -> str:
 
     gs = report["git_sync"]
     lines.append("### Git sync")
-    if not gs["enabled"]:
-        lines.append("Git sync is currently **disabled**.")
-    else:
-        lines.append(f"Git sync is enabled. Remote: `{gs['remote'] or 'not set'}`, branch: `{gs['branch']}`")
-        lines.append(f"Local repo: {'initialized' if gs['repo_present'] else 'not initialized'}")
-        lines.append(f"Auto-sync: {'on' if gs['auto_sync'] else 'off'}")
-        if gs["has_local_changes"]:
-            lines.append("The vault has uncommitted changes.")
+    lines.extend(markdown_table(["Item", "Status"], [
+        ["Enabled", "yes" if gs["enabled"] else "no"], ["Remote", f"`{gs['remote'] or 'not set'}`"],
+        ["Branch", str(gs["branch"])], ["Auto-sync", "on" if gs["auto_sync"] else "off"],
+        ["Uncommitted vault changes", "yes" if gs["has_local_changes"] else "no"],
+    ]))
     lines.append("")
 
     lines.append("### You can say")
@@ -673,6 +714,7 @@ def cmd_style(args: argparse.Namespace) -> int:
             print(f"Unknown style key '{key}'. Allowed: {', '.join(sorted(allowed))}", file=sys.stderr)
             return 1
         style[key] = value
+        style["profile_initialized"] = True
         style["last_feedback_at"] = datetime.now(timezone.utc).isoformat()
         write_json(style_path, style)
         print(f"Updated {key} for user '{user_cfg['_user_id']}'.")

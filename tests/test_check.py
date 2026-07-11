@@ -81,7 +81,8 @@ class CheckSkillTests(unittest.TestCase):
             result = self.run_check(env, "report")
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("Teach Me 状态检查", result.stdout)
-            self.assertIn("概念笔记：", result.stdout)
+            self.assertIn("| 项目 | 状态 |", result.stdout)
+            self.assertIn("| 教学风格 | 值 |", result.stdout)
             self.assertIn("你可以这样说", result.stdout)
 
     def test_json_output(self) -> None:
@@ -115,6 +116,8 @@ class CheckSkillTests(unittest.TestCase):
             self.assertTrue(data["git_sync"]["enabled"])
             self.assertTrue(data["git_sync"]["auto_sync"])
             self.assertEqual(data["git_sync"]["remote"], "git@github.com:user/repo.git")
+            self.assertIn("profile_initialized", data["style_profile"])
+            self.assertIn("knowledge_domains", data["vault"])
 
     def test_english_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

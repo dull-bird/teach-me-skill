@@ -7,11 +7,6 @@ hooks = true
 # install-hook.py writes your absolute home path automatically.
 writable_roots = ["/Users/YOUR_USER/.teach_me_skill"]
 
-[[hooks.UserPromptSubmit]]
-[[hooks.UserPromptSubmit.hooks]]
-type = "command"
-command = "python3 ~/.codex/skills/teach-me/scripts/teach_me_hook.py"
-
 [[hooks.PreToolUse]]
 matcher = "*"
 [[hooks.PreToolUse.hooks]]

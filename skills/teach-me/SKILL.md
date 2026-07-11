@@ -1,6 +1,6 @@
 ---
 name: teach-me
-description: Learning companion that turns meaningful tool-based work into durable notes and a personal learner portrait. Use when coding, debugging, reviewing, refactoring, building frontend/backend/mobile projects, explaining architecture, working with data, media, documents, configuration, or research, or when the user asks "teach me", "教我", "复盘", "原理", "grill me", "考我". Also use after completing a meaningful phase to decide whether to write 1-3 high-value Obsidian notes, update concept mastery, shape the AI's teaching personality to the user, and ask gentle Socratic questions without interrupting the user's flow.
+description: Learning companion that turns meaningful tool-based work into durable notes and a personal learner portrait. Use when coding, debugging, reviewing, refactoring, building frontend/backend/mobile projects, explaining architecture, working with data, media, documents, configuration, or research, or when the user asks "teach me", "教我", "复盘", "原理", or "grill me". Also use after completing a meaningful phase to decide whether to write 1-3 high-value Obsidian notes, update concept mastery, shape the AI's teaching personality to the user, and ask gentle Socratic questions without interrupting the user's flow.
 ---
 
 # Teach Me
@@ -17,6 +17,25 @@ file, then load the learner's dynamic portrait with `teach_me.py context --full`
 when a Teach Me workflow actually runs. Do not duplicate this workflow in hook
 output.
 
+## Teaching Output Contract
+
+Every user-facing Teach Me lesson — whether it answers an explicit teaching
+request or follows a Stop-hook boundary — begins on its first line with:
+
+```text
+🌱 [领域：<知识领域>] [项目：<项目显示名>]
+```
+
+Omit the project segment only when the work has no identifiable project. Choose
+exactly one domain tag: `AI`, `数据库`, `数学`, `物理`, `软件工程`, `产品设计`, or
+`通用`. Classify the underlying mechanism, not the tool name. This applies to
+teaching, not to operational status messages, setup questions, or test reports.
+
+When capturing, pass `knowledge_domain` and a project object when known. Prefer
+`project.path` as the stable identity; the runtime stores a path-derived ID
+separately from the display name, so a project rename does not split its history.
+Use an explicit `project.id` if a path is unavailable or not stable.
+
 Teach Me must behave like a tutor with a growing learner model, not only a
 recap writer. It should draw a learner portrait over time: what the user knows,
 where they are fuzzy, how they like to be taught, and what they have struggled
@@ -30,12 +49,12 @@ The AI's teaching personality can be shaped by the user. Respect the configured
 If no style is set, infer a reasonable default from the conversation tone.
 
 Use the local runtime in `scripts/teach_me.py` for configuration, Obsidian note
-creation, mastery state updates, and event logging. Hooks may inject a compact
-Teach Me context and may request one short Stop-hook review after
+creation, mastery state updates, and event logging. Tool hooks collect evidence
+and Stop may request one short Teach Me review after
 learning-worthy tool work. The Stop-hook review must teach exactly one core
 mechanism by default in 1-2 sentences, ask zero or one single-part optional
-question, and only then capture notes. Its final user-facing micro-lesson begins
-with `🌱`; hook feedback itself does not include that marker. Never turn tool steps into a lesson. If
+question, and only then capture notes. Its final user-facing micro-lesson follows
+the Teaching Output Contract; hook feedback itself does not include that marker. Never turn tool steps into a lesson. If
 hooks are not installed and the task involves real tool work,
 run:
 
@@ -84,6 +103,19 @@ Use `--vault <path>` if the user chooses a different vault path. Users can also 
 - “Initialize Teach Me for me, language auto.”
 - “Put my Teach Me vault in ~/Documents/Teach-Me-Vault.”
 - “Enable Git sync with my remote git@github.com:user/teach-me-vault.git and auto-sync.”
+
+### Teaching-profile confirmation
+
+Vault initialization and teaching-profile confirmation are separate. If
+`teach_me.py context` reports `teaching profile initialized: false`, its runtime
+fallback values are not consent. At the next genuine teaching boundary, ask for
+one concise style choice and wait for an explicit reply; do not teach, assess,
+capture, or write a note in that same turn. A confirmed default is valid:
+
+```bash
+python3 <teach-me-skill-dir>/scripts/teach_me.py configure \
+  --teacher-style default --knowledge-focus balanced
+```
 
 ### Multiple users
 
@@ -249,6 +281,14 @@ chooses by measured latency.
 ```text
 Short answer, optional: why is hardcoding subscription node names brittle?
 ```
+
+## Exam Handoff
+
+An exam is never created by a hook or automatically at Stop. When the user
+explicitly says “考考我”, “给我出套卷子”, “quiz me”, or “test me”, invoke the Teach
+Me Exam skill. It first asks for scope, question style, and time budget, then
+plans questions and records the graded result. A micro-lesson may suggest an
+exam later, but must not start one without the user's request.
 
 ## What To Capture
 
@@ -419,7 +459,7 @@ JSON
 Example:
 
 ```text
-🌱 刚才你做了一个“集中状态驱动动画”的改动。核心思路是：把所有动画状态
+🌱 [领域：软件工程] [项目：动画编辑器] 刚才你做了一个“集中状态驱动动画”的改动。核心思路是：把所有动画状态
 放在一个地方管理，UI 只负责根据状态重绘，这样交互和动画逻辑不会散在
 各处。一个小问题：如果状态更新和重绘频率不一致，你觉得应该先改状态再
 重绘，还是直接操作 DOM/Canvas？

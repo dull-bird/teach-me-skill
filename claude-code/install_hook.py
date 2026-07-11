@@ -16,7 +16,6 @@ HOOK_COMMAND = "python3 " + os.path.expanduser(
 )
 MARKER = "teach-me/scripts/teach_me_hook.py"
 DEFS = [
-    ("UserPromptSubmit", None),
     ("PreToolUse", "*"),
     ("PostToolUse", "*"),
     ("Stop", "*"),
@@ -79,7 +78,7 @@ def main() -> int:
     action = "Removed" if args.uninstall else "Installed"
     print(f"{action} Teach Me hooks in {SETTINGS_PATH}")
     if not args.uninstall:
-        print(f"  UserPromptSubmit + PreToolUse(*) + PostToolUse(*) + Stop(*) -> {HOOK_COMMAND}")
+        print(f"  PreToolUse(*) + PostToolUse(*) + Stop(*) -> {HOOK_COMMAND}")
     return 0
 
 

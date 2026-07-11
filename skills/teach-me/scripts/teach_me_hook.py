@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Hook entrypoint for Teach Me.
-
-The hook is intentionally conservative. Prompt hooks inject compact learning
-context for obvious learning work. Tool hooks collect evidence. Stop hooks use
-that evidence to request exactly one short Teach Me review when a turn appears
-learning-worthy.
-"""
+"""Hook entrypoint for Teach Me tool evidence and phase-boundary decisions."""
 
 from __future__ import annotations
 
@@ -27,63 +21,13 @@ from teach_me import (  # noqa: E402
     events_path,
     load_config,
     now_iso,
+    read_style,
     resolve_user_config,
     save_config,
+    teaching_profile_initialized,
     USERS_DIR,
 )
 
-
-MANUAL_TRIGGERS = [
-    "teach me",
-    "grill me",
-    "explain",
-    "why",
-    "教我",
-    "讲讲",
-    "解释",
-    "原理",
-    "复盘",
-    "知识点",
-    "知识图谱",
-    "考我",
-    "苏格拉底",
-]
-
-OPT_OUT_TRIGGERS = [
-    "don't teach", "do not teach", "no teaching", "skip teaching",
-    "don't explain", "do not explain", "no explanation",
-    "don't ask", "do not ask", "no questions",
-    "不要教学", "不用教学", "不需要教学", "跳过教学",
-    "不要解释", "不用解释", "不需要解释",
-    "不要总结知识", "不用总结知识", "不需要总结知识",
-    "不要问我", "不用问我", "不需要问我",
-]
-
-SETUP_CONFIRMATION_TRIGGERS = [
-    "i choose", "use defaults", "default setup", "teacher style", "knowledge focus",
-    "我选择", "我选", "使用默认", "默认设置", "教师风格", "知识重点",
-    "实战教练", "原理导师", "苏格拉底导师",
-]
-
-WORK_SIGNALS = [
-    # coding / software
-    "code", "coding", "debug", "bug", "frontend", "backend", "refactor", "review",
-    "test", "build", "vite", "vue", "react", "svelte", "next.js", "nuxt", "node",
-    "typescript", "javascript", "python", "go", "rust", "api", "database", "schema",
-    "algorithm", "architecture", "component", "hook",
-    # general tool / computer work
-    "tool", "tools", "computer", "file", "files", "folder", "document", "data",
-    "spreadsheet", "slide", "image", "video", "audio", "design", "draw", "write",
-    "analysis", "analyze", "research", "search", "browse", "download", "upload",
-    "install", "configure", "setup", "run", "execute", "command", "script",
-    # Chinese
-    "代码", "开发", "项目", "前端", "后端", "调试", "报错", "实现", "修复", "重构",
-    "评审", "测试", "构建", "算法", "架构", "组件", "页面", "接口", "数据库", "状态",
-    "依赖",
-    "工具", "电脑", "文件", "文件夹", "文档", "数据", "表格", "幻灯片", "图片",
-    "视频", "音频", "设计", "画图", "写作", "分析", "研究", "搜索", "浏览",
-    "下载", "上传", "安装", "配置", "设置", "运行", "执行", "命令", "脚本",
-]
 
 TOOL_EVENTS = {"PreToolUse", "PostToolUse", "PostToolUseFailure"}
 STOP_EVENTS = {"Stop"}
@@ -131,50 +75,6 @@ def event_name(payload: dict[str, Any]) -> str:
         or ""
     )
     return str(event)
-
-
-def get_prompt(payload: dict[str, Any]) -> str:
-    for key in ("prompt", "user_prompt", "userPrompt", "message"):
-        value = payload.get(key)
-        if isinstance(value, str):
-            return value
-        if isinstance(value, list):
-            parts = [
-                str(item.get("text") or item.get("content") or "")
-                for item in value
-                if isinstance(item, dict) and (item.get("text") or item.get("content"))
-            ]
-            if parts:
-                return "\n".join(parts)
-    messages = payload.get("messages")
-    if isinstance(messages, list) and messages:
-        last = messages[-1]
-        if isinstance(last, dict):
-            content = last.get("content")
-            if isinstance(content, str):
-                return content
-    return ""
-
-
-def includes_any(text: str, needles: list[str]) -> bool:
-    lowered = text.lower()
-    return any(needle.lower() in lowered for needle in needles)
-
-
-def is_manual(prompt: str) -> bool:
-    return includes_any(prompt, MANUAL_TRIGGERS)
-
-
-def is_opt_out(prompt: str) -> bool:
-    return includes_any(prompt, OPT_OUT_TRIGGERS)
-
-
-def is_setup_confirmation(prompt: str) -> bool:
-    return includes_any(prompt, SETUP_CONFIRMATION_TRIGGERS)
-
-
-def is_work_like(prompt: str) -> bool:
-    return includes_any(prompt, WORK_SIGNALS)
 
 
 def session_id(payload: dict[str, Any]) -> str:
@@ -440,26 +340,6 @@ def append_event(config: dict[str, Any], data: dict[str, Any]) -> None:
     append_jsonl(events_path(config), {"timestamp": now_iso(), **data})
 
 
-def maybe_log_prompt_event(
-    payload: dict[str, Any], prompt: str, manual: bool, work_like: bool, opt_out: bool = False
-) -> None:
-    user_cfg = ensure_user(payload)
-    append_event(
-        user_cfg,
-        {
-            "type": "prompt",
-            **event_context(payload),
-            "manual": manual,
-            "work_like": work_like,
-            "opt_out": opt_out,
-            "user_id": user_cfg.get("_user_id", "default"),
-            "prompt": prompt[:500],
-            "score": 0 if opt_out else (4 if manual else (2 if work_like else 0)),
-            "signal_tags": ["opt_out"] if opt_out else (["manual"] if manual else (["work_like"] if work_like else [])),
-        },
-    )
-
-
 def maybe_log_tool_event(payload: dict[str, Any]) -> None:
     user_cfg = ensure_user(payload)
     event = event_name(payload)
@@ -571,7 +451,6 @@ def modified_files(events: list[dict[str, Any]], payload: dict[str, Any]) -> lis
 
 def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
     scoped = [event for event in events if same_scope(event, payload)]
-    opted_out = any(event.get("type") == "prompt" and event.get("opt_out") for event in scoped)
     tags: set[str] = set()
     reasons: list[str] = []
     score = 0
@@ -599,9 +478,7 @@ def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[st
         score += 1
         tags.add("debug_signal")
 
-    if "manual" in tags:
-        threshold = 4
-    elif {"modification", "verification"} <= tags or {"modification", "build"} <= tags:
+    if {"modification", "verification"} <= tags or {"modification", "build"} <= tags:
         threshold = 6
     else:
         threshold = 7
@@ -612,16 +489,8 @@ def score_stop(payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[st
         "tags": sorted(tags),
         "reasons": reasons[-6:],
         "modified_files": modified_files(events, payload),
-        "should_block": not opted_out and score >= threshold and bool(tags),
+        "should_block": score >= threshold and bool(tags),
     }
-
-
-def build_additional_context(prompt: str, manual: bool, user_cfg: dict[str, Any]) -> str:
-    skill_dir = Path(__file__).resolve().parent.parent
-    return (
-        "Teach Me is active. Do not interrupt implementation. "
-        f"At a meaningful phase boundary, read and follow `{skill_dir}/SKILL.md`."
-    )
 
 
 def evidence_summary(assessment: dict[str, Any]) -> str:
@@ -650,6 +519,14 @@ Detection evidence:
 {evidence}
 """
 
+    if not teaching_profile_initialized(read_style(config)):
+        return f"""Teach Me teaching-profile setup is required before review.
+Follow `{skill_dir}/SKILL.md`. Do not teach, assess, capture, or write notes in this turn. Ask the user to choose exactly one style: (1) default balanced tutor, (2) implementation coach, (3) general-principles mentor, (4) Socratic tutor, or (5) custom. Explain that runtime fallback values are not a confirmed teaching preference. Wait for an explicit reply, then run `python3 {skill_dir}/scripts/teach_me.py configure --teacher-style <choice>{user_flag}`.
+
+Detection evidence:
+{evidence}
+"""
+
     modified = assessment.get("modified_files", [])
     modified_hint = ""
     if modified:
@@ -659,7 +536,7 @@ Detection evidence:
     prompt = f"""Teach Me review required at this phase boundary.
 Follow `{skill_dir}/SKILL.md` and first run `python3 {skill_dir}/scripts/teach_me.py context --full{user_flag}`. Review the actual work and teach exactly one core mechanism by default from the learner's first weak prerequisite in 1-2 plain sentences; add a second only when essential. Never present tool steps as knowledge. Ask zero or one optional, single-part follow-up; skip it when the user requested brevity. Capture or assess only after teaching when warranted.
 
-Begin your entire user-facing response with the 🌱 seedling emoji so the user recognizes it as a Teach Me micro-lesson.
+Begin your entire user-facing response with `🌱 [领域：<知识领域>]`, using one of AI, 数据库, 数学, 物理, 软件工程, 产品设计, or 通用. If the actual work identifies a project, append ` [项目：<当前项目名>]`. This header is required for every Teach Me lesson, whether it was requested directly or triggered at Stop.
 
 Detection evidence:
 {evidence}{modified_hint}
@@ -677,6 +554,8 @@ def build_stop_reason(config: dict[str, Any], assessment: dict[str, Any]) -> str
     skill_dir = Path(__file__).resolve().parent.parent
     if not config.get("initialized"):
         return f"Teach Me review requires setup. Read and follow `{skill_dir}/SKILL.md`."
+    if not teaching_profile_initialized(read_style(config)):
+        return f"Teach Me teaching-profile setup required. Read and follow `{skill_dir}/SKILL.md`; ask for one explicit style choice before teaching or capture."
 
     return f"Teach Me review required. Read and follow `{skill_dir}/SKILL.md`."
 
@@ -728,33 +607,6 @@ def handle_stop(payload: dict[str, Any]) -> int:
     return 0
 
 
-def handle_prompt(payload: dict[str, Any]) -> int:
-    prompt = get_prompt(payload)
-    opt_out = is_opt_out(prompt)
-    manual = not opt_out and is_manual(prompt)
-    work_like = is_work_like(prompt)
-    user_cfg = ensure_user(payload)
-    setup_confirmation = not user_cfg.get("initialized") and is_setup_confirmation(prompt)
-    maybe_log_prompt_event(payload, prompt, manual, work_like, opt_out)
-    if opt_out:
-        return 0
-    if not manual and not work_like and not setup_confirmation:
-        return 0
-
-    context = build_additional_context(prompt, manual, user_cfg)
-
-    # Prompt hooks only inject context. Blocking here aborts the user's task in
-    # Codex and Kimi instead of giving the agent a chance to teach.
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "UserPromptSubmit",
-            "additionalContext": context,
-        }
-    }
-    print(json.dumps(output, ensure_ascii=False))
-    return 0
-
-
 def main() -> int:
     payload = load_payload()
     debug_payload_path = os.environ.get("TEACH_ME_DEBUG_PAYLOAD_PATH")
@@ -772,7 +624,7 @@ def main() -> int:
     if event in STOP_EVENTS:
         return handle_stop(payload)
 
-    return handle_prompt(payload)
+    return 0
 
 
 if __name__ == "__main__":

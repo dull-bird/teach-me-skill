@@ -33,6 +33,6 @@ Avoid:
 - Feedback probes should be optional. Prefer multiple-choice and true/false;
   use short-answer occasionally.
 - Git sync is opt-in. Never imply a vault is pushed remotely by default.
-- Public copy must match the current implementation: Prompt hooks inject
-  context, tool hooks collect evidence, Stop hooks score the phase boundary, and
-  the runtime writes the vault.
+- Public copy must match the current implementation: tool hooks collect
+  evidence, Stop hooks score the phase boundary, explicit skills handle teaching
+  and exams, and the runtime writes the vault.

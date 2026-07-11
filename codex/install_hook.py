@@ -19,11 +19,6 @@ HOOK_COMMAND = "python3 " + os.path.expanduser(
 MARKER = "teach-me/scripts/teach_me_hook.py"
 
 HOOK_BLOCK = f"""
-[[hooks.UserPromptSubmit]]
-[[hooks.UserPromptSubmit.hooks]]
-type = "command"
-command = "{HOOK_COMMAND}"
-
 [[hooks.PreToolUse]]
 [[hooks.PreToolUse.hooks]]
 type = "command"
@@ -180,7 +175,7 @@ def main() -> int:
     action = "Removed" if args.uninstall else "Installed"
     print(f"{action} Teach Me hooks in {CONFIG_PATH}")
     if not args.uninstall:
-        print(f"  UserPromptSubmit + PreToolUse(*) + PostToolUse(*) + Stop(*) -> {HOOK_COMMAND}")
+        print(f"  PreToolUse(*) + PostToolUse(*) + Stop(*) -> {HOOK_COMMAND}")
         print(f"  Added Codex writable root for Teach Me: {TEACH_ME_HOME}")
         print("  Codex may still ask for hook trust approval once after hook changes.")
     return 0

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Teach Me - Turn Development Work Into Learning Assets</title>
-<meta name="description" content="Teach Me is an Agent Skill for Claude Code, Codex, OpenClaw, and Kimi Code CLI. Prompt, tool, and stop hooks turn meaningful development work into Obsidian notes, a knowledge tree, and review prompts.">
+<meta name="description" content="Teach Me is an Agent Skill for Claude Code, Codex, OpenClaw, and Kimi Code CLI. Tool and Stop hooks identify meaningful work for review, while explicit skills create teaching and exams from your local learning history.">
 <meta name="theme-color" content="#fbfaf7">
 <link rel="icon" type="image/webp" href="../assets/seedling_1f331_once.webp">
 <link rel="alternate" hreflang="zh-CN" href="../">
@@ -786,12 +786,12 @@ pre{
     <div class="wrap">
       <p class="kicker">How</p>
       <h2>Four steps to turn a work phase into knowledge.</h2>
-      <p class="section-sub">Teach Me does not replace the AI tool you already use. It acts like a tutor who knows when to pause: observe first, then decide whether to explain.</p>
+      <p class="section-sub">I keep an explicit learning request separate from an automatic review: say “teach me” to enter teaching; while you work, I only use real tool evidence to decide whether a pause is useful.</p>
       <div class="steps">
-        <div class="step"><strong>1. Sense the scene</strong><span>You are coding, configuring, researching, or processing data — or you explicitly ask “teach me” or “why.”</span></div>
-        <div class="step"><strong>2. Collect evidence</strong><span>It quietly notes what actually happened: what changed, what was tested, what failed, what was verified.</span></div>
-        <div class="step"><strong>3. Judge value</strong><span>At the phase boundary it asks: is there a concept, reasoning pattern, or risk worth keeping? If not, it stays quiet.</span></div>
-        <div class="step"><strong>4. Write it down</strong><span>It captures 1-3 high-value items, updates your knowledge tree and learner portrait, and schedules the next review.</span></div>
+        <div class="step"><strong>1. Explicit requests use skills</strong><span>“Teach me”, “why”, and “review” invoke Teach Me. “Quiz me” invokes Exam, which first asks for scope, format, and time.</span></div>
+        <div class="step"><strong>2. Collect real evidence</strong><span>Tool hooks quietly note what happened: what changed, what was tested, what failed, and what was verified.</span></div>
+        <div class="step"><strong>3. Stop judges value</strong><span>At a phase boundary it uses tool evidence only. Weak signals stay quiet; strong ones request one short review. It never starts an exam itself.</span></div>
+        <div class="step"><strong>4. Capture with context</strong><span>Lessons start with 🌱 [领域：…], and add [项目：…] when known. Notes keep a stable project ID, so a renamed project stays connected to its history.</span></div>
       </div>
     </div>
   </section>
@@ -839,19 +839,19 @@ pre{
             <tr>
               <td>Claude Code</td>
               <td><code>~/.claude/settings.json</code></td>
-              <td><code>UserPromptSubmit</code>, <code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code></td>
-              <td>Injects context for explicit learning or work prompts, scores tool evidence, and may request one short review at Stop.</td>
+              <td><code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code></td>
+              <td>Records real tool evidence and requests one short Stop review only when the signal is strong. Explicit teaching and exams use skills.</td>
             </tr>
             <tr>
               <td>Codex</td>
               <td><code>~/.codex/config.toml</code></td>
-              <td><code>UserPromptSubmit</code>, <code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code></td>
-            <td>Enables <code>[features] hooks = true</code>, appends Teach Me hook blocks, and adds <code>~/.teach_me_skill</code> as a writable root.</td>
+              <td><code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code></td>
+            <td>Enables <code>[features] hooks = true</code>, appends tool and Stop hook blocks, and adds <code>~/.teach_me_skill</code> as a writable root.</td>
             </tr>
             <tr>
               <td>Kimi Code CLI</td>
               <td><code>~/.kimi/config.toml</code></td>
-              <td><code>UserPromptSubmit</code>, tool events, <code>Stop</code></td>
+              <td>Tool events, <code>Stop</code></td>
               <td>Reuses the shared <code>~/.agents/skills/teach-me</code> path, records evidence, and triggers reviews through supported hook events.</td>
             </tr>
             <tr>
@@ -863,7 +863,7 @@ pre{
           </tbody>
         </table>
       </div>
-      <p class="note">Hooks do not teach directly. They provide context and evidence. The agent still decides at the phase boundary whether anything deserves a durable note.</p>
+      <p class="note">Hooks do not teach or guess intent from keywords. They provide tool evidence and a phase boundary; the agent decides whether anything deserves a durable note. Exams always require your explicit request.</p>
     </div>
   </section>
 

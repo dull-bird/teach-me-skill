@@ -270,6 +270,8 @@ def default_state() -> dict[str, Any]:
 def default_style(language: str = "auto") -> dict[str, Any]:
     return {
         "version": 1,
+        # Runtime defaults are usable before setup, but are not user consent.
+        "profile_initialized": False,
         "language": language,
         "analogy_level": "medium",
         "socratic_level": "gentle",
@@ -324,6 +326,61 @@ TEACHER_PROFILES: dict[str, dict[str, str]] = {
         "verbosity": "compact",
     },
 }
+
+
+KNOWLEDGE_DOMAINS = {"AI", "数据库", "数学", "物理", "软件工程", "产品设计", "通用"}
+
+
+def teaching_profile_initialized(style: dict[str, Any]) -> bool:
+    """Whether a user explicitly chose a teaching profile, not a fallback."""
+    return bool(style.get("profile_initialized", False))
+
+
+def normalize_knowledge_domain(value: Any) -> str:
+    text = str(value or "").strip()
+    aliases = {
+        "ai": "AI", "人工智能": "AI", "machine learning": "AI",
+        "database": "数据库", "db": "数据库",
+        "math": "数学", "mathematics": "数学",
+        "physics": "物理",
+        "software": "软件工程", "software engineering": "软件工程",
+        "product": "产品设计", "product design": "产品设计",
+        "general": "通用",
+    }
+    return text if text in KNOWLEDGE_DOMAINS else aliases.get(text.lower(), "通用")
+
+
+def normalize_project_ref(project: Any) -> dict[str, str] | None:
+    if not isinstance(project, dict):
+        return None
+    name = str(project.get("name") or "").strip()
+    path = str(project.get("path") or "").strip()
+    explicit_id = str(project.get("id") or project.get("project_id") or "").strip()
+    if explicit_id:
+        project_id = explicit_id
+    elif path:
+        project_id = "path:" + os.path.normpath(os.path.expanduser(path))
+    elif name:
+        project_id = "name:" + slugify(name)
+    else:
+        return None
+    return {"id": project_id, "name": name or project_id.removeprefix("name:")}
+
+
+def merge_project_refs(existing: Any, project_ref: dict[str, str] | None) -> list[dict[str, str]]:
+    refs = [
+        {"id": str(ref.get("id", "")), "name": str(ref.get("name", ""))}
+        for ref in (existing or [])
+        if isinstance(ref, dict) and ref.get("id")
+    ]
+    if not project_ref:
+        return refs
+    for ref in refs:
+        if ref["id"] == project_ref["id"]:
+            ref["name"] = project_ref["name"]
+            return refs
+    refs.append(project_ref)
+    return refs
 
 
 def apply_teacher_preferences(
@@ -1115,6 +1172,8 @@ def render_note(item: dict[str, Any], payload: dict[str, Any], existing: bool) -
     mastery = str(item.get("mastery", "seen"))
     project = payload.get("project") or {}
     project_name = str(project.get("name", "")).strip()
+    project_ref = normalize_project_ref(project)
+    knowledge_domain = normalize_knowledge_domain(item.get("knowledge_domain") or payload.get("knowledge_domain"))
     phase = str(payload.get("phase", "")).strip()
     one_line = str(item.get("one_line", "") or item.get("why_it_matters", "")).strip()
     first_principles = listify(item.get("first_principles"))
@@ -1153,6 +1212,9 @@ def render_note(item: dict[str, Any], payload: dict[str, Any], existing: bool) -
         lines.extend(["**Phase:** " + phase, ""])
     if project_name:
         lines.extend(["**Project:** " + project_name, ""])
+    if project_ref:
+        lines.extend(["**Project ID:** `" + project_ref["id"] + "`", ""])
+    lines.extend(["**Knowledge Domain:** " + knowledge_domain, ""])
     if one_line:
         lines.extend(["### One-Line Meaning", "", one_line, ""])
     why = str(item.get("why_it_matters", "")).strip()
@@ -1268,6 +1330,8 @@ def update_knowledge_tree_node(
     data: dict[str, Any],
     *,
     project_name: str = "",
+    project_ref: dict[str, str] | None = None,
+    knowledge_domain: str = "通用",
     source: str = "capture",
     note: str = "",
 ) -> None:
@@ -1314,6 +1378,8 @@ def update_knowledge_tree_node(
         "misconceptions": misconceptions,
         "evidence": evidence[-10:],
         "projects": merge_project(current.get("projects", []), project_name),
+        "project_refs": merge_project_refs(current.get("project_refs"), project_ref),
+        "knowledge_domain": normalize_knowledge_domain(data.get("knowledge_domain") or knowledge_domain),
         "last_assessed": now_iso(),
         "needs_probe": bool(data.get("needs_probe", merged_mastery in {"unknown", "seen"})),
     }
@@ -1339,6 +1405,8 @@ def update_knowledge_tree_node(
             "misconceptions": listify(prereq_current.get("misconceptions")),
             "evidence": prereq_current.get("evidence", [])[-10:],
             "projects": merge_project(prereq_current.get("projects", []), project_name),
+            "project_refs": merge_project_refs(prereq_current.get("project_refs"), project_ref),
+            "knowledge_domain": normalize_knowledge_domain(prereq_current.get("knowledge_domain") or knowledge_domain),
             "last_assessed": prereq_current.get("last_assessed", now_iso()),
             "needs_probe": bool(prereq_current.get("needs_probe", True)),
         }
@@ -1562,7 +1630,7 @@ def cmd_configure(args: argparse.Namespace) -> int:
     if sync.get("enabled"):
         ensure_git_repo(user_cfg)
 
-    teacher_profile = args.teacher_style or ("default" if not user_cfg.get("initialized") else None)
+    teacher_profile = args.teacher_style
     style = apply_teacher_preferences(
         read_style(user_cfg),
         teacher_profile,
@@ -1570,6 +1638,8 @@ def cmd_configure(args: argparse.Namespace) -> int:
         args.custom_teacher_style,
     )
     style["language"] = user_cfg.get("language", "auto")
+    if teacher_profile or args.custom_teacher_style or args.knowledge_focus:
+        style["profile_initialized"] = True
     write_json(style_path(user_cfg), style)
     rewrite_knowledge_tree(user_cfg, read_state(user_cfg))
     sync_result = auto_sync_vault(user_cfg, "configure")
@@ -1622,6 +1692,7 @@ def format_context(config: dict[str, Any], brief: bool = True) -> str:
     ensure_vault(config)
     state = read_state(config)
     style = read_style(config)
+    profile_initialized = teaching_profile_initialized(style)
     concepts = state.get("concepts", {})
     tree = state.get("knowledge_tree", {})
     total = len(concepts)
@@ -1635,6 +1706,7 @@ def format_context(config: dict[str, Any], brief: bool = True) -> str:
     lines.extend(
         [
             "- teaching cadence: do not interrupt implementation; capture 1-3 high-value concepts at phase boundaries.",
+            f"- teaching profile initialized: {str(profile_initialized).lower()}",
             "- teaching baseline: before teaching a new domain, sketch a prerequisite ladder, probe obvious basics, and start at the first weak node.",
             "- capture command: python3 <teach-me-skill-dir>/scripts/teach_me.py capture",
             "- assessment command: python3 <teach-me-skill-dir>/scripts/teach_me.py assess",
@@ -1657,6 +1729,8 @@ def format_context(config: dict[str, Any], brief: bool = True) -> str:
             f"- portrait summary: {total} concepts, {weak_count} weak, {due_today} due today, {len(tree)} knowledge-tree nodes",
         ]
     )
+    if not profile_initialized:
+        lines.append("- teaching-profile setup: fallback values are not consent. Before teaching or capture, ask the user to choose default, coach, theorist, socratic, or custom style.")
 
     if brief:
         lines.append("- run `python3 <teach-me-skill-dir>/scripts/teach_me.py context --full` to see weak concepts, knowledge-tree nodes, and recent captures.")
@@ -1713,6 +1787,9 @@ def cmd_status(args: argparse.Namespace) -> int:
     if user_cfg.get("initialized"):
         ensure_vault(user_cfg)
         state = read_state(user_cfg)
+        style = read_style(user_cfg)
+        data["teaching_profile_initialized"] = teaching_profile_initialized(style)
+        data["teacher_profile"] = style.get("teacher_profile", "default")
         data["concept_count"] = len(state.get("concepts", {}))
         data["knowledge_tree_count"] = len(state.get("knowledge_tree", {}))
         data["capture_count"] = len(state.get("captures", []))
@@ -1754,6 +1831,8 @@ def cmd_assess(args: argparse.Namespace) -> int:
     state = read_state(user_cfg)
     project = payload.get("project") or {}
     project_name = str(project.get("name", "")).strip()
+    project_ref = normalize_project_ref(project)
+    knowledge_domain = normalize_knowledge_domain(payload.get("knowledge_domain"))
     updated: list[str] = []
     for raw_node in nodes:
         if not isinstance(raw_node, dict):
@@ -1766,6 +1845,8 @@ def cmd_assess(args: argparse.Namespace) -> int:
             title,
             raw_node,
             project_name=project_name,
+            project_ref=project_ref,
+            knowledge_domain=knowledge_domain,
             source="assessment",
         )
         updated.append(title)
@@ -1777,6 +1858,8 @@ def cmd_assess(args: argparse.Namespace) -> int:
     assessment = {
         "timestamp": now_iso(),
         "project": project,
+        "project_ref": project_ref,
+        "knowledge_domain": knowledge_domain,
         "domain": payload.get("domain", ""),
         "summary": payload.get("summary", ""),
         "nodes": updated,
@@ -1828,6 +1911,8 @@ def cmd_style(args: argparse.Namespace) -> int:
         if value:
             style[key] = value
     style["last_feedback_at"] = now_iso()
+    if any(value for key, value in updates.items() if key != "language") or args.teacher_style or args.custom_teacher_style:
+        style["profile_initialized"] = True
     write_json(style_path(user_cfg), style)
     sync_result = auto_sync_vault(user_cfg, "style")
     print(f"Teach Me style updated for user '{user_cfg['_user_id']}': {style_path(user_cfg)}")
@@ -1882,6 +1967,8 @@ def cmd_capture(args: argparse.Namespace) -> int:
     state = read_state(user_cfg)
     project = payload.get("project") or {}
     project_name = str(project.get("name", "")).strip()
+    project_ref = normalize_project_ref(project)
+    knowledge_domain = normalize_knowledge_domain(payload.get("knowledge_domain"))
     phase = str(payload.get("phase", "")).strip()
     captured_titles: list[str] = []
 
@@ -1930,6 +2017,8 @@ def cmd_capture(args: argparse.Namespace) -> int:
             "review_interval_days": interval,
             "ease": float(current.get("ease", 2.5)),
             "projects": merge_project(current.get("projects", []), project_name),
+            "project_refs": merge_project_refs(current.get("project_refs"), project_ref),
+            "knowledge_domain": normalize_knowledge_domain(raw_item.get("knowledge_domain") or knowledge_domain),
             "note": str(path.relative_to(vault_path(user_cfg))),
             "importance": raw_item.get("importance"),
         }
@@ -1940,6 +2029,8 @@ def cmd_capture(args: argparse.Namespace) -> int:
             title,
             raw_item,
             project_name=project_name,
+            project_ref=project_ref,
+            knowledge_domain=knowledge_domain,
             source="capture",
             note=str(path.relative_to(vault_path(user_cfg))),
         )
@@ -1952,6 +2043,8 @@ def cmd_capture(args: argparse.Namespace) -> int:
     capture = {
         "timestamp": now_iso(),
         "project": project,
+        "project_ref": project_ref,
+        "knowledge_domain": knowledge_domain,
         "phase": phase,
         "language": payload.get("language", user_cfg.get("language", "auto")),
         "summary": payload.get("summary", ""),
