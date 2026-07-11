@@ -89,6 +89,24 @@ consent and should then complete setup.
 - Ask whether the knowledge focus should be `balanced`, `implementation`, or
   `general`. Choosing the defaults is valid and completes setup.
 
+## Selection Questions
+
+When Teach Me asks the user to choose from bounded options, use the agent's
+native single-select form (`AskUserQuestion`) whenever that surface supports
+forms. Use one decision per form, with the option text as the label; do not add
+redundant `A/B/C` prefixes. This applies to teacher profile, knowledge focus,
+Git-sync choices, import familiarity, feedback probes, exam preferences, and
+any other multiple-choice Teach Me interaction.
+
+For the first teaching-profile choice, ask one single-select form:
+
+- Question: `你希望 Teach Me 用什么方式教你？`
+- Options: `默认平衡`, `实战教练`, `原理导师`, `苏格拉底式`, `自定义描述`
+
+When the current agent does not support forms, use a short numbered text
+fallback. Do not ask several unrelated choices in one message, and do not use a
+form for free-text answers, code, paths, or custom-style prose.
+
 After the user confirms, run:
 
 ```bash
@@ -116,6 +134,8 @@ capture, or write a note in that same turn. A confirmed default is valid:
 python3 <teach-me-skill-dir>/scripts/teach_me.py configure \
   --teacher-style default --knowledge-focus balanced
 ```
+
+Use the teaching-profile single-select form above for this confirmation too.
 
 ### Multiple users
 
