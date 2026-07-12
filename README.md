@@ -279,11 +279,39 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 
 ### 目标级汇总与 quiet window
 
-对于一个 feature、调试排查或小项目，我希望最后留下的是一张能看懂全貌的知识地图，而不是多条被 Stop 刷走的小提示。因此 agent 会在 goal 开始时建立本地会话，Tool hooks 持续追加证据；普通 Stop 复盘会暂缓到 goal 完成。
+一个 `Stop` 只说明 agent 的一次输出结束，并不说明 feature、排查或小项目已经完成。长任务里可能发生很多次 Stop；若每次都教学，重要的脉络会被连续的小提示冲散。目标级汇总把“收集证据”和“交付解释”分成两个边界：中途安静积累，真正完成时再给一张能看懂全貌的知识地图。
 
-完成时，runtime 返回给 agent 一份明确的写作契约：以 `🌱 [领域：…] [项目：…]` 开头，先写 **一段** 连贯的知识总结，再写 **恰好 5 个** 相互关联、可迁移的知识点。hook 不自己生成内容，agent 仍会结合实际代码、文档和对话来写，避免把命令日志误当知识。
+| 时机 | runtime / hook 做什么 | 用户会看到什么 |
+| --- | --- | --- |
+| goal 开始 | agent 运行 `goal start`，把稳定 goal ID、项目路径、领域和可选 quiet window 写入本地 `goal_sessions` | 不教学、不打断 |
+| 正常工作 | Tool hooks 继续把编辑、测试、构建、错误和验证写入 `events.jsonl` | 不教学、不把命令当知识 |
+| 目标仍活跃时的 Stop | Stop hook 记录 `defer_goal_end`，跳过普通阶段微复盘 | 不重复刷出小课堂 |
+| goal 完成 | agent 运行 `goal complete`；runtime 从该 goal 开始以来的证据重建完整上下文 | 一段连贯总结 + **恰好 5 个**知识点 |
+| 用户补救 | “**帮我总结上面的工作**”会运行 `goal summary --recent --force` | 汇总近期尚未处理的工作 |
 
-可选的 `--quiet-window-minutes 15` 只是兜底：连续工作期间它只积累，15 分钟后遇到**下一次 Stop**才会请求汇总；它没有定时器，也不会强行弹窗。goal 完成总是直接汇总，不等待窗口。若你已经停下且没有自动汇总，直接说“**帮我总结上面的工作**”，agent 会取近期尚未汇总的证据来生成同样的一段 + 5 点总结。
+完成时，runtime 返回给 agent 一份写作契约：以 `🌱 [领域：…] [项目：…]` 开头，先写 **一段** 连贯的项目知识总结，再写 **恰好 5 个**相互关联、可迁移的知识点。那一段要解释机制、决策和取舍如何彼此关联，而不是复述“运行了什么命令”。hook 本身不生成教学文字；agent 仍要检查实际代码、文档和对话，不能补造证据里没有的事实。
+
+`summary_checkpoints` 只用于手动或 quiet-window 的“近期未总结”范围。它不会缩短最终的 `goal complete`：即使中途已经因为 quiet window 做过一次小结，完成 goal 时仍会回看整个目标周期，避免最终总结丢掉前半段的设计理由。
+
+可选的 `--quiet-window-minutes 15` 是兜底，不是计时器：连续工作期间它只积累；15 分钟过去后，只有遇到**下一次 Stop**才会请求一次汇总。它不会后台弹窗、不会强行打断，也不会自行启动考试。goal 完成总是绕过等待，直接进入完整总结；默认值为 `0`，即关闭这个兜底。
+
+典型调用如下；通常由 Teach Me skill 在可见 goal 的开始和完成边界执行：
+
+```bash
+# 开始积累一个项目目标
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py goal start \
+  --id parser-refactor \
+  --project-name "Parser refactor" \
+  --project-path /absolute/path/to/repo \
+  --knowledge-domain 软件工程 \
+  --quiet-window-minutes 15
+
+# 在完成边界取得完整总结提示
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py goal complete --id parser-refactor
+
+# 已停止工作但漏掉自动总结时
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py goal summary --recent --force
+```
 
 ### Hook 支持
 
@@ -560,11 +588,39 @@ python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure \
 
 ### Goal-level summaries and the quiet window
 
-For a feature, investigation, or small project, I want the end result to be a map of the connected ideas, not several tiny lessons that disappear in the stream. The agent starts a local goal session, Tool hooks keep adding evidence, and ordinary Stop reviews defer until the goal ends.
+A `Stop` only means that one agent response ended; it does not mean that a feature, investigation, or small project is complete. A long task can contain many Stops. Teaching at every one turns a connected explanation into a stream of small interruptions, so goal-level summaries separate evidence collection from explanation delivery: accumulate quietly during the goal, then produce one map of the work at its real boundary.
 
-At completion, the runtime gives the agent a writing contract: begin with `🌱 [领域：…] [项目：…]`, write **one** coherent paragraph, then write **exactly 5** distinct, connected, transferable knowledge points. The hook does not fabricate teaching text; the agent still checks the real code, documents, and conversation before writing.
+| Moment | What the runtime / hook does | What the user sees |
+| --- | --- | --- |
+| Goal starts | The agent runs `goal start` and stores a stable goal ID, project path, domain, and optional quiet window in local `goal_sessions` | No lesson and no interruption |
+| Normal work | Tool hooks continue recording edits, tests, builds, errors, and verification in `events.jsonl` | No lesson; commands are not treated as knowledge |
+| Stop while the goal is active | The Stop hook records `defer_goal_end` and skips the normal phase micro-review | No repeated mini-lessons |
+| Goal completes | The agent runs `goal complete`; the runtime rebuilds context from evidence since the goal began | One connected paragraph + **exactly 5** knowledge points |
+| Manual recovery | “**帮我总结上面的工作**” / “summarize the work above” runs `goal summary --recent --force` | A summary of recent unsummarized work |
 
-`--quiet-window-minutes 15` is an opt-in fallback only. It accumulates during continuous work and can request a summary at the **next Stop** after 15 minutes; it has no scheduler and never forces a popup. Goal completion bypasses the wait. If work stopped without an automatic summary, say “**帮我总结上面的工作**” / “summarize the work above”; the agent uses recent unsummarized evidence for the same paragraph-and-five-points result.
+At completion, the runtime gives the agent a writing contract: begin with `🌱 [领域：…] [项目：…]`, write **one** coherent project paragraph, then write **exactly 5** distinct, connected, transferable knowledge points. The paragraph explains how mechanisms, decisions, and tradeoffs fit together; it is not a recital of commands. The hook never fabricates teaching text. The agent still checks the real code, documents, and conversation and must not invent facts absent from that evidence.
+
+`summary_checkpoints` only scope manual or quiet-window requests to recent unsummarized evidence. They never shorten the final `goal complete`: even if a quiet-window fallback already produced an interim summary, completion reconsiders the full goal period so the final explanation does not lose the earlier design rationale.
+
+`--quiet-window-minutes 15` is an opt-in fallback, not a timer. It accumulates during continuous work and may request a summary only at the **next Stop** after 15 minutes. There is no scheduler, popup, forced interruption, or automatic exam. Goal completion bypasses the wait; `0` (the default) disables the fallback.
+
+Typical calls are below; the Teach Me skill normally runs them at a visible goal's start and completion boundaries:
+
+```bash
+# Start accumulating one project-sized goal
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py goal start \
+  --id parser-refactor \
+  --project-name "Parser refactor" \
+  --project-path /absolute/path/to/repo \
+  --knowledge-domain 软件工程 \
+  --quiet-window-minutes 15
+
+# Get the complete summary prompt at the completion boundary
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py goal complete --id parser-refactor
+
+# Recover a missed automatic summary after work stopped
+python3 ~/.codex/skills/teach-me/scripts/teach_me.py goal summary --recent --force
+```
 
 ### Hook support
 

@@ -864,7 +864,17 @@ pre{
           </tbody>
         </table>
       </div>
-      <p class="note">hook 不直接“教”，也不靠关键词猜你的意图。它只提供工具证据和阶段边界；goal 完成时也是由 agent 根据真实工作写出一段总结和 5 个点。可选 quiet window 只会在 15 分钟后遇到下一次 Stop 才兜底请求汇总，没有定时器或强制弹窗。考试始终要你明确提出。</p>
+      <p class="note">hook 不直接“教”，也不靠关键词猜你的意图。它只提供工具证据和阶段边界；goal 完成时也是由 agent 根据真实工作写出一段总结和 5 个点。考试始终要你明确提出。</p>
+      <div class="note">
+        <strong>目标级汇总到底怎么走</strong>
+        <ol>
+          <li>goal 开始时，agent 把稳定 ID、项目路径、领域与可选 quiet window 写入本地状态。</li>
+          <li>工作期间，Tool hooks 只追加编辑、测试、构建、错误与验证证据；活跃 goal 下的 Stop 记录 <code>defer_goal_end</code>，不重复教学。</li>
+          <li>goal 完成时，runtime 从目标开始以来的证据重建上下文，要求 agent 先写一段连贯的项目解释，再写恰好 5 个相互关联的知识点。</li>
+          <li>可选 quiet window 不是计时器：例如 15 分钟后，只有遇到下一次 Stop 才请求一次兜底汇总；它不弹窗、不强制打断。即使中途做过兜底，完成时仍回看整个 goal。</li>
+          <li>如果已经停下且漏掉了自动汇总，直接说“帮我总结上面的工作”；agent 会从近期尚未处理的证据和实际项目内容生成同样的总结。</li>
+        </ol>
+      </div>
     </div>
   </section>
 

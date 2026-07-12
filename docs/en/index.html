@@ -864,7 +864,17 @@ pre{
           </tbody>
         </table>
       </div>
-      <p class="note">Hooks do not teach or guess intent from keywords. They provide tool evidence and a phase boundary; at goal completion the agent still checks real work before writing one paragraph and 5 points. An optional quiet window only asks at the next Stop after its window has elapsed—there is no scheduler or forced popup. Exams always require your explicit request.</p>
+      <p class="note">Hooks do not teach or guess intent from keywords. They provide tool evidence and a phase boundary; at goal completion the agent still checks real work before writing one paragraph and 5 points. Exams always require your explicit request.</p>
+      <div class="note">
+        <strong>What a goal-level summary actually does</strong>
+        <ol>
+          <li>At goal start, the agent stores a stable ID, project path, domain, and optional quiet window in local state.</li>
+          <li>While work continues, Tool hooks append edit, test, build, error, and verification evidence. Stops inside an active goal record <code>defer_goal_end</code> instead of repeatedly teaching.</li>
+          <li>At completion, the runtime rebuilds context from evidence since the goal began and asks the agent for one coherent project explanation followed by exactly 5 connected knowledge points.</li>
+          <li>An optional quiet window is not a timer: after, for example, 15 minutes, it can request one fallback summary only at the next Stop. There is no popup or forced interruption. Completion still revisits the entire goal, even after an interim fallback.</li>
+          <li>If work already stopped and the automatic summary was missed, say “帮我总结上面的工作” or “summarize the work above”; the agent combines recent unsummarized evidence with the real project content.</li>
+        </ol>
+      </div>
     </div>
   </section>
 
