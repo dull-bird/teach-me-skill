@@ -264,6 +264,8 @@ def default_state() -> dict[str, Any]:
         "graph_edges": [],
         "captures": [],
         "assessments": [],
+        "goal_sessions": [],
+        "summary_checkpoints": {},
     }
 
 
@@ -1013,6 +1015,8 @@ def read_state(config: dict[str, Any]) -> dict[str, Any]:
     state.setdefault("graph_edges", [])
     state.setdefault("captures", [])
     state.setdefault("assessments", [])
+    state.setdefault("goal_sessions", [])
+    state.setdefault("summary_checkpoints", {})
     return state
 
 
@@ -1806,6 +1810,288 @@ def cmd_sync(args: argparse.Namespace) -> int:
     return 0 if result.get("ok") else 1
 
 
+def goal_sessions(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return goal sessions, repairing malformed legacy state defensively."""
+    sessions = state.get("goal_sessions")
+    if not isinstance(sessions, list):
+        sessions = []
+        state["goal_sessions"] = sessions
+    return sessions
+
+
+def find_goal_session(state: dict[str, Any], goal_id: str) -> dict[str, Any] | None:
+    for session in reversed(goal_sessions(state)):
+        if not isinstance(session, dict):
+            continue
+        if str(session.get("id", "")) == goal_id:
+            return session
+    return None
+
+
+def goal_matches_cwd(session: dict[str, Any], current_cwd: str = "") -> bool:
+    """Match a goal to its project directory without crossing project roots."""
+    goal_cwd = str(session.get("cwd") or "").rstrip("/")
+    current_cwd = str(current_cwd or "").rstrip("/")
+    if not goal_cwd:
+        return True
+    if not current_cwd:
+        return False
+    return current_cwd == goal_cwd or current_cwd.startswith(goal_cwd + "/")
+
+
+def active_goal_session(state: dict[str, Any], cwd: str = "") -> dict[str, Any] | None:
+    """Return the newest active goal_end session applicable to ``cwd``."""
+    for session in reversed(goal_sessions(state)):
+        if not isinstance(session, dict):
+            continue
+        if session.get("status") != "active":
+            continue
+        if str(session.get("review_mode") or "goal_end") != "goal_end":
+            continue
+        if goal_matches_cwd(session, cwd):
+            return session
+    return None
+
+
+def parse_event_timestamp(value: Any) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=local_now().tzinfo)
+    return parsed
+
+
+def is_at_or_after(timestamp: Any, boundary: Any) -> bool:
+    observed = parse_event_timestamp(timestamp)
+    start = parse_event_timestamp(boundary)
+    if observed is None or start is None:
+        return False
+    return observed >= start
+
+
+def is_after(timestamp: Any, boundary: Any) -> bool:
+    observed = parse_event_timestamp(timestamp)
+    previous = parse_event_timestamp(boundary)
+    if observed is None or previous is None:
+        return False
+    return observed > previous
+
+
+def read_events_for_summary(config: dict[str, Any], session: dict[str, Any], checkpoint: str = "") -> list[dict[str, Any]]:
+    """Read tool evidence after the session start/checkpoint and in its scope."""
+    try:
+        lines = events_path(config).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+
+    boundary = checkpoint or str(session.get("started_at") or "")
+    scoped: list[dict[str, Any]] = []
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict) or event.get("type") != "tool":
+            continue
+        is_newer = is_after(event.get("timestamp"), boundary) if checkpoint else is_at_or_after(event.get("timestamp"), boundary)
+        if boundary and not is_newer:
+            continue
+        if not goal_matches_cwd(session, str(event.get("cwd") or "")):
+            continue
+        scoped.append(event)
+    return scoped
+
+
+def latest_event_timestamp(events: list[dict[str, Any]], fallback: str) -> str:
+    timestamps = [str(event.get("timestamp")) for event in events if parse_event_timestamp(event.get("timestamp"))]
+    if not timestamps:
+        return fallback
+    return max(timestamps, key=lambda value: parse_event_timestamp(value) or local_now())
+
+
+def quiet_window_elapsed(session: dict[str, Any], now: datetime | None = None) -> bool:
+    minutes = int(session.get("quiet_window_minutes") or 0)
+    if minutes <= 0:
+        return False
+    started = parse_event_timestamp(session.get("started_at"))
+    if started is None:
+        return True
+    return (now or local_now()) >= started + timedelta(minutes=minutes)
+
+
+def compact_summary_evidence(events: list[dict[str, Any]]) -> str:
+    if not events:
+        return "- No stored tool evidence was found. Use the immediately preceding conversation and actual project artifacts; do not invent facts."
+    lines: list[str] = []
+    for event in events[-20:]:
+        parts = []
+        command = str(event.get("command") or "").strip()
+        file_path = str(event.get("file_path") or "").strip()
+        tags = ", ".join(str(tag) for tag in event.get("signal_tags", []) if tag)
+        if command:
+            parts.append(command[:220])
+        if file_path:
+            parts.append(file_path[:180])
+        if tags:
+            parts.append(f"signals: {tags}")
+        if parts:
+            lines.append("- " + " | ".join(parts))
+    return "\n".join(lines) or "- Tool evidence had no readable command details; use the conversation and project artifacts."
+
+
+def build_project_summary_prompt(config: dict[str, Any], session: dict[str, Any], events: list[dict[str, Any]], source: str) -> str:
+    project = session.get("project") if isinstance(session.get("project"), dict) else {}
+    project_name = str(project.get("name") or session.get("project_name") or "").strip()
+    domain = normalize_knowledge_domain(session.get("knowledge_domain"))
+    evidence = compact_summary_evidence(events)
+    script_path = Path(__file__).resolve()
+    skill_dir = script_path.parent.parent
+    user_id = str(config.get("_user_id") or "default")
+    user_flag = f" --user {user_id}" if user_id != "default" else ""
+    header = f"🌱 [领域：{domain}]" + (f" [项目：{project_name}]" if project_name else "")
+    return f"""Teach Me goal-level summary required ({source}).
+Follow `{skill_dir}/SKILL.md` and first run `python3 {script_path} context --full{user_flag}`.
+
+Write one user-facing goal-end lesson beginning exactly with `{header}`.
+Then write one coherent paragraph that explains the project's linked mechanisms, decisions, and tradeoffs as a small whole. It must explain the work, not recite a tool log. After that paragraph, write exactly 5 numbered knowledge points. The 5 points must be distinct, grounded in the actual work, and connect to each other where useful. Do not start an exam and do not ask a question unless the user asks for one.
+
+After teaching, capture only the durable concepts or project map that satisfy the normal Teach Me rubric. Do not claim a fact that is absent from the conversation, evidence, or project artifacts.
+
+Stored evidence for this summary:
+{evidence}
+"""
+
+
+def goal_summary_result(
+    config: dict[str, Any],
+    state: dict[str, Any],
+    session: dict[str, Any],
+    *,
+    source: str,
+    force: bool,
+    complete: bool,
+) -> dict[str, Any]:
+    if not complete and not force and not quiet_window_elapsed(session):
+        return {
+            "status": "waiting_for_quiet_window",
+            "goal_id": session.get("id"),
+            "quiet_window_minutes": int(session.get("quiet_window_minutes") or 0),
+            "scheduled": False,
+            "message": "Evidence is still accumulating; a later Stop can request the summary. No timer popup is scheduled.",
+        }
+
+    checkpoints = state.setdefault("summary_checkpoints", {})
+    checkpoint_key = str(session.get("checkpoint_key") or session.get("id") or "recent")
+    # A quiet-window review is an interim fallback. Finishing the goal must
+    # still synthesize the whole project, including evidence already covered
+    # by that interim summary.
+    checkpoint = "" if complete else str(checkpoints.get(checkpoint_key) or "")
+    events = read_events_for_summary(config, session, checkpoint)
+    requested_at = now_iso()
+    checkpoints[checkpoint_key] = latest_event_timestamp(events, requested_at)
+    session["summary_requested_at"] = requested_at
+    session["summary_source"] = source
+    if complete:
+        session["completed_at"] = requested_at
+        session["status"] = "completed"
+    write_json(state_path(config), state)
+    project = session.get("project") if isinstance(session.get("project"), dict) else {}
+    project_name = str(project.get("name") or session.get("project_name") or "").strip()
+    header = f"🌱 [领域：{normalize_knowledge_domain(session.get('knowledge_domain'))}]" + (f" [项目：{project_name}]" if project_name else "")
+    return {
+        "status": "ready",
+        "source": source,
+        "goal_id": session.get("id"),
+        "project": session.get("project", {}),
+        "evidence_count": len(events),
+        "summary_contract": {
+            "paragraph_count": 1,
+            "knowledge_point_count": 5,
+            "header": header,
+        },
+        "prompt_for_ai": build_project_summary_prompt(config, session, events, source),
+    }
+
+
+def cmd_goal(args: argparse.Namespace) -> int:
+    top_config = load_config(create=True)
+    user_cfg = resolve_user_config(top_config, args.user)
+    if not user_cfg.get("initialized"):
+        print("Teach Me is not initialized. Configure it before starting a goal summary.", file=sys.stderr)
+        return 2
+    ensure_vault(user_cfg)
+    state = read_state(user_cfg)
+
+    if args.goal_action == "start":
+        goal_id = str(args.id or "").strip()
+        if not goal_id:
+            print("Goal ID is required.", file=sys.stderr)
+            return 2
+        existing = find_goal_session(state, goal_id)
+        if existing and existing.get("status") == "active":
+            print(json.dumps({"status": "already_active", "goal_id": goal_id}, ensure_ascii=False))
+            return 0
+        project = normalize_project_ref({
+            "id": args.project_id,
+            "name": args.project_name,
+            "path": args.project_path,
+        }) or {}
+        session_cwd = str(args.cwd or args.project_path or "")
+        session = {
+            "id": goal_id,
+            "status": "active",
+            "review_mode": "goal_end",
+            "started_at": now_iso(),
+            "project": project,
+            "project_name": str(args.project_name or project.get("name") or ""),
+            "cwd": session_cwd,
+            "knowledge_domain": normalize_knowledge_domain(args.knowledge_domain),
+            "quiet_window_minutes": max(0, int(args.quiet_window_minutes or 0)),
+        }
+        goal_sessions(state).append(session)
+        write_json(state_path(user_cfg), state)
+        print(json.dumps({"status": "active", "goal_id": goal_id, "goal": session}, ensure_ascii=False))
+        return 0
+
+    if args.goal_action == "complete":
+        session = find_goal_session(state, str(args.id or ""))
+        if session is None:
+            print(f"Goal '{args.id}' was not found.", file=sys.stderr)
+            return 1
+        print(json.dumps(goal_summary_result(user_cfg, state, session, source="goal_complete", force=True, complete=True), ensure_ascii=False))
+        return 0
+
+    if args.goal_action == "summary":
+        if args.recent:
+            scope_cwd = str(args.cwd or "")
+            session = {
+                "id": "recent",
+                "checkpoint_key": "recent:" + (scope_cwd or "all"),
+                "status": "manual",
+                "review_mode": "manual",
+                "started_at": "",
+                "project": normalize_project_ref({"path": scope_cwd}) or {},
+                "cwd": scope_cwd,
+                "knowledge_domain": normalize_knowledge_domain(None),
+                "quiet_window_minutes": 0,
+            }
+            print(json.dumps(goal_summary_result(user_cfg, state, session, source="manual", force=True, complete=False), ensure_ascii=False))
+            return 0
+        session = find_goal_session(state, str(args.id or ""))
+        if session is None:
+            print(f"Goal '{args.id}' was not found.", file=sys.stderr)
+            return 1
+        print(json.dumps(goal_summary_result(user_cfg, state, session, source="goal_summary", force=bool(args.force), complete=False), ensure_ascii=False))
+        return 0
+
+    print("Unknown goal action.", file=sys.stderr)
+    return 2
+
+
 def cmd_assess(args: argparse.Namespace) -> int:
     top_config = load_config(create=True)
     user_cfg = resolve_user_config(top_config, args.user)
@@ -2498,6 +2784,30 @@ def build_parser() -> argparse.ArgumentParser:
     sync = sub.add_parser("sync", help="Commit, pull --rebase, and push the vault if Git sync is enabled")
     sync.add_argument("--reason", default="manual", help="Short reason for the sync commit")
     sync.set_defaults(func=cmd_sync)
+
+    goal = sub.add_parser("goal", help="Manage goal-level Teach Me summaries")
+    goal_sub = goal.add_subparsers(dest="goal_action", required=True)
+
+    goal_start = goal_sub.add_parser("start", help="Start accumulating evidence for one goal")
+    goal_start.add_argument("--id", required=True, help="Stable goal identifier")
+    goal_start.add_argument("--project-name", help="Human-readable project name")
+    goal_start.add_argument("--project-path", help="Stable project path")
+    goal_start.add_argument("--project-id", help="Stable project identifier when no path is available")
+    goal_start.add_argument("--cwd", help="Optional working-directory scope")
+    goal_start.add_argument("--knowledge-domain", help="AI, 数据库, 数学, 物理, 软件工程, 产品设计, or 通用")
+    goal_start.add_argument("--quiet-window-minutes", type=int, default=0, help="Optional non-scheduled fallback window")
+    goal_start.set_defaults(func=cmd_goal)
+
+    goal_complete = goal_sub.add_parser("complete", help="Finish a goal and request its project-level summary")
+    goal_complete.add_argument("--id", required=True, help="Goal identifier")
+    goal_complete.set_defaults(func=cmd_goal)
+
+    goal_summary = goal_sub.add_parser("summary", help="Request a goal or recent-work summary")
+    goal_summary.add_argument("--id", help="Goal identifier")
+    goal_summary.add_argument("--recent", action="store_true", help="Summarize recent unsummarized work")
+    goal_summary.add_argument("--force", action="store_true", help="Bypass the optional quiet-window wait")
+    goal_summary.add_argument("--cwd", help="Optional working-directory scope for --recent")
+    goal_summary.set_defaults(func=cmd_goal)
 
     assess = sub.add_parser("assess", help="Update the user's knowledge tree from JSON stdin")
     assess.set_defaults(func=cmd_assess)

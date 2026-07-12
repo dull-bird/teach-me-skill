@@ -16,11 +16,14 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from teach_me import (  # noqa: E402
+    active_goal_session,
     add_user,
     append_jsonl,
     events_path,
     load_config,
     now_iso,
+    quiet_window_elapsed,
+    read_state,
     read_style,
     resolve_user_config,
     save_config,
@@ -566,6 +569,53 @@ def handle_stop(payload: dict[str, Any]) -> int:
 
     user_cfg = ensure_user(payload)
     events = load_events(user_cfg)
+    goal = active_goal_session(read_state(user_cfg), cwd(payload))
+    if goal is not None:
+        # A goal-end session deliberately absorbs ordinary phase reviews. It
+        # either waits for explicit completion or, when the opt-in window has
+        # elapsed, asks the agent to generate one accumulated project summary.
+        if quiet_window_elapsed(goal) and not goal.get("summary_requested_at"):
+            goal_id = str(goal.get("id") or "")
+            user_id = user_cfg.get("_user_id", "default")
+            user_flag = f" --user {user_id}" if user_id != "default" else ""
+            reason = (
+                "Teach Me quiet-window summary is ready. Read and follow "
+                f"`{Path(__file__).resolve().parent.parent}/SKILL.md`, then run "
+                f"`python3 {Path(__file__).resolve().parent}/teach_me.py goal summary --id {goal_id}{user_flag}` "
+                "and use its prompt_for_ai to write one coherent paragraph plus exactly 5 knowledge points."
+            )
+            append_event(
+                user_cfg,
+                {
+                    "type": "stop_decision",
+                    **event_context(payload),
+                    "decision": "request_goal_summary",
+                    "goal_id": goal_id,
+                    "quiet_window_minutes": int(goal.get("quiet_window_minutes") or 0),
+                    "reason": reason,
+                    "user_id": user_id,
+                },
+            )
+            is_codex = bool(payload.get("transcript_path") is not None or "codex" in cwd(payload).lower())
+            if is_codex:
+                print(json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False))
+            else:
+                print(json.dumps({"hookSpecificOutput": {"permissionDecision": "deny", "permissionDecisionReason": reason}}, ensure_ascii=False))
+            return 0
+
+        append_event(
+            user_cfg,
+            {
+                "type": "stop_decision",
+                **event_context(payload),
+                "decision": "defer_goal_end",
+                "goal_id": goal.get("id"),
+                "quiet_window_minutes": int(goal.get("quiet_window_minutes") or 0),
+                "user_id": user_cfg.get("_user_id", "default"),
+            },
+        )
+        return 0
+
     if not has_new_scored_work_since_last_block(events, payload):
         return 0
     assessment = score_stop(payload, events)

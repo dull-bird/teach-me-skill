@@ -786,13 +786,14 @@ pre{
     <div class="wrap">
       <p class="kicker">How</p>
       <h2>Four steps to turn a work phase into knowledge.</h2>
-      <p class="section-sub">I keep an explicit learning request separate from an automatic review: say “teach me” to enter teaching; while you work, I only use real tool evidence to decide whether a pause is useful.</p>
+      <p class="section-sub">I keep an explicit learning request separate from an automatic review: say “teach me” to enter teaching; while you work, I only use real tool evidence to decide whether a pause is useful. For a larger goal, I would rather leave you with one connected map at the end.</p>
       <div class="steps">
         <div class="step"><strong>1. Explicit requests use skills</strong><span>“Teach me”, “why”, and “review” invoke Teach Me. “Quiz me” invokes Exam, which first asks for scope, format, and time.</span></div>
         <div class="step"><strong>2. Collect real evidence</strong><span>Tool hooks quietly note what happened: what changed, what was tested, what failed, and what was verified.</span></div>
-        <div class="step"><strong>3. Stop judges value</strong><span>At a phase boundary it uses tool evidence only. Weak signals stay quiet; strong ones request one short review. It never starts an exam itself.</span></div>
+        <div class="step"><strong>3. Stop judges value</strong><span>At a phase boundary it uses tool evidence only. Weak signals stay quiet; strong ones request one short review. It never starts an exam itself; an active goal is left uninterrupted.</span></div>
         <div class="step"><strong>4. Capture with context</strong><span>Lessons start with 🌱 [领域：…], and add [项目：…] when known. Notes keep a stable project ID, so a renamed project stays connected to its history.</span></div>
       </div>
+      <p class="note">When a feature, investigation, or small project ends, Teach Me gives the agent accumulated evidence for one coherent project paragraph and exactly 5 connected knowledge points. If no automatic summary appeared, say “帮我总结上面的工作” or “summarize the work above”.</p>
     </div>
   </section>
 
@@ -840,7 +841,7 @@ pre{
               <td>Claude Code</td>
               <td><code>~/.claude/settings.json</code></td>
               <td><code>PreToolUse</code>, <code>PostToolUse</code>, <code>Stop</code></td>
-              <td>Records real tool evidence and requests one short Stop review only when the signal is strong. Explicit teaching and exams use skills.</td>
+              <td>Records real tool evidence; normal Stop requests one short review only when the signal is strong. An active goal defers to its final paragraph-and-five-points summary. Explicit teaching and exams use skills.</td>
             </tr>
             <tr>
               <td>Codex</td>
@@ -852,7 +853,7 @@ pre{
               <td>Kimi Code CLI</td>
               <td><code>~/.kimi/config.toml</code></td>
               <td>Tool events, <code>Stop</code></td>
-              <td>Reuses the shared <code>~/.agents/skills/teach-me</code> path, records evidence, and triggers reviews through supported hook events.</td>
+              <td>Reuses the shared <code>~/.agents/skills/teach-me</code> path, records supported evidence, and avoids repeated Stop teaching inside an active goal.</td>
             </tr>
             <tr>
               <td>OpenClaw</td>
@@ -863,7 +864,7 @@ pre{
           </tbody>
         </table>
       </div>
-      <p class="note">Hooks do not teach or guess intent from keywords. They provide tool evidence and a phase boundary; the agent decides whether anything deserves a durable note. Exams always require your explicit request.</p>
+      <p class="note">Hooks do not teach or guess intent from keywords. They provide tool evidence and a phase boundary; at goal completion the agent still checks real work before writing one paragraph and 5 points. An optional quiet window only asks at the next Stop after its window has elapsed—there is no scheduler or forced popup. Exams always require your explicit request.</p>
     </div>
   </section>
 

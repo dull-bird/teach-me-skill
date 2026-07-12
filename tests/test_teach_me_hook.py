@@ -77,6 +77,88 @@ def load_module(path: Path):
 
 
 class TeachMeHookTests(unittest.TestCase):
+    def test_stop_requests_quiet_window_summary_only_on_a_later_stop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            write_initialized_config(home)
+            state_path = home / "vault" / ".teach-me" / "learning-state.json"
+            state_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "goal_sessions": [
+                            {
+                                "id": "goal-quiet",
+                                "status": "active",
+                                "review_mode": "goal_end",
+                                "cwd": "/repo",
+                                "started_at": "2000-01-01T00:00:00+00:00",
+                                "quiet_window_minutes": 15,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s-goal",
+                    "turn_id": "t-goal",
+                    "cwd": "/repo",
+                    "transcript_path": "/tmp/transcript.jsonl",
+                },
+                home,
+            )
+            decision = [event for event in read_events(home) if event.get("type") == "stop_decision"][-1]
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(parse_stdout(result)["decision"], "block")
+        self.assertEqual(decision["decision"], "request_goal_summary")
+        self.assertIn("exactly 5", decision["reason"])
+
+    def test_stop_defers_review_while_goal_end_is_active(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            write_initialized_config(home)
+            state_path = home / "vault" / ".teach-me" / "learning-state.json"
+            state_path.write_text(
+                json.dumps(
+                    {
+                        "version": 1,
+                        "goal_sessions": [
+                            {"id": "goal-1", "status": "active", "review_mode": "goal_end", "cwd": "/repo"}
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "pytest"},
+                    "tool_response": {"stdout": "2 passed", "stderr": ""},
+                    "session_id": "s-goal",
+                    "turn_id": "t-goal",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            result = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s-goal",
+                    "turn_id": "t-goal",
+                    "cwd": "/repo",
+                    "last_assistant_message": "Tests passed.",
+                },
+                home,
+            )
+            decision = [event for event in read_events(home) if event.get("type") == "stop_decision"][-1]
+
+        self.assertEqual(result.stdout, "")
+        self.assertEqual(decision["decision"], "defer_goal_end")
     def test_user_prompt_event_is_ignored(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_hook(

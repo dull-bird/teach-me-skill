@@ -786,13 +786,14 @@ pre{
     <div class="wrap">
       <p class="kicker">How</p>
       <h2>四步把一段工作变成知识。</h2>
-      <p class="section-sub">我把主动提问和自动复盘分开：你说“教我”时才进入教学；你正常做事时，我只根据真实工具证据判断要不要停下来讲一句。</p>
+      <p class="section-sub">我把主动提问和自动复盘分开：你说“教我”时才进入教学；你正常做事时，我只根据真实工具证据判断要不要停下来讲一句。一个目标比较大时，我宁愿在最后给你一张完整的知识地图。</p>
       <div class="steps">
         <div class="step"><strong>1. 主动请求走 skill</strong><span>“教我”“为什么”“复盘”会调用 Teach Me；“考考我”会调用 Exam，先问范围、题型和时长。</span></div>
         <div class="step"><strong>2. 收集真实证据</strong><span>Tool hooks 默默记录这段工作里真正发生的事：改了什么、测了什么、报了什么错、验证了哪些假设。</span></div>
-        <div class="step"><strong>3. Stop 判断价值</strong><span>阶段结束时只根据工具证据判断：没有值得留下的概念就继续，有才请求一次短复盘；不会自动开考。</span></div>
+        <div class="step"><strong>3. Stop 判断价值</strong><span>阶段结束时只根据工具证据判断：没有值得留下的概念就继续，有才请求一次短复盘；不会自动开考。目标进行中则先不打断。</span></div>
         <div class="step"><strong>4. 有标签地沉淀</strong><span>教学以 🌱 [领域：…] 开头；有项目时加 [项目：…]。笔记保留稳定项目 ID，改名后仍能复盘同一项目。</span></div>
       </div>
+      <p class="note">一个 feature、排查或小项目结束时，Teach Me 会把累计证据交给 agent：先写一段通顺的项目知识总结，再列出恰好 5 个相互关联的知识点。没有被自动总结时，你也可以直接说“帮我总结上面的工作”。</p>
     </div>
   </section>
 
@@ -840,7 +841,7 @@ pre{
               <td>Claude Code</td>
               <td><code>~/.claude/settings.json</code></td>
               <td><code>PreToolUse</code>、<code>PostToolUse</code>、<code>Stop</code></td>
-              <td>工具事件记录真实证据；Stop 阶段只在信号足够时请求一次短复盘。教学与考试由显式 skill 请求处理。</td>
+              <td>工具事件记录真实证据；普通 Stop 只在信号足够时请求一次短复盘。活跃 goal 会延后到最后的一段 + 5 点总结；教学与考试由显式 skill 请求处理。</td>
             </tr>
             <tr>
               <td>Codex</td>
@@ -852,7 +853,7 @@ pre{
               <td>Kimi Code CLI</td>
               <td><code>~/.kimi/config.toml</code></td>
               <td>工具事件、<code>Stop</code></td>
-              <td>复用共享 <code>~/.agents/skills/teach-me</code> 路径，按支持的 hook 事件记录证据和触发复盘。</td>
+              <td>复用共享 <code>~/.agents/skills/teach-me</code> 路径，按支持的 hook 事件记录证据；活跃 goal 不会被重复 Stop 教学打断。</td>
             </tr>
             <tr>
               <td>OpenClaw</td>
@@ -863,7 +864,7 @@ pre{
           </tbody>
         </table>
       </div>
-      <p class="note">hook 不直接“教”，也不靠关键词猜你的意图。它只提供工具证据和阶段边界；要不要写笔记、写哪几个点，仍由 agent 按 skill rubric 判断。考试始终要你明确提出。</p>
+      <p class="note">hook 不直接“教”，也不靠关键词猜你的意图。它只提供工具证据和阶段边界；goal 完成时也是由 agent 根据真实工作写出一段总结和 5 个点。可选 quiet window 只会在 15 分钟后遇到下一次 Stop 才兜底请求汇总，没有定时器或强制弹窗。考试始终要你明确提出。</p>
     </div>
   </section>
 

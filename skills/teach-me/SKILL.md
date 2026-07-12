@@ -1,6 +1,6 @@
 ---
 name: teach-me
-description: Learning companion that turns meaningful tool-based work into durable notes and a personal learner portrait. Use when coding, debugging, reviewing, refactoring, building frontend/backend/mobile projects, explaining architecture, working with data, media, documents, configuration, or research, or when the user asks "teach me", "教我", "复盘", "原理", or "grill me". Also use after completing a meaningful phase to decide whether to write 1-3 high-value Obsidian notes, update concept mastery, shape the AI's teaching personality to the user, and ask gentle Socratic questions without interrupting the user's flow.
+description: Learning companion that turns meaningful tool-based work into durable notes and a personal learner portrait. Use when coding, debugging, reviewing, refactoring, building frontend/backend/mobile projects, explaining architecture, working with data, media, documents, configuration, or research, or when the user asks "teach me", "教我", "复盘", "原理", "帮我总结上面的工作", or "grill me". Also use after completing a meaningful phase to decide whether to write 1-3 high-value Obsidian notes, update concept mastery, shape the AI's teaching personality to the user, and ask gentle Socratic questions without interrupting the user's flow.
 ---
 
 # Teach Me
@@ -35,6 +35,49 @@ When capturing, pass `knowledge_domain` and a project object when known. Prefer
 `project.path` as the stable identity; the runtime stores a path-derived ID
 separately from the display name, so a project rename does not split its history.
 Use an explicit `project.id` if a path is unavailable or not stable.
+
+## Goal-Level Summaries
+
+Use this flow for a goal-sized task: a feature, debugging investigation,
+refactor, research task, or small project whose knowledge is interconnected.
+It replaces repeated Stop micro-lessons with one synthesis at the end.
+
+1. When a visible goal begins, start an evidence-accumulating session. Choose a
+   stable goal ID and pass the project path when known:
+
+   ```bash
+   python3 <teach-me-skill-dir>/scripts/teach_me.py goal start \
+     --id <goal-id> --project-name <project-name> --project-path <absolute-project-path> \
+     --knowledge-domain <domain>
+   ```
+
+2. At goal completion, run `goal complete --id <goal-id>` before the final
+   response. Use its `prompt_for_ai` verbatim as the output contract: start
+   with the Teaching Output Contract header, write exactly one coherent
+   project-level paragraph, then exactly 5 distinct numbered knowledge points.
+   Explain the connected mechanisms, decisions, and tradeoffs; do not recite
+   tool calls. Capture only durable concepts or a project map afterward.
+
+3. The user can recover a missed Stop review by saying “帮我总结上面的工作” (or
+   equivalent). Run:
+
+   ```bash
+   python3 <teach-me-skill-dir>/scripts/teach_me.py goal summary --recent --force
+   ```
+
+   Then use the returned `prompt_for_ai` to summarize the preceding work. It
+   relies on recent unsummarized tool evidence plus the conversation and actual
+   artifacts; do not invent missing facts.
+
+4. `--quiet-window-minutes 15` is an optional fallback for a long continuous
+   goal. It only accumulates evidence until a later Stop after the window; it
+   never schedules a timer or pops up by itself. When that Stop asks for a goal
+   summary, run `goal summary --id <goal-id>` and follow its prompt. Goal
+   completion always bypasses this wait. Leave the option at `0` (the default)
+   unless the user wants this fallback.
+
+While an active `goal_end` session applies to the current project, ordinary
+Stop reviews are deferred so the user is not interrupted by repeated lessons.
 
 Teach Me must behave like a tutor with a growing learner model, not only a
 recap writer. It should draw a learner portrait over time: what the user knows,
