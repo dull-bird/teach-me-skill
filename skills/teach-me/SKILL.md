@@ -65,6 +65,11 @@ It replaces repeated Stop micro-lessons with one synthesis at the end.
    python3 <teach-me-skill-dir>/scripts/teach_me.py goal summary --recent --force
    ```
 
+   `--recent` defaults to `--scope project`: only evidence from the current
+   working directory tree (or `--cwd <path>`) is summarized, so parallel
+   sessions in other projects do not leak in. Pass `--scope global` only for
+   a deliberate cross-project digest.
+
    Then use the returned `prompt_for_ai` to summarize the preceding work. It
    relies on recent unsummarized tool evidence plus the conversation and actual
    artifacts; do not invent missing facts.

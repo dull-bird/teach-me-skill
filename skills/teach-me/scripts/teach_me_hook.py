@@ -56,6 +56,11 @@ ERROR_RE = re.compile(
     re.IGNORECASE,
 )
 PASS_RE = re.compile(r"\b(passed|passing|success|successful|complete|ok|通过|完成)\b", re.IGNORECASE)
+
+# Tags that represent substantive new work. After a review block, only these
+# re-arm the Stop hook; pure reading (research) and bookkeeping (tool_use)
+# must not — otherwise the review's own investigative reads re-trigger it.
+REARM_TAGS = {"modification", "verification", "build", "quality_check", "error_signal"}
 FINISH_RE = re.compile(
     r"(done|fixed|implemented|verified|completed|tests?\s+pass|build\s+passed|finished|已完成|已修复|已实现|测试通过|构建通过|验证通过|完成|修复|实现|通过)",
     re.IGNORECASE,
@@ -354,7 +359,11 @@ def maybe_log_tool_event(payload: dict[str, Any]) -> None:
     response_text = compact_json(response_value)
     score, tags = classify_tool(tool, command, file_path, response_text)
     activity = f"{command}\n{file_path}".replace("\\", "/").lower()
-    if "/skills/teach-me/skill.md" in activity or "/skills/teach-me/scripts/teach_me.py" in activity:
+    if (
+        "/skills/teach-me/skill.md" in activity
+        or "/skills/teach-me/scripts/teach_me.py" in activity
+        or "/.teach_me_skill/" in activity
+    ):
         score, tags = 0, []
     phase = {
         "PreToolUse": "pre",
@@ -429,7 +438,9 @@ def has_new_scored_work_since_last_block(events: list[dict[str, Any]], payload: 
     if last_block_index is None:
         return True
     return any(
-        event.get("type") == "tool" and int(event.get("score") or 0) > 0
+        event.get("type") == "tool"
+        and int(event.get("score") or 0) > 0
+        and REARM_TAGS.intersection(event.get("signal_tags") or [])
         for event in scoped[last_block_index + 1 :]
     )
 

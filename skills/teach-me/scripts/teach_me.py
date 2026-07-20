@@ -1923,6 +1923,24 @@ def quiet_window_elapsed(session: dict[str, Any], now: datetime | None = None) -
     return (now or local_now()) >= started + timedelta(minutes=minutes)
 
 
+# Evidence produced by Teach Me's own introspection (runtime queries, captures,
+# hook decisions) is noise for later summaries: it is not user work.
+SELF_REFERENCE_RE = re.compile(
+    r"(/skills/teach-me/scripts/teach_me\.py|/skills/teach-me/SKILL\.md|\.teach_me_skill/)",
+    re.IGNORECASE,
+)
+SELF_EVIDENCE_TYPES = {"capture", "assessment", "stop_decision"}
+
+
+def is_self_referential_event(event: dict[str, Any]) -> bool:
+    if str(event.get("type") or "") in SELF_EVIDENCE_TYPES:
+        return True
+    haystack = "\n".join(
+        str(event.get(key) or "") for key in ("command", "file_path", "input_excerpt")
+    )
+    return bool(SELF_REFERENCE_RE.search(haystack))
+
+
 def compact_summary_evidence(events: list[dict[str, Any]]) -> str:
     if not events:
         return "- No stored tool evidence was found. Use the immediately preceding conversation and actual project artifacts; do not invent facts."
@@ -1939,7 +1957,11 @@ def compact_summary_evidence(events: list[dict[str, Any]]) -> str:
         if tags:
             parts.append(f"signals: {tags}")
         if parts:
-            lines.append("- " + " | ".join(parts))
+            # Provenance: name the project directory the evidence came from so
+            # the reviewer can spot cross-project cross-talk at a glance.
+            source_dir = Path(str(event.get("cwd") or "")).name
+            prefix = f"[{source_dir}] " if source_dir else ""
+            lines.append("- " + prefix + " | ".join(parts))
     return "\n".join(lines) or "- Tool evidence had no readable command details; use the conversation and project artifacts."
 
 
@@ -1992,7 +2014,10 @@ def goal_summary_result(
     checkpoint = "" if complete else str(checkpoints.get(checkpoint_key) or "")
     events = read_events_for_summary(config, session, checkpoint)
     requested_at = now_iso()
+    # Checkpoint advances over the raw stream so filtered noise never
+    # resurfaces; only user-work evidence is shown to the reviewer.
     checkpoints[checkpoint_key] = latest_event_timestamp(events, requested_at)
+    display_events = [event for event in events if not is_self_referential_event(event)]
     session["summary_requested_at"] = requested_at
     session["summary_source"] = source
     if complete:
@@ -2007,13 +2032,13 @@ def goal_summary_result(
         "source": source,
         "goal_id": session.get("id"),
         "project": session.get("project", {}),
-        "evidence_count": len(events),
+        "evidence_count": len(display_events),
         "summary_contract": {
             "paragraph_count": 1,
             "knowledge_point_count": 5,
             "header": header,
         },
-        "prompt_for_ai": build_project_summary_prompt(config, session, events, source),
+        "prompt_for_ai": build_project_summary_prompt(config, session, display_events, source),
     }
 
 
@@ -2067,7 +2092,11 @@ def cmd_goal(args: argparse.Namespace) -> int:
 
     if args.goal_action == "summary":
         if args.recent:
-            scope_cwd = str(args.cwd or "")
+            scope = str(args.scope or "project")
+            if scope == "global":
+                scope_cwd = str(args.cwd or "")
+            else:
+                scope_cwd = str(args.cwd or os.getcwd())
             session = {
                 "id": "recent",
                 "checkpoint_key": "recent:" + (scope_cwd or "all"),
@@ -2562,6 +2591,37 @@ def _set_openclaw_hook(enabled: bool) -> tuple[bool, str]:
         return False, str(exc)
 
 
+def _set_omp_hook(enabled: bool, installer: Path | None) -> tuple[bool, str]:
+    """Enable or disable Teach Me hooks for Oh My Pi via the pi-hooks extension."""
+    action = "enable" if enabled else "disable"
+    if not shutil.which("omp"):
+        return False, "omp command not found"
+
+    # Check whether the pi-hooks extension is installed.
+    try:
+        result = subprocess.run(
+            ["omp", "plugin", "list"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        installed_packages = result.stdout + result.stderr
+    except Exception as exc:
+        return False, f"Failed to list OMP plugins: {exc}"
+
+    if "pi-hooks" not in installed_packages:
+        if not enabled:
+            # Nothing to disable if the adapter is not installed.
+            return True, "pi-hooks not installed; nothing to disable"
+        return False, "pi-hooks extension is not installed. Run: omp install npm:@hsingjui/pi-hooks"
+
+    if installer is None or not installer.exists():
+        return False, "OMP hook installer not found; run the matching install-hook.sh from the teach-me-skill repo"
+
+    return _run_python_hook_installer("omp", installer, enabled)
+
+
+
 def cmd_hooks(args: argparse.Namespace) -> int:
     """Enable or disable Teach Me hooks across installed agents."""
     if args.enable and args.disable:
@@ -2580,11 +2640,12 @@ def cmd_hooks(args: argparse.Namespace) -> int:
         "claude-code": Path.home() / ".claude",
         "codex": Path.home() / ".codex",
         "kimi": Path.home() / ".kimi",
+        "omp": Path.home() / ".omp",
         "openclaw": Path.home() / ".openclaw",
     }
 
     results: list[dict[str, Any]] = []
-    for agent in ("claude-code", "codex", "kimi", "openclaw"):
+    for agent in ("claude-code", "codex", "kimi", "omp", "openclaw"):
         home_dir = agent_home_dirs[agent]
         installer = _find_hook_installer(skill_dir, agent) if agent != "openclaw" else None
         detected = home_dir.exists() or (installer is not None) or (agent == "openclaw" and shutil.which("openclaw") is not None)
@@ -2595,6 +2656,8 @@ def cmd_hooks(args: argparse.Namespace) -> int:
 
         if agent == "openclaw":
             ok, message = _set_openclaw_hook(enable)
+        elif agent == "omp":
+            ok, message = _set_omp_hook(enable, installer)
         elif installer is not None:
             ok, message = _run_python_hook_installer(agent, installer, enable)
         else:
@@ -2807,6 +2870,12 @@ def build_parser() -> argparse.ArgumentParser:
     goal_summary.add_argument("--recent", action="store_true", help="Summarize recent unsummarized work")
     goal_summary.add_argument("--force", action="store_true", help="Bypass the optional quiet-window wait")
     goal_summary.add_argument("--cwd", help="Optional working-directory scope for --recent")
+    goal_summary.add_argument(
+        "--scope",
+        choices=["project", "global"],
+        default="project",
+        help="Evidence scope for --recent: project (default, current/--cwd directory tree) or global (all projects, for deliberate cross-project digests)",
+    )
     goal_summary.set_defaults(func=cmd_goal)
 
     assess = sub.add_parser("assess", help="Update the user's knowledge tree from JSON stdin")

@@ -691,6 +691,63 @@ class TeachMeHookTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(parse_stdout(second)["hookSpecificOutput"]["permissionDecision"], "deny")
 
+    def test_research_reads_do_not_rearm_after_block(self) -> None:
+        """Review-activity reads (artifact/file reads tagged research) must not
+        re-arm the Stop hook after a review — only substantive work does."""
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            run_hook(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "pytest"},
+                    "tool_response": {"stdout": "1 passed", "stderr": ""},
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                },
+                home,
+            )
+            first = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "测试通过。",
+                },
+                home,
+            )
+            for path in ("artifact://31", "/repo/docs/notes.md"):
+                run_hook(
+                    {
+                        "hook_event_name": "PostToolUse",
+                        "tool_name": "Read",
+                        "tool_input": {"file_path": path},
+                        "tool_response": {"content": "review material"},
+                        "session_id": "s1",
+                        "turn_id": "t1",
+                        "cwd": "/repo",
+                    },
+                    home,
+                )
+            second = run_hook(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": "s1",
+                    "turn_id": "t1",
+                    "cwd": "/repo",
+                    "stop_hook_active": False,
+                    "last_assistant_message": "复盘完成。",
+                },
+                home,
+            )
+
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertEqual(parse_stdout(first)["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertEqual(second.stdout, "")
+
     def test_kimi_style_stop_stays_silent_without_new_work_after_block(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)

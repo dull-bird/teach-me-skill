@@ -88,7 +88,7 @@ class GoalSummaryTests(unittest.TestCase):
             home = Path(tmp) / "home"
             self.configure(home)
             self.log_tool(home, "edit migration.py and verify output")
-            result = self.run_cli(home, "goal", "summary", "--recent", "--force")
+            result = self.run_cli(home, "goal", "summary", "--recent", "--force", "--scope", "global")
 
         data = json.loads(result.stdout)
         self.assertEqual(data["status"], "ready")
@@ -108,6 +108,63 @@ class GoalSummaryTests(unittest.TestCase):
         self.assertEqual(fallback.returncode, 0, fallback.stderr)
         self.assertEqual(complete.returncode, 0, complete.stderr)
         self.assertEqual(json.loads(complete.stdout)["evidence_count"], 2)
+
+    def test_recent_project_scope_excludes_other_projects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            self.configure(home)
+            self.log_tool(home, "edit parser.py", cwd="/repo/demo")
+            self.log_tool(home, "edit trading.py", cwd="/other/project")
+            result = self.run_cli(home, "goal", "summary", "--recent", "--force", "--cwd", "/repo/demo")
+
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "ready")
+        self.assertEqual(data["evidence_count"], 1)
+        self.assertIn("edit parser.py", data["prompt_for_ai"])
+        self.assertNotIn("edit trading.py", data["prompt_for_ai"])
+
+    def test_recent_global_scope_includes_other_projects(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            self.configure(home)
+            self.log_tool(home, "edit parser.py", cwd="/repo/demo")
+            self.log_tool(home, "edit trading.py", cwd="/other/project")
+            result = self.run_cli(home, "goal", "summary", "--recent", "--force", "--scope", "global")
+
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "ready")
+        self.assertEqual(data["evidence_count"], 2)
+        self.assertIn("edit parser.py", data["prompt_for_ai"])
+        self.assertIn("edit trading.py", data["prompt_for_ai"])
+
+    def test_summary_filters_teach_me_introspection_noise(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            self.configure(home)
+            self.log_tool(home, "edit parser.py", cwd="/repo/demo")
+            self.log_tool(
+                home,
+                "python3 /home/me/.omp/skills/teach-me/scripts/teach_me.py capture",
+                cwd="/repo/demo",
+            )
+            result = self.run_cli(home, "goal", "summary", "--recent", "--force", "--cwd", "/repo/demo")
+            second = self.run_cli(home, "goal", "summary", "--recent", "--force", "--cwd", "/repo/demo")
+
+        data = json.loads(result.stdout)
+        self.assertEqual(data["evidence_count"], 1)
+        self.assertIn("edit parser.py", data["prompt_for_ai"])
+        self.assertNotIn("teach_me.py capture", data["prompt_for_ai"])
+        # The checkpoint advanced past the noise, so it never resurfaces.
+        self.assertEqual(json.loads(second.stdout)["evidence_count"], 0)
+
+    def test_summary_evidence_lines_carry_provenance_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            self.configure(home)
+            self.log_tool(home, "edit parser.py", cwd="/repo/demo")
+            result = self.run_cli(home, "goal", "summary", "--recent", "--force", "--cwd", "/repo/demo")
+
+        self.assertIn("[demo]", json.loads(result.stdout)["prompt_for_ai"])
 
 
 if __name__ == "__main__":
