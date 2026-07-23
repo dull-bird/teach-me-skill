@@ -25,7 +25,7 @@
 
 **Teach Me：做事，顺便学明白。**
 
-它是一套 Agent Skill，支持 Claude Code、Codex、OpenClaw、Kimi Code CLI。在你写代码、调试、重构、测试，或者处理数据、整理文档、剪辑媒体、调试配置、研究问题的过程中，Teach Me 自动识别值得学习的瞬间，把关键概念、隐藏机制、决策理由整理成你的本地知识库。
+它是一套 Agent Skill，支持 Claude Code、Codex、OpenClaw、Kimi Code CLI、Oh My Pi。在你写代码、调试、重构、测试，或者处理数据、整理文档、剪辑媒体、调试配置、研究问题的过程中，Teach Me 自动识别值得学习的瞬间，把关键概念、隐藏机制、决策理由整理成你的本地知识库。
 
 它还会慢慢画出你的学习画像：你喜欢怎么被教、哪些概念已经掌握、哪些前置知识还模糊。AI 的教学个性可以由你塑造，复习和教学都会围绕你来进行。
 
@@ -145,7 +145,7 @@ cd teach-me-skill
 ./install.sh
 
 # 2. 按你的 agent 装 hook
-./codex/install-hook.sh      # 或 claude-code, kimi, openclaw
+./codex/install-hook.sh      # 或 claude-code, kimi, openclaw, omp (oh-my-pi)
 
 # 3. 配置
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
@@ -191,6 +191,14 @@ cd teach-me-skill
 ./codex/install-hook.sh
 ./openclaw/install-hook.sh
 ./kimi/install-hook.sh
+./omp/install-hook.sh        # Oh My Pi 需要先装 pi-hooks 扩展
+```
+
+Oh My Pi 通过 `@hsingjui/pi-hooks` 扩展提供 Claude Code 兼容的 command hooks，安装方式：
+
+```bash
+omp install npm:@hsingjui/pi-hooks
+./omp/install-hook.sh
 ```
 
 ### 首次配置
@@ -334,7 +342,7 @@ python3 -m unittest -v tests.test_teach_me_hook tests.test_goal_summary
 
 **Teach Me: Learn by doing, with your tools.**
 
-It is a set of Agent Skills for Claude Code, Codex, OpenClaw, and Kimi Code CLI. As you code, debug, refactor, and test — or work with data, media, documents, configuration, and research — Teach Me spots the moments worth learning from and turns key concepts, hidden mechanisms, and decision rationales into a local knowledge base.
+It is a set of Agent Skills for Claude Code, Codex, OpenClaw, Kimi Code CLI, and Oh My Pi. As you code, debug, refactor, and test — or work with data, media, documents, configuration, and research — Teach Me spots the moments worth learning from and turns key concepts, hidden mechanisms, and decision rationales into a local knowledge base.
 
 It also builds a growing learner portrait: how you like to be taught, which concepts you have mastered, and which prerequisites are still fuzzy. The AI's teaching personality is shaped by you, and reviews and explanations are centered on you.
 
@@ -454,7 +462,7 @@ cd teach-me-skill
 ./install.sh
 
 # 2. Register hooks for your agent
-./codex/install-hook.sh      # or claude-code, kimi, openclaw
+./codex/install-hook.sh      # or claude-code, kimi, openclaw, omp (oh-my-pi)
 
 # 3. Configure
 python3 ~/.codex/skills/teach-me/scripts/teach_me.py configure --language auto
@@ -500,6 +508,14 @@ Install hooks for the agent you use:
 ./codex/install-hook.sh
 ./openclaw/install-hook.sh
 ./kimi/install-hook.sh
+./omp/install-hook.sh        # Oh My Pi requires the pi-hooks extension first
+```
+
+Oh My Pi supports Claude Code-compatible command hooks via the `@hsingjui/pi-hooks` extension. Install it first:
+
+```bash
+omp install npm:@hsingjui/pi-hooks
+./omp/install-hook.sh
 ```
 
 ### First configuration

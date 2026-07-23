@@ -47,6 +47,8 @@ install_into() {
   install_hook_installer "$REPO_DIR/claude-code" "$teach_me_dest" "install-claude-code-hook.py"
   install_hook_installer "$REPO_DIR/codex" "$teach_me_dest" "install-codex-hook.py"
   install_hook_installer "$REPO_DIR/kimi" "$teach_me_dest" "install-kimi-hook.py"
+  install_hook_installer "$REPO_DIR/omp" "$teach_me_dest" "install-omp-hook.py"
+
 }
 
 installed_any=false
@@ -67,6 +69,12 @@ if [ -d "$HOME/.kimi" ] || [ -d "$HOME/.agents" ]; then
   install_into "$HOME/.agents" "shared ~/.agents"
   installed_any=true
   echo "  Optional: run kimi/install-hook.sh"
+fi
+
+if [ -d "$HOME/.omp" ]; then
+  install_into "$HOME/.omp" "Oh My Pi"
+  installed_any=true
+  echo "  Optional: install pi-hooks with 'omp install npm:@hsingjui/pi-hooks', then run omp/install-hook.sh"
 fi
 
 if [ -d "$HOME/.openclaw" ]; then

@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "current_user": "default",
+  "users": {
+    "default": {
+      "name": "Default User",
+      "github": null,
+      "vault_path": "/Users/lilei/Documents/work/repos/teach-me-skill/.teach_me_test/vault",
+      "language": "auto",
+      "max_notes_per_phase": 3,
+      "git_sync": {
+        "enabled": false,
+        "remote": "",
+        "branch": "main",
+        "auto_sync": false
+      },
+      "initialized": false
+    }
+  },
+  "created_at": "2026-07-15T01:34:44+08:00",
+  "updated_at": "2026-07-15T01:34:44+08:00"
+}
