@@ -1,6 +1,7 @@
 import React from "react";
 import { Audio, Series, staticFile, useCurrentFrame } from "remotion";
-import manifest from "./data/manifest.json";
+import manifestZh from "./data/manifest.json";
+import manifestEn from "./data/manifest-en.json";
 import { Hook } from "./scenes/Hook";
 import { ImportPanel } from "./scenes/ImportPanel";
 import { InstallPanel } from "./scenes/InstallPanel";
@@ -13,7 +14,14 @@ import { VaultPanel } from "./scenes/VaultPanel";
 import { Why } from "./scenes/Why";
 import { WorkflowPanel } from "./scenes/WorkflowPanel";
 
-type NarrationSegment = (typeof manifest.segments)[number];
+type Locale = "zh" | "en";
+
+const manifests: Record<Locale, typeof manifestZh> = {
+  zh: manifestZh,
+  en: manifestEn,
+};
+
+type NarrationSegment = (typeof manifestZh.segments)[number];
 
 type SceneGroup = {
   scene: string;
@@ -22,29 +30,28 @@ type SceneGroup = {
   endFrame: number;
 };
 
-export const TOTAL_DURATION = manifest.totalDurationFrames;
-
-const sceneGroups: SceneGroup[] = [];
-
-for (const segment of manifest.segments) {
-  const previous = sceneGroups.at(-1);
-  if (!previous || previous.scene !== segment.scene) {
-    sceneGroups.push({
-      scene: segment.scene,
-      segments: [segment],
-      startFrame: segment.startFrame,
-      endFrame: segment.startFrame,
-    });
-  } else {
-    previous.segments.push(segment);
+const buildSceneGroups = (manifest: typeof manifestZh): SceneGroup[] => {
+  const groups: SceneGroup[] = [];
+  for (const segment of manifest.segments) {
+    const previous = groups.at(-1);
+    if (!previous || previous.scene !== segment.scene) {
+      groups.push({
+        scene: segment.scene,
+        segments: [segment],
+        startFrame: segment.startFrame,
+        endFrame: segment.startFrame,
+      });
+    } else {
+      previous.segments.push(segment);
+    }
   }
-}
-
-sceneGroups.forEach((group, index) => {
-  group.endFrame = index < sceneGroups.length - 1
-    ? sceneGroups[index + 1].startFrame
-    : manifest.totalDurationFrames;
-});
+  groups.forEach((group, index) => {
+    group.endFrame = index < groups.length - 1
+      ? groups[index + 1].startFrame
+      : manifest.totalDurationFrames;
+  });
+  return groups;
+};
 
 const activeText = (segments: NarrationSegment[], frame: number) => {
   let text = segments[0].text;
@@ -58,54 +65,65 @@ const activeText = (segments: NarrationSegment[], frame: number) => {
   return text;
 };
 
-const renderScene = (scene: string, text: string) => {
+const renderScene = (scene: string, text: string, locale: Locale) => {
   switch (scene) {
     case "hook":
       return <Hook text={text} />;
     case "intro":
-      return <Intro />;
+      return <Intro locale={locale} />;
     case "why":
       return <Why text={text} />;
     case "story":
-      return <StoryPanel />;
+      return <StoryPanel locale={locale} />;
     case "workflow-steps":
     case "workflow-skills":
-      return <WorkflowPanel />;
+      return <WorkflowPanel locale={locale} />;
     case "quiz":
-      return <QuizPanel text={text} />;
+      return <QuizPanel text={text} locale={locale} />;
     case "vault":
-      return <VaultPanel text={text} />;
+      return <VaultPanel text={text} locale={locale} />;
     case "import":
-      return <ImportPanel text={text} />;
+      return <ImportPanel text={text} locale={locale} />;
     case "install":
-      return <InstallPanel text={text} />;
+      return <InstallPanel text={text} locale={locale} />;
     case "quote":
-      return <Quote />;
+      return <Quote locale={locale} />;
     case "outro":
-      return <Outro />;
+      return <Outro locale={locale} />;
     default:
       return null;
   }
 };
 
-const GroupedScene: React.FC<{ group: SceneGroup }> = ({ group }) => {
+type GroupedSceneProps = { group: SceneGroup; locale: Locale };
+
+const GroupedScene: React.FC<GroupedSceneProps> = ({ group, locale }) => {
   const frame = useCurrentFrame();
   const absoluteFrame = group.startFrame + frame;
-  return renderScene(group.scene, activeText(group.segments, absoluteFrame));
+  return renderScene(group.scene, activeText(group.segments, absoluteFrame), locale);
 };
 
-export const TeachMePromo: React.FC = () => (
-  <>
-    <Audio src={staticFile("narration.mp3")} />
-    <Series>
-      {sceneGroups.map((group, index) => {
-        const startFrame = index === 0 ? 0 : group.startFrame;
-        return (
-          <Series.Sequence key={`${group.scene}-${group.startFrame}`} durationInFrames={group.endFrame - startFrame}>
-            <GroupedScene group={group} />
-          </Series.Sequence>
-        );
-      })}
-    </Series>
-  </>
-);
+export type TeachMePromoProps = { locale?: Locale };
+
+export const TeachMePromo: React.FC<TeachMePromoProps> = ({ locale = "zh" }) => {
+  const manifest = manifests[locale];
+  const sceneGroups = buildSceneGroups(manifest);
+  const audioFile = locale === "en" ? "narration-en.mp3" : "narration.mp3";
+  return (
+    <>
+      <Audio src={staticFile(audioFile)} />
+      <Series>
+        {sceneGroups.map((group, index) => {
+          const startFrame = index === 0 ? 0 : group.startFrame;
+          return (
+            <Series.Sequence key={`${group.scene}-${group.startFrame}`} durationInFrames={group.endFrame - startFrame}>
+              <GroupedScene group={group} locale={locale} />
+            </Series.Sequence>
+          );
+        })}
+      </Series>
+    </>
+  );
+};
+
+export const TOTAL_DURATION = manifestZh.totalDurationFrames;

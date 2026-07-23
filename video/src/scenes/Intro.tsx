@@ -5,7 +5,12 @@ import { Cloud, Flower, Sparkle, SoftBlobBackground } from "../components/Decor"
 
 const AGENTS = ["Claude Code", "Codex", "Kimi Code CLI", "OpenClaw"];
 
-export const Intro: React.FC = () => {
+const TAGLINE: Record<"zh" | "en", string> = {
+  zh: "做事，顺便学明白",
+  en: "Work, and actually learn.",
+};
+
+export const Intro: React.FC<{ locale?: "zh" | "en" }> = ({ locale = "zh" }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -61,7 +66,7 @@ export const Intro: React.FC = () => {
             letterSpacing: 2,
           }}
         >
-          做事，顺便学明白
+          {TAGLINE[locale]}
         </div>
 
         <div style={{ opacity: chipsOpacity, marginTop: 34, display: "flex", gap: 12 }}>

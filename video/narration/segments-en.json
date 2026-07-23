@@ -1,0 +1,57 @@
+[
+  {"id":"hook-ai","scene":"hook","text":"AI can finish things fast.","pauseAfterSec":0.58},
+  {"id":"hook-work","scene":"hook","text":"Code, research, configuration.","pauseAfterSec":0.72},
+  {"id":"hook-question","scene":"hook","text":"But once the feature ships, can you still explain why you did it that way?","pauseAfterSec":0.9},
+
+  {"id":"intro-reason","scene":"intro","text":"That is why I built Teach Me.","pauseAfterSec":0.7},
+  {"id":"intro-aim","scene":"intro","text":"I do not want AI to only do my work.","pauseAfterSec":0.55},
+  {"id":"intro-learn","scene":"intro","text":"I want it to help me notice what is worth learning while the work is happening.","pauseAfterSec":0.9},
+
+  {"id":"why-black-box","scene":"why","text":"If every step becomes a black box, we may ship the feature, but we do not keep the judgment.","pauseAfterSec":0.8},
+  {"id":"why-forget","scene":"why","text":"A few days later, why this design works or how that bug was found becomes blurry again.","pauseAfterSec":0.82},
+  {"id":"why-explore","scene":"why","text":"AI can certainly help us walk unfamiliar roads.","pauseAfterSec":0.5},
+  {"id":"why-blindspots","scene":"why","text":"We have gaps and blind spots. It can explore, explain, and fill them in.","pauseAfterSec":0.72},
+  {"id":"why-identity","scene":"why","text":"The problem is not using AI.","pauseAfterSec":0.52},
+  {"id":"why-identity-2","scene":"why","text":"The problem is whether we hand over the identity of thinking and creating along with it.","pauseAfterSec":0.95},
+  {"id":"why-practical","scene":"why","text":"For students or people early in their careers, hands-on practice is already scarce.","pauseAfterSec":0.72},
+  {"id":"why-future","scene":"why","text":"Switching tasks, switching jobs, or facing an interview, being able to ask AI is not enough.","pauseAfterSec":0.72},
+  {"id":"why-need","scene":"why","text":"You also need judgment, articulation, and review.","pauseAfterSec":0.9},
+
+  {"id":"story-not-recorder","scene":"story","text":"Teach Me is not a verbose recorder.","pauseAfterSec":0.58},
+  {"id":"story-observe","scene":"story","text":"It quietly observes this round of work: coding, configuration, research, or whenever you simply say teach me.","pauseAfterSec":0.72},
+  {"id":"story-evidence","scene":"story","text":"What you changed, what you tested, what error you hit, it collects those clues.","pauseAfterSec":0.65},
+  {"id":"story-no-interrupt","scene":"story","text":"But it never interrupts you.","pauseAfterSec":0.92},
+
+  {"id":"workflow-boundary","scene":"workflow-steps","text":"Only when a stretch of work truly ends does it look back.","pauseAfterSec":0.55},
+  {"id":"workflow-signal","scene":"workflow-steps","text":"Not every trace is worth turning into a note.","pauseAfterSec":0.58},
+  {"id":"workflow-judge","scene":"workflow-steps","text":"It asks: is there a concept here that you should actually master?","pauseAfterSec":0.72},
+  {"id":"workflow-structure","scene":"workflow-steps","text":"If so, it explains the key point in one or two sentences, connects it to your system, instead of piling things up randomly.","pauseAfterSec":0.8},
+  {"id":"workflow-review","scene":"workflow-steps","text":"Then it updates your knowledge tree, schedules review, and fills the real gap in your skill map.","pauseAfterSec":0.9},
+
+  {"id":"skills-cycle","scene":"workflow-skills","text":"This loop has four small skills that turn learning into a closed cycle.","pauseAfterSec":0.52},
+  {"id":"skills-core","scene":"workflow-skills","text":"Teach Me gathers evidence, explains the key point, and completes the review.","pauseAfterSec":0.48},
+  {"id":"skills-check","scene":"workflow-skills","text":"Teach Me Check inspects install status and your learning profile.","pauseAfterSec":0.48},
+  {"id":"skills-recap","scene":"workflow-skills","text":"Teach Me Recap uses spaced repetition to help you retain what you learned.","pauseAfterSec":0.48},
+  {"id":"skills-exam","scene":"workflow-skills","text":"Teach Me Exam generates questions from your learning profile to test real mastery.","pauseAfterSec":0.8},
+
+  {"id":"quiz-retrieve","scene":"quiz","text":"Knowledge is not yours just because it was written down.","pauseAfterSec":0.55},
+  {"id":"quiz-example","scene":"quiz","text":"You have learned it when you can retrieve it and use it when needed.","pauseAfterSec":0.62},
+  {"id":"quiz-try","scene":"quiz","text":"So you can take quizzes right on the site. After choosing, you see the answer and the reason immediately.","pauseAfterSec":0.82},
+
+  {"id":"vault-local","scene":"vault","text":"All notes are plain Markdown files, living in your own vault.","pauseAfterSec":0.52},
+  {"id":"vault-choice","scene":"vault","text":"Local-first by default. Whether to sync with Git is entirely up to you.","pauseAfterSec":0.78},
+
+  {"id":"import-existing","scene":"import","text":"You do not have to start from zero.","pauseAfterSec":0.45},
+  {"id":"import-sources","scene":"import","text":"A PDF, a web page, even an entire Obsidian vault can be brought in.","pauseAfterSec":0.52},
+  {"id":"import-baseline","scene":"import","text":"Teach Me first understands your baseline, then decides whether to archive, explain, or directly quiz you.","pauseAfterSec":0.82},
+
+  {"id":"install-fast","scene":"install","text":"Getting started is also fast. Clone the repo, run install dot sh, then install the matching hook for the agent you are using.","pauseAfterSec":0.62},
+  {"id":"install-start","scene":"install","text":"In minutes, every work session can leave one more chance to grow.","pauseAfterSec":0.85},
+
+  {"id":"quote-build","scene":"quote","text":"I love a line: keep building your own brain.","pauseAfterSec":0.58},
+  {"id":"quote-not-reject","scene":"quote","text":"It is not rejecting AI.","pauseAfterSec":0.48},
+  {"id":"quote-use-ai","scene":"quote","text":"It is making sure that when AI frees us, we do not stop being people who think.","pauseAfterSec":0.92},
+
+  {"id":"outro-line","scene":"outro","text":"Teach Me. Work, and actually learn.","pauseAfterSec":0.58},
+  {"id":"outro-github","scene":"outro","text":"Search teach-me-skill on GitHub. Free, open source, try it now.","pauseAfterSec":0}
+]

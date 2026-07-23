@@ -3,7 +3,12 @@ import { AbsoluteFill, interpolate, spring, staticFile, useCurrentFrame, useVide
 import { theme } from "../theme";
 import { Cloud, Flower, SoftBlobBackground, Sparkle } from "../components/Decor";
 
-export const Outro: React.FC = () => {
+const TAGLINE: Record<"zh" | "en", string> = {
+  zh: "做事，顺便学明白",
+  en: "Work, and actually learn.",
+};
+
+export const Outro: React.FC<{ locale?: "zh" | "en" }> = ({ locale = "zh" }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -39,7 +44,7 @@ export const Outro: React.FC = () => {
             color: theme.accentInk,
           }}
         >
-          做事，顺便学明白
+          {TAGLINE[locale]}
         </div>
 
         <div

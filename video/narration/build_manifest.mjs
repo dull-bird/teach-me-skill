@@ -7,11 +7,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fps = 30;
 const defaultPauseAfterSec = 0.5;
 const leadInSec = 0.2;
-const segmentsDir = path.join(__dirname, "segments");
+const locale = process.argv.includes("--locale")
+  ? process.argv[process.argv.indexOf("--locale") + 1] || "zh"
+  : "zh";
+const localeSuffix = locale === "zh" ? "" : `-${locale}`;
+const segmentsDir = path.join(__dirname, "segments", locale);
 const outputDir = path.join(__dirname, "..", "out");
 const publicDir = path.join(__dirname, "..", "public");
-const sourceManifestPath = path.join(__dirname, "..", "src", "data", "manifest.json");
-const segments = JSON.parse(fs.readFileSync(path.join(__dirname, "segments.json"), "utf8"));
+const sourceManifestPath = path.join(__dirname, "..", "src", "data", `manifest${localeSuffix}.json`);
+const segments = JSON.parse(fs.readFileSync(path.join(__dirname, `segments${localeSuffix}.json`), "utf8"));
 
 fs.mkdirSync(segmentsDir, { recursive: true });
 fs.mkdirSync(outputDir, { recursive: true });
@@ -101,12 +105,12 @@ const manifest = {
 };
 
 fs.writeFileSync(path.join(segmentsDir, "concat.txt"), `${concatEntries.join("\n")}\n`);
-fs.writeFileSync(path.join(__dirname, "manifest.json"), JSON.stringify(manifest, null, 2));
+fs.writeFileSync(path.join(__dirname, `manifest${localeSuffix}.json`), JSON.stringify(manifest, null, 2));
 fs.writeFileSync(sourceManifestPath, JSON.stringify(manifest, null, 2));
-fs.writeFileSync(path.join(outputDir, "subtitles.srt"), srtLines.join("\n"));
+fs.writeFileSync(path.join(outputDir, `subtitles${localeSuffix}.srt`), srtLines.join("\n"));
 
-const narrationWav = path.join(publicDir, "narration.wav");
-const narrationMp3 = path.join(publicDir, "narration.mp3");
+const narrationWav = path.join(publicDir, `narration${localeSuffix}.wav`);
+const narrationMp3 = path.join(publicDir, `narration${localeSuffix}.mp3`);
 execSync(`ffmpeg -y -f concat -safe 0 -i "${path.join(segmentsDir, "concat.txt")}" -ar 44100 -ac 2 "${narrationWav}"`, {
   stdio: "inherit",
 });
@@ -116,4 +120,4 @@ execSync(`ffmpeg -y -i "${narrationWav}" -codec:a libmp3lame -qscale:a 2 "${narr
 
 console.log(`Total duration (s): ${manifest.totalDurationSec.toFixed(2)}`);
 console.log(`Total duration (frames @30fps): ${manifest.totalDurationFrames}`);
-console.log("Wrote narration manifest, subtitle cues, and narration.mp3");
+console.log(`Wrote narration manifest, subtitle cues, and narration${localeSuffix}.mp3`);

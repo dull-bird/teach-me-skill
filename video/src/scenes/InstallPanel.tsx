@@ -10,7 +10,7 @@ const LINES = [
   "./claude-code/install-hook.sh",
 ];
 
-export const InstallPanel: React.FC<{ text: string }> = ({ text }) => {
+export const InstallPanel: React.FC<{ text: string; locale?: "zh" | "en" }> = ({ text }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const cardScale = spring({ frame, fps, config: { damping: 14, mass: 0.7 }, durationInFrames: 26 });

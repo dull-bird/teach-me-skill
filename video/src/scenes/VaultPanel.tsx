@@ -3,6 +3,33 @@ import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } fr
 import { theme } from "../theme";
 import { Sparkle, SoftBlobBackground } from "../components/Decor";
 
+type Locale = "zh" | "en";
+
+const BADGES: Record<Locale, string[]> = {
+  zh: ["本地优先", "纯 Markdown", "Git 同步可选", "多用户隔离"],
+  en: ["Local-first", "Plain Markdown", "Git sync optional", "Multi-user"],
+};
+
+const PROFILE_TITLE: Record<Locale, string> = {
+  zh: "你的学习画像",
+  en: "Your learning profile",
+};
+
+const PROFILE_ITEMS: Record<Locale, { label: string; value: string | number }[]> = {
+  zh: [
+    { label: "rebase 掌握度", value: 72 },
+    { label: "偏好教学风格", value: "代码示例 + 类比" },
+    { label: "薄弱前置知识", value: "git reflog" },
+    { label: "下次复习", value: "3 天后" },
+  ],
+  en: [
+    { label: "rebase mastery", value: 72 },
+    { label: "preferred style", value: "code + analogy" },
+    { label: "weak prerequisite", value: "git reflog" },
+    { label: "next review", value: "in 3 days" },
+  ],
+};
+
 const TREE = [
   "vault/",
   "├── 00_Index.md",
@@ -20,14 +47,16 @@ const TREE = [
   "    └── events.jsonl",
 ];
 
-const BADGES = ["本地优先", "纯 Markdown", "Git 同步可选", "多用户隔离"];
-
-export const VaultPanel: React.FC<{ text: string }> = () => {
+export const VaultPanel: React.FC<{ text: string; locale?: Locale }> = ({ text, locale = "zh" }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const cardScale = spring({ frame, fps, config: { damping: 14, mass: 0.7 }, durationInFrames: 26 });
   const badgeOpacity = interpolate(frame, [20, 36], [0, 1], { extrapolateRight: "clamp" });
   const profileOpacity = interpolate(frame, [36, 52], [0, 1], { extrapolateRight: "clamp" });
+
+  const profileItems = PROFILE_ITEMS[locale];
+  const badges = BADGES[locale];
+  const profileTitle = PROFILE_TITLE[locale];
 
   return (
     <AbsoluteFill>
@@ -95,15 +124,10 @@ export const VaultPanel: React.FC<{ text: string }> = () => {
                   marginBottom: 18,
                 }}
               >
-                你的学习画像
+                {profileTitle}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {[
-                  { label: "rebase 掌握度", value: 72 },
-                  { label: "偏好教学风格", value: "代码示例 + 类比" },
-                  { label: "薄弱前置知识", value: "git reflog" },
-                  { label: "下次复习", value: "3 天后" },
-                ].map((item) => (
+                {profileItems.map((item) => (
                   <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontFamily: theme.sans, fontSize: 15, color: theme.muted }}>{item.label}</span>
                     <span style={{ fontFamily: theme.sans, fontWeight: 700, fontSize: 15, color: theme.ink }}>
@@ -148,7 +172,7 @@ export const VaultPanel: React.FC<{ text: string }> = () => {
               gap: 14,
             }}
           >
-            {BADGES.map((label) => (
+            {badges.map((label) => (
               <span
                 key={label}
                 style={{

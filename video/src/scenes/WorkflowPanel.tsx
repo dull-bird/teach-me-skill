@@ -1,7 +1,8 @@
 import React from "react";
 import { AbsoluteFill, Img, staticFile } from "remotion";
 
-export const WorkflowPanel: React.FC = () => {
+export const WorkflowPanel: React.FC<{ locale?: "zh" | "en" }> = ({ locale = "zh" }) => {
+  const image = locale === "en" ? "workflow-en.png" : "workflow.png";
   return (
     <AbsoluteFill
       style={{
@@ -11,7 +12,7 @@ export const WorkflowPanel: React.FC = () => {
       }}
     >
       <Img
-        src={staticFile("workflow.png")}
+        src={staticFile(image)}
         style={{ width: "100%", height: "100%", objectFit: "contain" }}
       />
     </AbsoluteFill>

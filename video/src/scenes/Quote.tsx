@@ -3,7 +3,20 @@ import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } fr
 import { theme } from "../theme";
 import { Flower, SoftBlobBackground, Sparkle } from "../components/Decor";
 
-export const Quote: React.FC = () => {
+type Locale = "zh" | "en";
+
+const QUOTE: Record<Locale, { lines: string[]; cite: string }> = {
+  zh: {
+    lines: ["把持续建设自己的大脑，", "当作此生唯一重要的任务。"],
+    cite: "—— 李笑来，《专注的真相》",
+  },
+  en: {
+    lines: ["Keep building your own brain,", "as the one task that matters most in this life."],
+    cite: "— Li Xiaolai, The Truth of Focus",
+  },
+};
+
+export const Quote: React.FC<{ locale?: Locale }> = ({ locale = "zh" }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -18,6 +31,8 @@ export const Quote: React.FC = () => {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
+
+  const copy = QUOTE[locale];
 
   return (
     <AbsoluteFill style={{ opacity: sceneFade }}>
@@ -53,9 +68,12 @@ export const Quote: React.FC = () => {
             textAlign: "center",
           }}
         >
-          把持续建设自己的大脑，
-          <br />
-          当作此生唯一重要的任务。
+          {copy.lines.map((line, i) => (
+            <React.Fragment key={i}>
+              {line}
+              {i < copy.lines.length - 1 && <br />}
+            </React.Fragment>
+          ))}
         </div>
         <div
           style={{
@@ -68,7 +86,7 @@ export const Quote: React.FC = () => {
             color: theme.muted,
           }}
         >
-          —— 李笑来，《专注的真相》
+          {copy.cite}
         </div>
       </AbsoluteFill>
     </AbsoluteFill>

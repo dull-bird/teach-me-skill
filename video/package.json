@@ -5,6 +5,7 @@
   "scripts": {
     "start": "remotion studio src/index.ts",
     "render": "remotion render src/index.ts TeachMePromo out/teach-me-promo.mp4",
+    "render:en": "remotion render src/index.ts TeachMePromoEnglish out/teach-me-promo-en.mp4",
     "still": "remotion still src/index.ts TeachMePromo out/still.png"
   },
   "dependencies": {

@@ -1,0 +1,136 @@
+flowchart TD
+    %% =========================================================
+    %% 🌱 Teach Me Hook System
+    %% =========================================================
+
+    START([🤖 Agent receives user prompt])
+    WORK[🛠️ Agent begins working]
+    PRE{{👀 PreToolUse hook}}
+    CLASSIFY[🏷️ Classify tool call<br/>write · edit · test · build · research · error]
+    PRE_SCORE[⭐ Assign preliminary evidence score]
+    TOOL[⚙️ Tool executes]
+    TOOL_OK{✅ Tool succeeded?}
+
+    POST{{📦 PostToolUse hook}}
+    POST_FAIL{{💥 PostToolUseFailure hook}}
+    RESULT[🧾 Collect tool result<br/>output · files · diff · status]
+    FAILURE[🔎 Collect failure evidence<br/>error · stderr · attempted action]
+
+    FINAL_SCORE[🧮 Calculate event score<br/>based on action, result, diff, error,<br/>learning value and phase signals]
+    EVENT[📝 Build normalized event record<br/>session_id · turn_id · user_id · cwd<br/>tool · category · score · timestamp]
+    APPEND[(📚 Append to events.jsonl<br/>scoped by session / turn / user / cwd)]
+
+    CONTINUE{🔁 More agent work<br/>in this turn?}
+    AGENT_CONT[🤖 Agent continues working]
+
+    STOP{{🛑 Stop hook fires<br/>at turn end}}
+    LOAD[📖 Load recent events<br/>from the same scope]
+    FILTER[🧹 Ignore stale, unrelated<br/>or already-consumed evidence]
+    SUM[➕ Sum event scores]
+    SIGNALS[🚦 Check phase-boundary signals<br/>task complete · major diff · tests pass<br/>error resolved · explanation opportunity]
+    TOTAL[📊 Compute teaching evidence total]
+    ACTIVE{🌀 stop_hook_active<br/>is true?}
+    GOAL{🎯 goal_end session active?}
+    QUIET[🤫 Quiet-window defer<br/>accumulate evidence<br/>do not teach yet]
+    THRESHOLD{⚖️ Score ≥ 7<br/>and phase boundary reached?}
+
+    SILENT([🌙 Allow silently<br/>no interruption])
+    LOOP_ALLOW([🛡️ Allow immediately<br/>prevent Stop-hook recursion])
+    DEFER_ALLOW([⏳ Allow quietly<br/>retain evidence for later])
+
+    BLOCK[🚧 Block Stop<br/>return teaching reason]
+    AGENT_SEES[🤖 Agent receives block reason]
+    CONTEXT[🐍 Run<br/>teach_me.py context --full]
+    CONTEXT_LOAD[🧠 Load scoped context<br/>recent events · diffs · errors<br/>task goal · relevant files]
+    LESSON[✨ Generate one focused micro-lesson<br/>what happened · why it matters<br/>pattern · practical takeaway]
+    QUALITY{🔍 Lesson useful<br/>and non-duplicative?}
+    REFINE[🪄 Refine lesson<br/>shorter · clearer · more specific]
+    VAULT[(🗂️ Save Markdown lesson<br/>to local learning vault)]
+    TREE[🌳 Update knowledge tree<br/>topic · concept · skill · links]
+    GIT{🔄 Git sync enabled?}
+    COMMIT[📤 Git add · commit · optional push]
+    NO_GIT[📁 Keep changes local]
+    RESET[🧽 Mark evidence consumed<br/>reset teaching accumulator]
+    RESUME([🌈 Allow agent to stop<br/>or continue next turn])
+
+    %% =========================================================
+    %% Main tool-observation flow
+    %% =========================================================
+
+    START --> WORK
+    WORK --> PRE
+    PRE --> CLASSIFY
+    CLASSIFY --> PRE_SCORE
+    PRE_SCORE --> TOOL
+    TOOL --> TOOL_OK
+
+    TOOL_OK -- Yes --> POST
+    TOOL_OK -- No --> POST_FAIL
+
+    POST --> RESULT
+    POST_FAIL --> FAILURE
+
+    RESULT --> FINAL_SCORE
+    FAILURE --> FINAL_SCORE
+
+    FINAL_SCORE --> EVENT
+    EVENT --> APPEND
+    APPEND --> CONTINUE
+
+    CONTINUE -- Yes --> AGENT_CONT
+    AGENT_CONT --> PRE
+
+    CONTINUE -- No --> STOP
+
+    %% =========================================================
+    %% Stop-hook decision flow
+    %% =========================================================
+
+    STOP --> LOAD
+    LOAD --> FILTER
+    FILTER --> SUM
+    SUM --> SIGNALS
+    SIGNALS --> TOTAL
+    TOTAL --> ACTIVE
+
+    ACTIVE -- Yes --> LOOP_ALLOW
+    LOOP_ALLOW --> RESUME
+
+    ACTIVE -- No --> GOAL
+
+    GOAL -- Yes --> QUIET
+    QUIET --> DEFER_ALLOW
+    DEFER_ALLOW --> RESUME
+
+    GOAL -- No --> THRESHOLD
+
+    THRESHOLD -- No --> SILENT
+    SILENT --> RESUME
+
+    THRESHOLD -- Yes --> BLOCK
+    BLOCK --> AGENT_SEES
+    AGENT_SEES --> CONTEXT
+    CONTEXT --> CONTEXT_LOAD
+    CONTEXT_LOAD --> LESSON
+    LESSON --> QUALITY
+
+    QUALITY -- No --> REFINE
+    REFINE --> LESSON
+
+    QUALITY -- Yes --> VAULT
+    VAULT --> TREE
+    TREE --> GIT
+
+    GIT -- Yes --> COMMIT
+    GIT -- No --> NO_GIT
+
+    COMMIT --> RESET
+    NO_GIT --> RESET
+    RESET --> RESUME
+
+    %% =========================================================
+    %% Helpful annotations
+    %% =========================================================
+
+    SCORE_NOTE["💡 Example scoring signals<br/>small read: +0–1<br/>meaningful edit: +2<br/>test/build result: +1–2<br/>error or recovery: +2<br/>major phase boundary: +2"]
+    SCOPE_NOTE["🔐 Scope: session_id · turn_id · user_id · cwd"]
