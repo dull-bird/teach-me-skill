@@ -103,6 +103,37 @@ from a book with zero file edits can still score high here.
 
 Unknown types are treated as `concept`.
 
+## Import Provenance (`origin`)
+
+Knowledge imported from an external source (an Obsidian vault, a PDF, a URL)
+must stay distinguishable from knowledge Teach Me accumulates natively. The
+`import` command returns an `origin` object in its JSON output; pass it
+verbatim at the top level of every `capture` or `assess` payload that stores
+knowledge derived from that import:
+
+```json
+{
+  "origin": {
+    "kind": "import",
+    "source_type": "obsidian",
+    "source_path": "/absolute/path/to/vault",
+    "vault_name": "My Knowledge Vault",
+    "import_id": "import-20260724-120000"
+  },
+  "items": [ ... ]
+}
+```
+
+Effects:
+
+- New notes get extra frontmatter: `origin: import`, `origin_source_type`,
+  `imported_from` (vault name), `origin_source_path`, `import_id` — in
+  addition to the usual `type: teach-me/*` marker, so re-import filters keep
+  working.
+- Concept state and knowledge-tree nodes store the `origin` block.
+- Provenance is first-wins: once a concept has an `origin`, later learning
+  events (native or from another import) never overwrite it.
+
 ## Assessment Payload
 
 Use `assess` when you learned something about the user's level but do not need

@@ -522,7 +522,7 @@ def _strip_html_tags(text: str) -> str:
 
 # Paths and file types to skip when importing an Obsidian vault so that
 # Teach Me does not import its own metadata or generated system notes.
-OBSIDIAN_SKIP_DIRS = {".teach-me", ".obsidian", ".trash", ".git"}
+OBSIDIAN_SKIP_DIRS = {".teach-me", ".obsidian", ".trash", ".git", "99_System"}
 OBSIDIAN_SKIP_FILES = {
     "00_Index.md",
     "01_Knowledge_Graph.md",
@@ -1164,6 +1164,35 @@ def listify(value: Any) -> list[str]:
     return [text] if text else []
 
 
+ORIGIN_KEYS = ("kind", "source_type", "source_path", "vault_name", "import_id")
+
+
+def normalize_origin(raw: Any) -> dict[str, str] | None:
+    """Validate an `origin` provenance block from a capture/assess payload.
+
+    Imported knowledge must stay distinguishable from knowledge Teach Me
+    accumulates natively. The block is passed through verbatim by the agent
+    from `import` output into `capture`/`assess` payloads.
+    """
+    if not isinstance(raw, dict):
+        return None
+    origin = {key: str(raw[key]).strip() for key in ORIGIN_KEYS if str(raw.get(key, "")).strip()}
+    if not origin:
+        return None
+    origin.setdefault("kind", "import")
+    return origin
+
+
+def origin_label(origin: dict[str, str]) -> str:
+    """Human-readable provenance, e.g. 'MyVault (obsidian:/path/to/vault)'."""
+    name = origin.get("vault_name") or origin.get("source_path") or "external source"
+    source_path = origin.get("source_path", "")
+    source_type = origin.get("source_type", "")
+    if source_path and source_path != name:
+        return f"{name} ({source_type}:{source_path})" if source_type else f"{name} ({source_path})"
+    return name
+
+
 def note_path_for_item(config: dict[str, Any], item: dict[str, Any]) -> Path:
     item_type = str(item.get("type", "concept"))
     folder = ITEM_FOLDERS.get(item_type, ITEM_FOLDERS["concept"])
@@ -1186,25 +1215,33 @@ def render_note(item: dict[str, Any], payload: dict[str, Any], existing: bool) -
     relationships = normalize_relationships(item.get("relationships"))
     questions = listify(item.get("socratic_questions"))
     body = str(item.get("body", "")).strip()
+    origin = normalize_origin(item.get("origin")) or normalize_origin(payload.get("origin"))
 
     lines: list[str] = []
     if not existing:
         aliases = listify(item.get("aliases"))
         alias_json = json.dumps(aliases, ensure_ascii=False)
-        lines.extend(
-            [
-                "---",
-                f"type: teach-me/{item_type}",
-                f"mastery: {mastery}",
-                f"created: {today()}",
-                f"updated: {today()}",
-                f"aliases: {alias_json}",
-                "---",
-                "",
-                f"# {title}",
-                "",
-            ]
-        )
+        frontmatter = [
+            "---",
+            f"type: teach-me/{item_type}",
+            f"mastery: {mastery}",
+            f"created: {today()}",
+            f"updated: {today()}",
+            f"aliases: {alias_json}",
+        ]
+        if origin:
+            frontmatter.append(f"origin: {origin.get('kind', 'import')}")
+            if origin.get("source_type"):
+                frontmatter.append(f"origin_source_type: {origin['source_type']}")
+            imported_from = origin.get("vault_name") or origin.get("source_path")
+            if imported_from:
+                frontmatter.append(f"imported_from: {imported_from}")
+            if origin.get("source_path"):
+                frontmatter.append(f"origin_source_path: \"{origin['source_path']}\"")
+            if origin.get("import_id"):
+                frontmatter.append(f"import_id: {origin['import_id']}")
+        frontmatter.append("---")
+        lines.extend(frontmatter + ["", f"# {title}", ""])
 
     lines.extend(
         [
@@ -1214,6 +1251,8 @@ def render_note(item: dict[str, Any], payload: dict[str, Any], existing: bool) -
     )
     if phase:
         lines.extend(["**Phase:** " + phase, ""])
+    if origin:
+        lines.extend(["**Origin:** imported from " + origin_label(origin), ""])
     if project_name:
         lines.extend(["**Project:** " + project_name, ""])
     if project_ref:
@@ -1338,6 +1377,7 @@ def update_knowledge_tree_node(
     knowledge_domain: str = "通用",
     source: str = "capture",
     note: str = "",
+    origin: dict[str, str] | None = None,
 ) -> None:
     title = title.strip()
     if not title:
@@ -1389,6 +1429,9 @@ def update_knowledge_tree_node(
     }
     if note:
         node["note"] = note
+    if origin and not current.get("origin"):
+        # Provenance is first-wins: where the knowledge FIRST entered the vault.
+        node["origin"] = origin
     tree[title] = node
 
     for prereq in prerequisites:
@@ -2163,6 +2206,7 @@ def cmd_assess(args: argparse.Namespace) -> int:
             project_ref=project_ref,
             knowledge_domain=knowledge_domain,
             source="assessment",
+            origin=normalize_origin(raw_node.get("origin")) or normalize_origin(payload.get("origin")),
         )
         updated.append(title)
 
@@ -2285,6 +2329,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
     project_ref = normalize_project_ref(project)
     knowledge_domain = normalize_knowledge_domain(payload.get("knowledge_domain"))
     phase = str(payload.get("phase", "")).strip()
+    origin = normalize_origin(payload.get("origin"))
     captured_titles: list[str] = []
 
     for raw_item in selected:
@@ -2337,6 +2382,11 @@ def cmd_capture(args: argparse.Namespace) -> int:
             "note": str(path.relative_to(vault_path(user_cfg))),
             "importance": raw_item.get("importance"),
         }
+        item_origin = normalize_origin(raw_item.get("origin")) or origin
+        if item_origin and not current.get("origin"):
+            # Provenance is first-wins: where the knowledge FIRST entered the
+            # vault. Later native learning events must not overwrite it.
+            concepts[title]["origin"] = item_origin
         relationships = normalize_relationships(raw_item.get("relationships"))
         add_graph_edges(state, title, relationships)
         update_knowledge_tree_node(
@@ -2348,6 +2398,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
             knowledge_domain=knowledge_domain,
             source="capture",
             note=str(path.relative_to(vault_path(user_cfg))),
+            origin=normalize_origin(raw_item.get("origin")) or origin,
         )
         captured_titles.append(title)
 
@@ -2365,6 +2416,8 @@ def cmd_capture(args: argparse.Namespace) -> int:
         "summary": payload.get("summary", ""),
         "items": captured_titles,
     }
+    if origin:
+        capture["origin"] = origin
     state.setdefault("captures", []).append(capture)
     write_json(state_path(user_cfg), state)
     rewrite_index(user_cfg, state)
@@ -2422,6 +2475,16 @@ def cmd_import(args: argparse.Namespace) -> int:
     import_id = f"import-{datetime.now().astimezone().strftime('%Y%m%d-%H%M%S')}"
     state = read_state(user_cfg)
 
+    origin: dict[str, str] = {
+        "kind": "import",
+        "source_type": source_type,
+        "import_id": import_id,
+    }
+    if source_path and source_path != "<stdin>":
+        origin["source_path"] = source_path
+    if project:
+        origin["vault_name"] = project
+
     detected_type = source_type
     if source_type == "auto" and source_path:
         detected_type = _detect_source_type(Path(source_path).expanduser().resolve())
@@ -2465,6 +2528,7 @@ def cmd_import(args: argparse.Namespace) -> int:
         phase=phase,
         text_preview=text_preview,
         status=status,
+        origin=origin,
     )
 
     output: dict[str, Any] = {
@@ -2477,6 +2541,7 @@ def cmd_import(args: argparse.Namespace) -> int:
         "phase": phase,
         "status": status,
         "extracted_length": import_record["extracted_length"],
+        "origin": origin,
         "prompt_for_ai": prompt_for_ai,
     }
     for key in ("note_count", "skipped_count", "note_paths", "skipped_paths", "error"):
@@ -2702,6 +2767,7 @@ def build_import_prompt(
     phase: str,
     text_preview: str,
     status: str,
+    origin: dict[str, str] | None = None,
 ) -> str:
     """Build a prompt for the AI to extract knowledge from an imported source."""
     if status != "ok":
@@ -2712,11 +2778,24 @@ def build_import_prompt(
             "and call `teach_me.py assess` or `teach_me.py capture` to inject them into the vault."
         )
 
+    origin_block = ""
+    if origin:
+        origin_block = (
+            "PROVENANCE (required): include the following `origin` object verbatim at the TOP LEVEL "
+            "of every `capture` and `assess` payload you send for this import. It marks the resulting "
+            "notes and knowledge-tree nodes as imported from this vault so they never mix with "
+            "knowledge Teach Me accumulates natively:\n"
+            "```json\n"
+            f"{json.dumps({'origin': origin}, ensure_ascii=False, indent=2)}\n"
+            "```\n\n"
+        )
+
     return (
         f"You are importing knowledge from a {source_type} source into the user's Teach Me vault.\n"
         f"Source: {source_path}\n"
         f"Project: {project or '(none)'}\n"
         f"Phase: {phase}\n\n"
+        f"{origin_block}"
         "Read the source text below and extract as many important knowledge points as possible.\n\n"
         "For each knowledge point, decide whether to use `assess` (structured knowledge-tree node) "
         "or `capture` (full Markdown note).\n\n"

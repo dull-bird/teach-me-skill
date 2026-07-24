@@ -251,6 +251,12 @@ Novelty rather than discounted for lacking tool evidence. The manual `import`
 workflow's summarize step should apply this rubric directly rather than
 deferring to the hook's tool-activity score.
 
+Import provenance: the `import` command returns an `origin` object. Pass it
+verbatim at the top level of every `capture`/`assess` payload that stores
+knowledge from that import (see `references/schemas.md` → "Import
+Provenance"). This keeps imported vault knowledge distinguishable from
+knowledge Teach Me accumulates natively — never drop it.
+
 Default behavior:
 
 - Score 9 or more: capture a full note.
