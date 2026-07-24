@@ -94,6 +94,12 @@ class ImportProvenanceTests(unittest.TestCase):
             # The prompt must instruct the agent to pass origin through.
             self.assertIn('"origin"', output["prompt_for_ai"])
             self.assertIn(origin["import_id"], output["prompt_for_ai"])
+            # Per-note metadata is exposed for item-level provenance.
+            meta = output.get("note_meta")
+            self.assertEqual(len(meta), 1)
+            self.assertEqual(meta[0]["path"], "40_Wiki/Event Sourcing.md")
+            self.assertTrue(meta[0].get("updated"))
+            self.assertIn("SOURCE NOTES", output["prompt_for_ai"])
 
     def test_obsidian_import_skips_deeporbit_system_dir(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -119,6 +125,11 @@ class ImportProvenanceTests(unittest.TestCase):
                 "vault_name": "MyVault",
                 "import_id": "import-20260724-120000",
             }
+            item_origin = {
+                "source_note": "40_Wiki/Event Sourcing.md",
+                "source_created": "2026-06-01",
+                "source_updated": "2026-07-20",
+            }
             payload = {
                 "project": {"name": "MyVault", "path": "/home/user/MyVault"},
                 "phase": "external import",
@@ -129,6 +140,7 @@ class ImportProvenanceTests(unittest.TestCase):
                         "title": "event sourcing",
                         "one_line": "State as an append-only log of events.",
                         "mastery": "seen",
+                        "origin": item_origin,
                     }
                 ],
             }
@@ -137,8 +149,14 @@ class ImportProvenanceTests(unittest.TestCase):
 
             note = vault / "02_Concepts" / "event-sourcing.md"
             text = note.read_text(encoding="utf-8")
+            # Dedicated external-vault frontmatter block.
+            self.assertIn("external: true", text)
             self.assertIn("origin: import", text)
-            self.assertIn("imported_from: MyVault", text)
+            self.assertIn("external_vault: MyVault", text)
+            self.assertIn('external_vault_path: "/home/user/MyVault"', text)
+            self.assertIn('source_path: "40_Wiki/Event Sourcing.md"', text)
+            self.assertIn("source_created: 2026-06-01", text)
+            self.assertIn("source_updated: 2026-07-20", text)
             self.assertIn("import_id: import-20260724-120000", text)
             self.assertIn("**Origin:** imported from MyVault", text)
             # Still a teach-me note, so re-import filters keep working.
@@ -148,6 +166,7 @@ class ImportProvenanceTests(unittest.TestCase):
             concept_origin = state["concepts"]["event sourcing"].get("origin")
             self.assertIsNotNone(concept_origin)
             self.assertEqual(concept_origin["import_id"], "import-20260724-120000")
+            self.assertEqual(concept_origin["source_note"], "40_Wiki/Event Sourcing.md")
             tree_origin = state["knowledge_tree"]["event sourcing"].get("origin")
             self.assertEqual(tree_origin["vault_name"], "MyVault")
 
@@ -175,7 +194,7 @@ class ImportProvenanceTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             note = (vault / "02_Concepts" / "idempotency.md").read_text(encoding="utf-8")
             self.assertNotIn("origin:", note)
-            self.assertNotIn("imported_from:", note)
+            self.assertNotIn("external:", note)
             state = self.read_state(vault)
             self.assertNotIn("origin", state["concepts"]["idempotency"])
 
@@ -194,6 +213,31 @@ class ImportProvenanceTests(unittest.TestCase):
             node_origin = state["knowledge_tree"]["backpressure"].get("origin")
             self.assertIsNotNone(node_origin)
             self.assertEqual(node_origin["vault_name"], "ResearchVault")
+
+    def test_import_fills_dedicated_obsidian_vault_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            env, _ = self.make_env(tmp)
+            source = self.make_obsidian_vault(tmp)
+            result = self.run_teach_me(
+                env, "import", "--source", "obsidian", "--path", str(source),
+                "--project", "DeepOrbit Vault", "--json",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            status = self.run_teach_me(env, "status")
+            data = json.loads(status.stdout)
+            resolved = str(source.resolve())
+            self.assertEqual(data["obsidian_vault_path"], resolved)
+            self.assertEqual(data["linked_vaults"][0]["path"], resolved)
+
+    def test_configure_obsidian_vault_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            env, _ = self.make_env(tmp)
+            other = Path(tmp) / "other_vault"
+            other.mkdir()
+            result = self.run_teach_me(env, "configure", "--obsidian-vault", str(other))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            status = json.loads(self.run_teach_me(env, "status").stdout)
+            self.assertEqual(status["obsidian_vault_path"], str(other.resolve()))
 
 
 if __name__ == "__main__":

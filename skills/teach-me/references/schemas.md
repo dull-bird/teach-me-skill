@@ -18,6 +18,7 @@ vault's `.teach-me/` directory.
       "vault_path": "~/.teach_me_skill/vault",
       "language": "auto",
       "max_notes_per_phase": 3,
+      "obsidian_vault_path": "/path/to/external/obsidian/vault",
       "linked_vaults": [
         {
           "path": "/path/to/obsidian/vault",
@@ -39,6 +40,12 @@ vault's `.teach-me/` directory.
 
 Git sync is opt-in. If `auto_sync` is true, the runtime attempts to commit,
 pull --rebase, and push after `assess`, `capture`, and `style`.
+
+`obsidian_vault_path` is the dedicated external Obsidian vault the user links
+as a knowledge source. Set it explicitly with
+`teach_me.py configure --obsidian-vault <path>`; the first successful
+`import --source obsidian` also fills it in when unset. `linked_vaults` keeps
+the full history of linked vaults. `status` reports both.
 
 ## Capture Payload
 
@@ -126,10 +133,23 @@ knowledge derived from that import:
 
 Effects:
 
-- New notes get extra frontmatter: `origin: import`, `origin_source_type`,
-  `imported_from` (vault name), `origin_source_path`, `import_id` — in
-  addition to the usual `type: teach-me/*` marker, so re-import filters keep
-  working.
+- New notes get a dedicated external-vault frontmatter block — in addition to
+  the usual `type: teach-me/*` marker, so re-import filters keep working:
+
+  ```yaml
+  external: true
+  origin: import
+  external_vault: My Knowledge Vault      # vault display name
+  external_vault_path: "/abs/path/vault"  # vault root
+  source_path: "40_Wiki/RAG.md"           # exact source note (item-level)
+  source_created: 2026-06-01              # source note's created (frontmatter or mtime)
+  source_updated: 2026-07-20
+  import_id: import-20260724-120000
+  ```
+
+  `source_path`/`source_created`/`source_updated` come from an item-level
+  `origin` block; the import output's `note_meta` lists every extracted note
+  with its timestamps so the agent can attach them.
 - Concept state and knowledge-tree nodes store the `origin` block.
 - Provenance is first-wins: once a concept has an `origin`, later learning
   events (native or from another import) never overwrite it.

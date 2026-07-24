@@ -245,6 +245,10 @@ def _record_linked_vault(user_cfg: dict[str, Any], vault_path_str: str, project:
         "project": project,
         "linked_at": now_iso(),
     })
+    # The first linked Obsidian vault becomes the dedicated external vault;
+    # an explicit `configure --obsidian-vault` always overrides it.
+    if not user_cfg.get("obsidian_vault_path"):
+        user_cfg["obsidian_vault_path"] = normalized
 
 
 def vault_path(config: dict[str, Any]) -> Path:
@@ -544,6 +548,31 @@ def _is_teach_me_note(text: str) -> bool:
     return "type: teach-me/" in frontmatter
 
 
+def _note_dates(text: str, file_path: Path) -> tuple[str, str]:
+    """Best-effort (created, updated) dates for a source note.
+
+    Prefers frontmatter `created:`/`updated:`; falls back to filesystem
+    mtime for `updated`. Empty string when unknown.
+    """
+    created = updated = ""
+    if text.startswith("---"):
+        end = text.find("---", 3)
+        if end != -1:
+            frontmatter = text[3:end]
+            created_match = re.search(r"^created:\s*\"?([^\"\n]+?)\"?\s*$", frontmatter, re.MULTILINE)
+            updated_match = re.search(r"^updated:\s*\"?([^\"\n]+?)\"?\s*$", frontmatter, re.MULTILINE)
+            if created_match:
+                created = created_match.group(1)
+            if updated_match:
+                updated = updated_match.group(1)
+    if not updated:
+        try:
+            updated = datetime.fromtimestamp(file_path.stat().st_mtime).date().isoformat()
+        except OSError:
+            pass
+    return created, updated
+
+
 def _extract_obsidian_vault_text(
     path: Path,
     user_vault: Path | None = None,
@@ -574,6 +603,7 @@ def _extract_obsidian_vault_text(
             )
 
     note_paths: list[str] = []
+    note_meta: list[dict[str, str]] = []
     skipped_paths: list[str] = []
     chunks: list[str] = []
     total_chars = 0
@@ -601,6 +631,13 @@ def _extract_obsidian_vault_text(
             continue
 
         note_paths.append(rel_str)
+        created, updated = _note_dates(text, file_path)
+        entry = {"path": rel_str}
+        if created:
+            entry["created"] = created
+        if updated:
+            entry["updated"] = updated
+        note_meta.append(entry)
         header = f"\n\n--- From {rel_str} ---\n\n"
         remaining = OBSIDIAN_MAX_TOTAL_CHARS - total_chars
         if remaining <= 0:
@@ -614,6 +651,7 @@ def _extract_obsidian_vault_text(
         "note_count": len(note_paths),
         "skipped_count": len(skipped_paths),
         "note_paths": note_paths,
+        "note_meta": note_meta,
         "skipped_paths": skipped_paths[:100],
     }
 
@@ -1164,7 +1202,17 @@ def listify(value: Any) -> list[str]:
     return [text] if text else []
 
 
-ORIGIN_KEYS = ("kind", "source_type", "source_path", "vault_name", "import_id")
+ORIGIN_KEYS = (
+    "kind",
+    "source_type",
+    "source_path",
+    "vault_name",
+    "import_id",
+    # Per-item provenance: the exact source note and its timestamps.
+    "source_note",
+    "source_created",
+    "source_updated",
+)
 
 
 def normalize_origin(raw: Any) -> dict[str, str] | None:
@@ -1172,7 +1220,9 @@ def normalize_origin(raw: Any) -> dict[str, str] | None:
 
     Imported knowledge must stay distinguishable from knowledge Teach Me
     accumulates natively. The block is passed through verbatim by the agent
-    from `import` output into `capture`/`assess` payloads.
+    from `import` output into `capture`/`assess` payloads. Item-level blocks
+    may add `source_note`/`source_created`/`source_updated` pointing at the
+    exact source note.
     """
     if not isinstance(raw, dict):
         return None
@@ -1181,6 +1231,14 @@ def normalize_origin(raw: Any) -> dict[str, str] | None:
         return None
     origin.setdefault("kind", "import")
     return origin
+
+
+def merge_origin(payload_origin: dict[str, str] | None, item_origin_raw: Any) -> dict[str, str] | None:
+    """Merge payload-level origin with an item-level override (item wins)."""
+    item = normalize_origin(item_origin_raw)
+    if payload_origin and item:
+        return {**payload_origin, **item}
+    return item or payload_origin
 
 
 def origin_label(origin: dict[str, str]) -> str:
@@ -1215,7 +1273,7 @@ def render_note(item: dict[str, Any], payload: dict[str, Any], existing: bool) -
     relationships = normalize_relationships(item.get("relationships"))
     questions = listify(item.get("socratic_questions"))
     body = str(item.get("body", "")).strip()
-    origin = normalize_origin(item.get("origin")) or normalize_origin(payload.get("origin"))
+    origin = merge_origin(normalize_origin(payload.get("origin")), item.get("origin"))
 
     lines: list[str] = []
     if not existing:
@@ -1230,14 +1288,21 @@ def render_note(item: dict[str, Any], payload: dict[str, Any], existing: bool) -
             f"aliases: {alias_json}",
         ]
         if origin:
+            # Dedicated external-vault provenance frontmatter. `type: teach-me/*`
+            # stays, so re-import filters keep working.
+            frontmatter.append("external: true")
             frontmatter.append(f"origin: {origin.get('kind', 'import')}")
-            if origin.get("source_type"):
-                frontmatter.append(f"origin_source_type: {origin['source_type']}")
             imported_from = origin.get("vault_name") or origin.get("source_path")
             if imported_from:
-                frontmatter.append(f"imported_from: {imported_from}")
+                frontmatter.append(f"external_vault: {imported_from}")
             if origin.get("source_path"):
-                frontmatter.append(f"origin_source_path: \"{origin['source_path']}\"")
+                frontmatter.append(f"external_vault_path: \"{origin['source_path']}\"")
+            if origin.get("source_note"):
+                frontmatter.append(f"source_path: \"{origin['source_note']}\"")
+            if origin.get("source_created"):
+                frontmatter.append(f"source_created: {origin['source_created']}")
+            if origin.get("source_updated"):
+                frontmatter.append(f"source_updated: {origin['source_updated']}")
             if origin.get("import_id"):
                 frontmatter.append(f"import_id: {origin['import_id']}")
         frontmatter.append("---")
@@ -1650,6 +1715,9 @@ def cmd_configure(args: argparse.Namespace) -> int:
 
     if args.vault and not args.add_user:
         user_cfg["vault_path"] = str(Path(args.vault).expanduser())
+    if args.obsidian_vault:
+        user_cfg["obsidian_vault_path"] = str(Path(args.obsidian_vault).expanduser().resolve())
+        _record_linked_vault(user_cfg, args.obsidian_vault, args.name or Path(args.obsidian_vault).name)
     if args.language:
         user_cfg["language"] = args.language
     sync = git_sync_config(user_cfg)
@@ -1829,6 +1897,8 @@ def cmd_status(args: argparse.Namespace) -> int:
         "initialized": bool(user_cfg.get("initialized")),
         "vault": str(vault_path(user_cfg)),
         "language": user_cfg.get("language", "auto"),
+        "obsidian_vault_path": user_cfg.get("obsidian_vault_path", ""),
+        "linked_vaults": user_cfg.get("linked_vaults", []),
         "git_sync": git_sync_config(user_cfg),
     }
     if user_cfg.get("initialized"):
@@ -2206,7 +2276,7 @@ def cmd_assess(args: argparse.Namespace) -> int:
             project_ref=project_ref,
             knowledge_domain=knowledge_domain,
             source="assessment",
-            origin=normalize_origin(raw_node.get("origin")) or normalize_origin(payload.get("origin")),
+            origin=merge_origin(normalize_origin(payload.get("origin")), raw_node.get("origin")),
         )
         updated.append(title)
 
@@ -2382,7 +2452,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
             "note": str(path.relative_to(vault_path(user_cfg))),
             "importance": raw_item.get("importance"),
         }
-        item_origin = normalize_origin(raw_item.get("origin")) or origin
+        item_origin = merge_origin(origin, raw_item.get("origin"))
         if item_origin and not current.get("origin"):
             # Provenance is first-wins: where the knowledge FIRST entered the
             # vault. Later native learning events must not overwrite it.
@@ -2398,7 +2468,7 @@ def cmd_capture(args: argparse.Namespace) -> int:
             knowledge_domain=knowledge_domain,
             source="capture",
             note=str(path.relative_to(vault_path(user_cfg))),
-            origin=normalize_origin(raw_item.get("origin")) or origin,
+            origin=merge_origin(origin, raw_item.get("origin")),
         )
         captured_titles.append(title)
 
@@ -2529,6 +2599,7 @@ def cmd_import(args: argparse.Namespace) -> int:
         text_preview=text_preview,
         status=status,
         origin=origin,
+        note_meta=import_record.get("note_meta"),
     )
 
     output: dict[str, Any] = {
@@ -2544,7 +2615,7 @@ def cmd_import(args: argparse.Namespace) -> int:
         "origin": origin,
         "prompt_for_ai": prompt_for_ai,
     }
-    for key in ("note_count", "skipped_count", "note_paths", "skipped_paths", "error"):
+    for key in ("note_count", "skipped_count", "note_paths", "note_meta", "skipped_paths", "error"):
         if key in import_record:
             output[key] = import_record[key]
     if text_preview:
@@ -2768,6 +2839,7 @@ def build_import_prompt(
     text_preview: str,
     status: str,
     origin: dict[str, str] | None = None,
+    note_meta: list[dict[str, str]] | None = None,
 ) -> str:
     """Build a prompt for the AI to extract knowledge from an imported source."""
     if status != "ok":
@@ -2789,6 +2861,18 @@ def build_import_prompt(
             f"{json.dumps({'origin': origin}, ensure_ascii=False, indent=2)}\n"
             "```\n\n"
         )
+    if note_meta:
+        lines = ["SOURCE NOTES: for every capture/assess item, also add an item-level `origin` block "
+                 "naming the exact source note and its timestamps, e.g. "
+                 '`"origin": {"source_note": "40_Wiki/RAG.md", "source_created": "2026-06-01", "source_updated": "2026-07-20"}`. '
+                 "Source notes in this import:"]
+        lines.extend(
+            f"- {entry['path']}"
+            + (f" (created {entry['created']})" if entry.get("created") else "")
+            + (f" (updated {entry['updated']})" if entry.get("updated") else "")
+            for entry in note_meta[:50]
+        )
+        origin_block += "\n".join(lines) + "\n\n"
 
     return (
         f"You are importing knowledge from a {source_type} source into the user's Teach Me vault.\n"
@@ -2895,6 +2979,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     configure = sub.add_parser("configure", help="Initialize or update Teach Me config")
     configure.add_argument("--vault", help="Obsidian vault path")
+    configure.add_argument("--obsidian-vault", help="Dedicated external Obsidian vault path (source of imported knowledge)")
     configure.add_argument("--language", default="auto", help="auto, zh, en, etc.")
     configure.add_argument("--git-remote", help="Remote repository URL for vault sync")
     configure.add_argument("--git-branch", help="Git branch for vault sync")

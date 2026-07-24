@@ -253,9 +253,16 @@ deferring to the hook's tool-activity score.
 
 Import provenance: the `import` command returns an `origin` object. Pass it
 verbatim at the top level of every `capture`/`assess` payload that stores
-knowledge from that import (see `references/schemas.md` → "Import
-Provenance"). This keeps imported vault knowledge distinguishable from
-knowledge Teach Me accumulates natively — never drop it.
+knowledge from that import, and add an item-level `origin` with `source_note`/
+`source_created`/`source_updated` for the exact source note (the import
+output's `note_meta` lists them). Imported notes get a dedicated
+external-vault frontmatter block (`external: true`, `external_vault`,
+`external_vault_path`, `source_path`, timestamps, `import_id`) — see
+`references/schemas.md` → "Import Provenance". This keeps imported vault
+knowledge distinguishable from knowledge Teach Me accumulates natively —
+never drop it. The user's linked Obsidian vault is tracked in config as
+`obsidian_vault_path` (set via `configure --obsidian-vault`; the first
+obsidian import fills it in when unset).
 
 Default behavior:
 
